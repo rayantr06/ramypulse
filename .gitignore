@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+*.parquet
+data/raw/
+data/processed/
+data/embeddings/
+models/dziribert/
+models/whisper/
+.pytest_cache/
