@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import logging
+
 import pandas as pd
 
 import config
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_SENTIMENT_LABELS = ["très_positif", "positif", "neutre", "négatif", "très_négatif"]
 
@@ -71,7 +75,9 @@ def _build_trends(dataframe: pd.DataFrame) -> pd.DataFrame:
     if working.empty:
         return pd.DataFrame(columns=["week_start", "nss", "volume_total"])
 
-    working["week_start"] = working["timestamp"].dt.normalize() - pd.to_timedelta(working["timestamp"].dt.dayofweek, unit="D")
+    working["week_start"] = working["timestamp"].dt.normalize() - pd.to_timedelta(
+        working["timestamp"].dt.dayofweek, unit="D"
+    )
 
     weekly = []
     for period_start, subset in working.groupby("week_start", sort=True):
@@ -83,11 +89,23 @@ def _build_trends(dataframe: pd.DataFrame) -> pd.DataFrame:
             }
         )
 
-    return pd.DataFrame(weekly, columns=["week_start", "nss", "volume_total"]).sort_values("week_start").reset_index(drop=True)
+    return (
+        pd.DataFrame(weekly, columns=["week_start", "nss", "volume_total"])
+        .sort_values("week_start")
+        .reset_index(drop=True)
+    )
 
 
 def calculate_nss(dataframe: pd.DataFrame) -> dict[str, object]:
-    """Calcule le NSS global, par canal, par aspect et sa tendance temporelle."""
+    """Calcule le NSS global, par canal, par aspect et sa tendance temporelle.
+
+    Args:
+        dataframe: DataFrame ABSA avec les colonnes standard RamyPulse.
+
+    Returns:
+        Dict avec les clés : nss_global, nss_by_channel, nss_by_aspect,
+        trends, volume_total, distribution.
+    """
     if dataframe.empty:
         return {
             "nss_global": 0.0,
@@ -107,3 +125,27 @@ def calculate_nss(dataframe: pd.DataFrame) -> dict[str, object]:
         "volume_total": int(len(dataframe)),
         "distribution": distribution,
     }
+
+
+def calculate_nss_by_channel(dataframe: pd.DataFrame) -> dict[str, float]:
+    """Retourne uniquement le NSS par canal (raccourci pour le simulateur What-If).
+
+    Args:
+        dataframe: DataFrame ABSA avec colonnes 'sentiment_label' et 'channel'.
+
+    Returns:
+        Dict {canal: nss_value}.
+    """
+    return _group_nss(dataframe, "channel")
+
+
+def calculate_nss_by_aspect(dataframe: pd.DataFrame) -> dict[str, float]:
+    """Retourne uniquement le NSS par aspect (raccourci pour le simulateur What-If).
+
+    Args:
+        dataframe: DataFrame ABSA avec colonnes 'sentiment_label' et 'aspect'.
+
+    Returns:
+        Dict {aspect: nss_value}.
+    """
+    return _group_nss(dataframe, "aspect")
