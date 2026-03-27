@@ -1,0 +1,15 @@
+transformers>=4.40
+torch>=2.2
+sentence-transformers>=3.0
+faiss-cpu>=1.8
+streamlit>=1.35
+pandas>=2.2
+plotly>=5.20
+rank-bm25>=0.2.2
+requests>=2.31
+beautifulsoup4>=4.12
+faster-whisper>=1.0
+ollama>=0.3
+python-dotenv>=1.0
+pyarrow>=15.0
+numpy>=1.26
