@@ -1,0 +1,111 @@
+"""Configuration centrale de RamyPulse.
+
+Centralise tous les chemins, constantes et paramètres de modèles.
+Aucune logique métier ici.
+"""
+
+import os
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+# Charger les variables d'environnement depuis .env (optionnel)
+load_dotenv()
+
+# ---------------------------------------------------------------------------
+# Chemins de base
+# ---------------------------------------------------------------------------
+
+BASE_DIR: Path = Path(__file__).parent.resolve()
+DATA_DIR: Path = BASE_DIR / "data"
+MODELS_DIR: Path = BASE_DIR / "models"
+
+# Création automatique des dossiers si absents
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+MODELS_DIR.mkdir(parents=True, exist_ok=True)
+(DATA_DIR / "raw").mkdir(parents=True, exist_ok=True)
+(DATA_DIR / "processed").mkdir(parents=True, exist_ok=True)
+(DATA_DIR / "embeddings").mkdir(parents=True, exist_ok=True)
+(DATA_DIR / "demo").mkdir(parents=True, exist_ok=True)
+(MODELS_DIR / "dziribert").mkdir(parents=True, exist_ok=True)
+(MODELS_DIR / "whisper").mkdir(parents=True, exist_ok=True)
+
+# ---------------------------------------------------------------------------
+# Modèles ML
+# ---------------------------------------------------------------------------
+
+DZIRIBERT_MODEL_PATH: Path = MODELS_DIR / "dziribert"
+"""Chemin local vers le modèle DziriBERT fine-tuné (5 classes)."""
+
+WHISPER_MODEL_SIZE: str = os.getenv("WHISPER_MODEL_SIZE", "large-v3")
+"""Taille du modèle Whisper: tiny, base, small, medium, large, large-v2, large-v3."""
+
+OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "llama3.2:3b")
+"""Modèle Ollama utilisé pour la génération RAG."""
+
+OLLAMA_BASE_URL: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+"""URL de base de l'API Ollama locale."""
+
+EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "intfloat/multilingual-e5-base")
+"""Modèle d'embedding multilingue pour FAISS (768 dimensions)."""
+
+EMBEDDING_DIM: int = 768
+"""Dimension des vecteurs d'embedding produits par multilingual-e5-base."""
+
+# ---------------------------------------------------------------------------
+# Index FAISS
+# ---------------------------------------------------------------------------
+
+FAISS_INDEX_PATH: Path = DATA_DIR / "embeddings" / "faiss_index"
+"""Chemin vers l'index FAISS sauvegardé sur disque."""
+
+# ---------------------------------------------------------------------------
+# Constantes métier
+# ---------------------------------------------------------------------------
+
+SENTIMENT_LABELS: list[str] = [
+    "très_positif",
+    "positif",
+    "neutre",
+    "négatif",
+    "très_négatif",
+]
+"""5 classes discrètes de sentiment — jamais de score continu."""
+
+ASPECT_LIST: list[str] = [
+    "goût",
+    "emballage",
+    "prix",
+    "disponibilité",
+    "fraîcheur",
+]
+"""5 aspects produit Ramy analysés en ABSA."""
+
+CHANNELS: list[str] = [
+    "facebook",
+    "google_maps",
+    "audio",
+    "youtube",
+]
+"""Canaux de collecte supportés."""
+
+# ---------------------------------------------------------------------------
+# Formule NSS (Net Sentiment Score)
+# ---------------------------------------------------------------------------
+
+NSS_FORMULA: str = (
+    "NSS = (nb_très_positifs + nb_positifs - nb_négatifs - nb_très_négatifs) "
+    "/ total × 100"
+)
+"""Formule du Net Sentiment Score.
+
+Calcul: (très_positif + positif - négatif - très_négatif) / total × 100
+Plage: [-100, +100]. Neutre exclue du calcul (pas de contribution).
+"""
+
+# ---------------------------------------------------------------------------
+# Clés API externes (optionnelles)
+# ---------------------------------------------------------------------------
+
+APIFY_API_KEY: str | None = os.getenv("APIFY_API_KEY") or None
+"""Clé API Apify pour les scrapers Facebook et Google Maps. Optionnelle."""
