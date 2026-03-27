@@ -1,177 +1,225 @@
-"""Script de collecte batch avec fallback dataset local.
+"""Script orchestrateur de collecte batch avec fallback local.
 
-Algorithme :
-  1. Tenter de charger data/raw/facebook_raw.parquet (si présent).
-  2. Tenter de charger data/raw/google_raw.parquet (si présent).
-  3. Si aucune source n'est trouvée : charger le dataset fallback Algerian Dialect
-     depuis data/demo/ (ou générer un dataset synthétique minimal pour le PoC).
-  4. Fusionner et sauvegarder dans data/raw/collected_raw.parquet.
-  5. Logger un résumé : sources, volume, colonnes.
-
-Usage :
-    python scripts/01_collect_data.py
+Le script suit le PRD:
+1. Réutiliser les sources déjà collectées dans ``data/raw/`` si elles existent.
+2. Tenter les collecteurs Facebook et Google Maps si les modules sont présents.
+3. Tenter l'audio pipeline si des fichiers audio existent et si le module est présent.
+4. Si aucune donnée n'est disponible, charger un dataset fallback local depuis ``data/demo/``.
+5. Sauvegarder un fichier agrégé ``data/raw/collected_raw.parquet``.
 """
-import logging
-import os
-import sys
 
-import numpy as np
+from __future__ import annotations
+
+import importlib
+import logging
+import sys
+from pathlib import Path
+
 import pandas as pd
 
-# Ajouter la racine du projet au path pour les imports locaux
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+import config
 
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s — %(levelname)s — %(message)s",
+    format="%(asctime)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
-# Chemins par défaut (overridables via les paramètres de main() pour les tests)
-RAW_DIR: str = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "raw"))
-DEMO_DIR: str = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "demo"))
+RAW_DIR = config.RAW_DATA_DIR
+DEMO_DIR = config.DEMO_DATA_DIR
 
-COLONNES_STANDARD = [
-    "text", "sentiment_label", "channel", "aspect",
-    "source_url", "timestamp", "confidence",
+STANDARD_COLUMNS = [
+    "text",
+    "sentiment_label",
+    "channel",
+    "aspect",
+    "source_url",
+    "timestamp",
+    "confidence",
 ]
 
 
-def _charger_parquet(chemin: str) -> pd.DataFrame | None:
-    """Charge un fichier Parquet si le chemin existe.
+def _load_parquet_if_exists(path: Path) -> pd.DataFrame | None:
+    """Charge un fichier Parquet s'il existe."""
+    if not path.exists():
+        return None
+    logger.info("Source existante détectée: %s", path)
+    return pd.read_parquet(path)
 
-    Args:
-        chemin: Chemin absolu vers le fichier Parquet.
 
-    Returns:
-        DataFrame chargé, ou None si le fichier est absent.
-    """
-    if os.path.exists(chemin):
-        logger.info("Source trouvée : %s", chemin)
-        return pd.read_parquet(chemin)
+def _coerce_standard_schema(dataframe: pd.DataFrame, channel_hint: str | None = None) -> pd.DataFrame:
+    """Aligne un DataFrame sur le schéma standard RamyPulse."""
+    working = dataframe.copy()
+    rename_map = {
+        "url": "source_url",
+        "date": "timestamp",
+    }
+    working = working.rename(columns={key: value for key, value in rename_map.items() if key in working.columns})
+
+    if channel_hint and "channel" not in working.columns:
+        working["channel"] = channel_hint
+
+    for column in STANDARD_COLUMNS:
+        if column not in working.columns:
+            working[column] = None
+
+    return working[STANDARD_COLUMNS]
+
+
+def _call_first_available(module: object, function_names: list[str]) -> pd.DataFrame | None:
+    """Appelle la première fonction disponible d'un module optionnel."""
+    for function_name in function_names:
+        function = getattr(module, function_name, None)
+        if callable(function):
+            result = function()
+            if isinstance(result, pd.DataFrame):
+                return result
     return None
 
 
-def _charger_fallback_demo(demo_dir: str) -> pd.DataFrame:
-    """Charge le dataset fallback depuis demo_dir, ou génère un dataset synthétique.
+def _try_optional_scraper(module_name: str, channel: str) -> pd.DataFrame | None:
+    """Tente d'exécuter un scraper optionnel, sinon journalise un fallback gracieux."""
+    try:
+        module = importlib.import_module(module_name)
+    except ModuleNotFoundError:
+        logger.info("Module optionnel absent: %s", module_name)
+        return None
+    except Exception as error:  # pragma: no cover - protection runtime
+        logger.warning("Import du module %s impossible: %s", module_name, error)
+        return None
+
+    try:
+        result = _call_first_available(module, ["collect", "collect_data", "main"])
+    except Exception as error:  # pragma: no cover - protection runtime
+        logger.warning("Collecte %s échouée: %s", channel, error)
+        return None
+
+    if result is None:
+        logger.info("Aucune DataFrame retournée par %s.", module_name)
+        return None
+
+    logger.info("Collecte %s exécutée via %s.", channel, module_name)
+    return _coerce_standard_schema(result, channel_hint=channel)
+
+
+def _try_optional_audio_pipeline(raw_dir: Path) -> pd.DataFrame | None:
+    """Tente une préparation audio si des fichiers audio et le pipeline existent."""
+    audio_dir = raw_dir / "audio"
+    if not audio_dir.exists():
+        return None
+
+    audio_files = [
+        path for path in audio_dir.iterdir() if path.suffix.lower() in {".wav", ".mp3", ".m4a"}
+    ]
+    if not audio_files:
+        return None
+
+    try:
+        module = importlib.import_module("core.ingestion.audio_pipeline")
+    except ModuleNotFoundError:
+        logger.info("audio_pipeline absent, aucun traitement audio lancé.")
+        return None
+    except Exception as error:  # pragma: no cover - protection runtime
+        logger.warning("Import audio_pipeline impossible: %s", error)
+        return None
+
+    runner = getattr(module, "process_audio_batch", None) or getattr(module, "main", None)
+    if not callable(runner):
+        logger.info("audio_pipeline présent mais sans point d'entrée batch exploitable.")
+        return None
+
+    try:
+        result = runner(audio_dir)
+    except Exception as error:  # pragma: no cover - protection runtime
+        logger.warning("Traitement audio échoué: %s", error)
+        return None
+
+    if not isinstance(result, pd.DataFrame):
+        return None
+
+    logger.info("Traitement audio exécuté pour %d fichier(s).", len(audio_files))
+    return _coerce_standard_schema(result, channel_hint="audio")
+
+
+def _load_local_fallback(demo_dir: Path) -> pd.DataFrame:
+    """Charge le dataset fallback local depuis ``data/demo/``."""
+    demo_files = sorted(demo_dir.glob("*.parquet"), key=lambda path: path.stat().st_size, reverse=True)
+    if not demo_files:
+        raise FileNotFoundError(
+            "Aucun dataset fallback local trouvé dans data/demo/. "
+            "Le PRD exige un fallback 45K disponible localement."
+        )
+
+    fallback_path = demo_files[0]
+    logger.info("Fallback local chargé: %s", fallback_path)
+    return _coerce_standard_schema(pd.read_parquet(fallback_path))
+
+
+def _save_raw_snapshot(dataframe: pd.DataFrame, output_path: Path) -> None:
+    """Sauvegarde le snapshot brut agrégé au format Parquet."""
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    dataframe.to_parquet(output_path, index=False)
+
+
+def main(raw_dir: Path | None = None, demo_dir: Path | None = None) -> Path:
+    """Orchestre la collecte batch et sauvegarde le résultat agrégé.
 
     Args:
-        demo_dir: Répertoire contenant les fichiers Parquet de démo.
+        raw_dir: Répertoire ``data/raw`` à utiliser.
+        demo_dir: Répertoire ``data/demo`` contenant le fallback local.
 
     Returns:
-        DataFrame avec les colonnes standard RamyPulse.
+        Chemin du fichier Parquet agrégé généré.
     """
-    if os.path.exists(demo_dir):
-        fichiers_demo = sorted(f for f in os.listdir(demo_dir) if f.endswith(".parquet"))
-        if fichiers_demo:
-            chemin = os.path.join(demo_dir, fichiers_demo[0])
-            logger.info("Fallback demo chargé : %s", chemin)
-            return pd.read_parquet(chemin)
+    raw_dir = Path(raw_dir) if raw_dir is not None else RAW_DIR
+    demo_dir = Path(demo_dir) if demo_dir is not None else DEMO_DIR
+    raw_dir.mkdir(parents=True, exist_ok=True)
+    demo_dir.mkdir(parents=True, exist_ok=True)
 
-    logger.warning(
-        "Aucun dataset demo trouvé dans '%s' — génération d'un dataset synthétique minimal.",
-        demo_dir,
-    )
-    return _generer_dataset_synthetique()
+    sources: list[tuple[str, pd.DataFrame]] = []
 
+    existing_sources = {
+        "facebook": raw_dir / "facebook_raw.parquet",
+        "google_maps": raw_dir / "google_raw.parquet",
+    }
+    for channel, path in existing_sources.items():
+        dataframe = _load_parquet_if_exists(path)
+        if dataframe is not None:
+            sources.append((channel, _coerce_standard_schema(dataframe, channel_hint=channel)))
 
-def _generer_dataset_synthetique(n: int = 100) -> pd.DataFrame:
-    """Génère un dataset synthétique minimal pour le PoC.
+    if not any(channel == "facebook" for channel, _ in sources):
+        dataframe = _try_optional_scraper("core.ingestion.scraper_facebook", "facebook")
+        if dataframe is not None:
+            sources.append(("facebook", dataframe))
 
-    Args:
-        n: Nombre d'enregistrements à générer.
+    if not any(channel == "google_maps" for channel, _ in sources):
+        dataframe = _try_optional_scraper("core.ingestion.scraper_google", "google_maps")
+        if dataframe is not None:
+            sources.append(("google_maps", dataframe))
 
-    Returns:
-        DataFrame de n lignes avec les colonnes standard RamyPulse.
-    """
-    from datetime import datetime
+    audio_dataframe = _try_optional_audio_pipeline(raw_dir)
+    if audio_dataframe is not None:
+        sources.append(("audio", audio_dataframe))
 
-    sentiments = ["très_positif", "positif", "neutre", "négatif", "très_négatif"]
-    aspects = ["goût", "emballage", "prix", "disponibilité", "fraîcheur"]
-    canaux = ["facebook", "google_maps", "audio", "youtube"]
+    if not sources:
+        sources.append(("fallback_demo", _load_local_fallback(demo_dir)))
 
-    rng = np.random.default_rng(42)
+    collected = pd.concat([frame for _, frame in sources], ignore_index=True)
+    output_path = raw_dir / "collected_raw.parquet"
+    _save_raw_snapshot(collected, output_path)
 
-    logger.info("Dataset synthétique généré : %d enregistrements.", n)
-    return pd.DataFrame(
-        {
-            "text": [f"Avis synthétique RamyPulse #{i}" for i in range(n)],
-            "sentiment_label": rng.choice(sentiments, n).tolist(),
-            "channel": rng.choice(canaux, n).tolist(),
-            "aspect": rng.choice(aspects, n).tolist(),
-            "source_url": [f"http://demo/avis/{i}" for i in range(n)],
-            "timestamp": [datetime(2024, 1, 1).isoformat()] * n,
-            "confidence": rng.uniform(0.6, 1.0, n).round(3).tolist(),
-        }
-    )
-
-
-def _assurer_colonnes(df: pd.DataFrame) -> pd.DataFrame:
-    """S'assure que toutes les colonnes standard sont présentes (crée-les à None si manquantes).
-
-    Args:
-        df: DataFrame à compléter.
-
-    Returns:
-        DataFrame avec les 7 colonnes standard garanties.
-    """
-    for col in COLONNES_STANDARD:
-        if col not in df.columns:
-            df[col] = None
-    return df
-
-
-def main(raw_dir: str | None = None, demo_dir: str | None = None) -> None:
-    """Point d'entrée principal — collecte et sauvegarde les données.
-
-    Args:
-        raw_dir: Répertoire de sortie (défaut : data/raw/). Paramètre optionnel
-                 utilisé par les tests pour isoler les entrées/sorties.
-        demo_dir: Répertoire des datasets de démo (défaut : data/demo/).
-    """
-    if raw_dir is None:
-        raw_dir = RAW_DIR
-    if demo_dir is None:
-        demo_dir = DEMO_DIR
-
-    os.makedirs(raw_dir, exist_ok=True)
-
-    frames: list[pd.DataFrame] = []
-    sources_chargees: list[str] = []
-
-    # 1. Tenter de charger les sources existantes
-    for nom, nom_fichier in [
-        ("facebook", "facebook_raw.parquet"),
-        ("google", "google_raw.parquet"),
-    ]:
-        chemin = os.path.join(raw_dir, nom_fichier)
-        df = _charger_parquet(chemin)
-        if df is not None:
-            frames.append(df)
-            sources_chargees.append(nom)
-
-    # 2. Fallback local si aucune source trouvée
-    if not frames:
-        logger.info("Aucune source locale — chargement du fallback demo.")
-        df_fallback = _charger_fallback_demo(demo_dir)
-        frames.append(df_fallback)
-        sources_chargees.append("fallback_demo")
-
-    # 3. Fusionner les sources
-    df_final = pd.concat(frames, ignore_index=True)
-    df_final = _assurer_colonnes(df_final)
-
-    # 4. Sauvegarder dans data/raw/
-    chemin_output = os.path.join(raw_dir, "collected_raw.parquet")
-    df_final.to_parquet(chemin_output, index=False)
-
-    # 5. Logger le résumé
     logger.info("=== RÉSUMÉ COLLECTE ===")
-    logger.info("Sources    : %s", ", ".join(sources_chargees))
-    logger.info("Volume     : %d enregistrements", len(df_final))
-    logger.info("Colonnes   : %s", list(df_final.columns))
-    logger.info("Sauvegardé : %s", chemin_output)
+    logger.info("Sources    : %s", ", ".join(channel for channel, _ in sources))
+    logger.info("Volume     : %d enregistrements", len(collected))
+    logger.info("Colonnes   : %s", list(collected.columns))
+    logger.info("Sauvegardé : %s", output_path)
     logger.info("=======================")
+
+    return output_path
 
 
 if __name__ == "__main__":

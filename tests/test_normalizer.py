@@ -457,3 +457,31 @@ class TestCasUsageReels:
         assert "ح" in normalized  # 7→ح
         assert "غ" in normalized  # gh→غ
         assert _get(r, "language") == "darija"
+
+
+class TestAlignementPRD:
+    """Vérifie les cas PRD qui étaient auparavant simplifiés."""
+
+    def test_arabizi_phrase_complete_est_translitteree_sans_latin_residuel(self):
+        r = normalize("7aja mli7a bzaf")
+        normalized = _get(r, "normalized")
+        assert normalized == "حاجه مليحه بزاف"
+        assert not any("a" <= ch.lower() <= "z" for ch in normalized)
+
+    def test_ghali_bzaf_est_reconnu_comme_darija_meme_sans_chiffre(self):
+        r = normalize("ghali bzaf")
+        assert _get(r, "normalized") == "غالي بزاف"
+        assert _get(r, "language") == "darija"
+
+    def test_khir_est_converti_en_arabe_meme_sans_chiffre(self):
+        r = normalize("khir")
+        assert _get(r, "normalized") == "خير"
+
+    def test_exemple_prd_ramy_m3andhoumch_ta3m_supprime_les_chiffres(self):
+        r = normalize("ramy m3andhoumch ta3m")
+        normalized = _get(r, "normalized")
+        assert "3" not in normalized
+        assert "m3andhoumch" not in normalized
+        assert "ta3m" not in normalized
+        assert "ماعندهمش" in normalized
+        assert "طعم" in normalized

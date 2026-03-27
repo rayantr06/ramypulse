@@ -14,7 +14,7 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from core.whatif.simulator import simulate_whatif  # noqa: E402
+from core.whatif.simulator import simulate, simulate_whatif  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -68,7 +68,7 @@ def df_sample() -> pd.DataFrame:
 
 def test_output_contient_toutes_les_cles(df_sample: pd.DataFrame) -> None:
     """Le dict retourné doit avoir exactement les 6 clés attendues."""
-    result = simulate_whatif("goût", "améliorer", df_sample)
+    result = simulate("goût", "améliorer", df_sample)
     expected = {
         "nss_actuel",
         "nss_simule",
@@ -179,4 +179,31 @@ def test_nss_by_channel_simulated_est_un_dict(df_sample: pd.DataFrame) -> None:
 def test_scenario_invalide_leve_valueerror(df_sample: pd.DataFrame) -> None:
     """Un scénario non reconnu doit lever une ValueError."""
     with pytest.raises(ValueError):
-        simulate_whatif("goût", "magique", df_sample)
+        simulate("goût", "magique", df_sample)
+
+
+def test_alias_retrocompatible_simulate_whatif(df_sample: pd.DataFrame) -> None:
+    """L'ancien nom de fonction doit rester compatible pour ne pas casser l'existant."""
+    assert simulate("goût", "améliorer", df_sample) == simulate_whatif("goût", "améliorer", df_sample)
+
+
+def test_simulate_supporte_colonne_aspects_liste(df_sample: pd.DataFrame) -> None:
+    """Le simulateur doit supporter une colonne ``aspects`` issue de l'ABSA."""
+    df_multi = df_sample.drop(columns=["aspect"]).copy()
+    df_multi["aspects"] = [
+        ["emballage"],
+        ["emballage"],
+        ["emballage"],
+        ["goût"],
+        ["goût"],
+        ["goût"],
+        ["prix"],
+        ["prix"],
+        ["prix"],
+        ["disponibilité"],
+    ]
+
+    result = simulate("prix", "dégrader", df_multi)
+
+    assert result["affected_count"] == 3
+    assert result["delta"] < 0

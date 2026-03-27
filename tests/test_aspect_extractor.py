@@ -5,6 +5,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+import core.analysis.aspect_extractor as aspect_extractor
 from core.analysis.aspect_extractor import extract_aspects
 
 
@@ -110,3 +111,22 @@ def test_supports_underscore_keywords_with_spaces() -> None:
 def test_ignores_substring_inside_longer_word() -> None:
     """Vérifie qu'un mot-clé n'est pas détecté au milieu d'un mot plus long."""
     assert extract_aspects("disponiblement faux mot") == []
+
+
+def test_dictionary_is_extensible_via_config_without_code_change(monkeypatch) -> None:
+    """Le dictionnaire métier doit pouvoir être enrichi via la configuration."""
+    monkeypatch.setattr(
+        aspect_extractor.config,
+        "ASPECT_KEYWORDS",
+        {
+            **aspect_extractor.DEFAULT_ASPECT_KEYWORDS,
+            "prix": [*aspect_extractor.DEFAULT_ASPECT_KEYWORDS["prix"], "tarifpromo"],
+        },
+        raising=False,
+    )
+
+    results = extract_aspects("tarifpromo sur ramy aujourd'hui")
+
+    assert len(results) == 1
+    assert results[0]["aspect"] == "prix"
+    assert results[0]["mention"] == "tarifpromo"

@@ -32,7 +32,18 @@ REMAPPING_DEGRADER: dict[str, str] = {
 }
 
 
-def simulate_whatif(aspect: str, scenario: str, df: pd.DataFrame) -> dict:
+def _build_aspect_mask(dataframe: pd.DataFrame, aspect: str) -> pd.Series:
+    """Construit un masque compatible avec une colonne aspect scalaire ou aspects liste."""
+    if "aspects" in dataframe.columns:
+        return dataframe["aspects"].apply(
+            lambda value: isinstance(value, (list, tuple, set)) and aspect in value
+        )
+    if "aspect" not in dataframe.columns:
+        return pd.Series(False, index=dataframe.index)
+    return dataframe["aspect"] == aspect
+
+
+def simulate(aspect: str, scenario: str, df: pd.DataFrame) -> dict:
     """Simule l'impact d'un scénario What-If sur le NSS global.
 
     Algorithme :
@@ -72,7 +83,7 @@ def simulate_whatif(aspect: str, scenario: str, df: pd.DataFrame) -> dict:
     nss_actuel = calculate_nss(df)["nss_global"]
 
     # 3. Identifier les enregistrements de l'aspect ciblé
-    mask_aspect = df_sim["aspect"] == aspect
+    mask_aspect = _build_aspect_mask(df_sim, aspect)
     affected_count = int(mask_aspect.sum())
 
     # Cas particulier : aucun enregistrement pour cet aspect
@@ -130,6 +141,11 @@ def simulate_whatif(aspect: str, scenario: str, df: pd.DataFrame) -> dict:
         "affected_count": affected_count,
         "nss_by_channel_simulated": nss_by_channel_simulated,
     }
+
+
+def simulate_whatif(aspect: str, scenario: str, df: pd.DataFrame) -> dict:
+    """Alias rétrocompatible vers l'API PRD ``simulate``."""
+    return simulate(aspect, scenario, df)
 
 
 def _generer_interpretation(aspect: str, scenario: str, delta: float) -> str:

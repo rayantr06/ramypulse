@@ -5,8 +5,7 @@ import re
 import config
 
 DEFAULT_ASPECT_LIST = ["goût", "emballage", "prix", "disponibilité", "fraîcheur"]
-
-ASPECT_KEYWORDS = {
+DEFAULT_ASPECT_KEYWORDS = {
     "goût": ["ta3m", "طعم", "goût", "saveur", "madha9", "bnin", "ldid", "mli7", "doux", "amer", "sucré"],
     "emballage": ["bouteille", "plastique", "تغليف", "9ar3a", "emballage", "packaging", "3olba", "couvercle", "bouchon", "fuite"],
     "prix": ["ghali", "rkhis", "سعر", "prix", "cher", "pas_cher", "prix_abordable", "t7ayol", "promotions"],
@@ -18,6 +17,11 @@ ASPECT_KEYWORDS = {
 def _get_aspect_list() -> list[str]:
     """Retourne la liste d'aspects configurée ou la valeur par défaut."""
     return list(getattr(config, "ASPECT_LIST", DEFAULT_ASPECT_LIST))
+
+
+def _get_aspect_keywords() -> dict[str, list[str]]:
+    """Retourne le dictionnaire de mots-clés configuré ou la valeur par défaut."""
+    return dict(getattr(config, "ASPECT_KEYWORDS", DEFAULT_ASPECT_KEYWORDS))
 
 
 def _keyword_to_regex(keyword: str) -> str:
@@ -33,7 +37,7 @@ def _compile_patterns() -> dict[str, re.Pattern[str]]:
     """Compile les motifs regex pour chaque aspect supporté."""
     configured_aspects = set(_get_aspect_list())
     patterns = {}
-    for aspect, keywords in ASPECT_KEYWORDS.items():
+    for aspect, keywords in _get_aspect_keywords().items():
         if aspect not in configured_aspects:
             continue
         union = "|".join(_keyword_to_regex(keyword) for keyword in keywords)

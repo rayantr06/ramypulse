@@ -287,3 +287,34 @@ def test_groups_trends_by_week() -> None:
     assert list(trends["week_start"].dt.strftime("%Y-%m-%d")) == ["2026-01-05", "2026-01-12"]
     assert list(trends["nss"]) == pytest.approx([0.0, 100.0])
     assert list(trends["volume_total"]) == [2, 1]
+
+
+def test_calculates_nss_by_aspect_from_multi_aspect_rows() -> None:
+    """Le calcul par aspect doit exploser les lignes multi-aspects."""
+    df = pd.DataFrame(
+        [
+            {
+                "text": "a",
+                "sentiment_label": "positif",
+                "channel": "facebook",
+                "aspects": ["goût", "prix"],
+                "source_url": "https://x/1",
+                "timestamp": "2026-01-01",
+            },
+            {
+                "text": "b",
+                "sentiment_label": "négatif",
+                "channel": "youtube",
+                "aspects": ["prix"],
+                "source_url": "https://x/2",
+                "timestamp": "2026-01-02",
+            },
+        ]
+    )
+
+    result = calculate_nss(df)
+
+    assert result["nss_by_aspect"] == {
+        "goût": pytest.approx(100.0),
+        "prix": pytest.approx(0.0),
+    }

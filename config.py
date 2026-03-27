@@ -19,14 +19,18 @@ load_dotenv()
 BASE_DIR: Path = Path(__file__).parent.resolve()
 DATA_DIR: Path = BASE_DIR / "data"
 MODELS_DIR: Path = BASE_DIR / "models"
+RAW_DATA_DIR: Path = DATA_DIR / "raw"
+PROCESSED_DATA_DIR: Path = DATA_DIR / "processed"
+EMBEDDINGS_DIR: Path = DATA_DIR / "embeddings"
+DEMO_DATA_DIR: Path = DATA_DIR / "demo"
 
 # Création automatique des dossiers si absents
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 MODELS_DIR.mkdir(parents=True, exist_ok=True)
-(DATA_DIR / "raw").mkdir(parents=True, exist_ok=True)
-(DATA_DIR / "processed").mkdir(parents=True, exist_ok=True)
-(DATA_DIR / "embeddings").mkdir(parents=True, exist_ok=True)
-(DATA_DIR / "demo").mkdir(parents=True, exist_ok=True)
+RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
+PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
+EMBEDDINGS_DIR.mkdir(parents=True, exist_ok=True)
+DEMO_DATA_DIR.mkdir(parents=True, exist_ok=True)
 (MODELS_DIR / "dziribert").mkdir(parents=True, exist_ok=True)
 (MODELS_DIR / "whisper").mkdir(parents=True, exist_ok=True)
 
@@ -56,7 +60,7 @@ EMBEDDING_DIM: int = 768
 # Index FAISS
 # ---------------------------------------------------------------------------
 
-FAISS_INDEX_PATH: Path = DATA_DIR / "embeddings" / "faiss_index"
+FAISS_INDEX_PATH: Path = EMBEDDINGS_DIR / "faiss_index"
 """Chemin vers l'index FAISS sauvegardé sur disque."""
 
 # ---------------------------------------------------------------------------
@@ -88,6 +92,67 @@ CHANNELS: list[str] = [
     "youtube",
 ]
 """Canaux de collecte supportés."""
+
+ASPECT_KEYWORDS: dict[str, list[str]] = {
+    "goût": [
+        "ta3m",
+        "طعم",
+        "goût",
+        "saveur",
+        "madha9",
+        "bnin",
+        "ldid",
+        "mli7",
+        "doux",
+        "amer",
+        "sucré",
+    ],
+    "emballage": [
+        "bouteille",
+        "plastique",
+        "تغليف",
+        "9ar3a",
+        "emballage",
+        "packaging",
+        "3olba",
+        "couvercle",
+        "bouchon",
+        "fuite",
+    ],
+    "prix": [
+        "ghali",
+        "rkhis",
+        "سعر",
+        "prix",
+        "cher",
+        "pas_cher",
+        "prix_abordable",
+        "t7ayol",
+        "promotions",
+    ],
+    "disponibilité": [
+        "nlgah",
+        "ma_kaynch",
+        "متوفر",
+        "disponible",
+        "rupture",
+        "yla9awh",
+        "ma_lgitouch",
+    ],
+    "fraîcheur": [
+        "bared",
+        "skhoun",
+        "طازج",
+        "frais",
+        "froid",
+        "chaud",
+        "périmé",
+        "fraîcheur",
+        "date",
+        "expiration",
+    ],
+}
+"""Dictionnaire bilingue des mots-clés d'aspects, surchargeable via config."""
 
 # ---------------------------------------------------------------------------
 # Formule NSS (Net Sentiment Score)

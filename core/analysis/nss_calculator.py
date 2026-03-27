@@ -64,6 +64,32 @@ def _group_nss(dataframe: pd.DataFrame, column: str) -> dict[str, float]:
     return grouped_scores
 
 
+def _normalize_aspect_values(value: object) -> list[str]:
+    """Normalise une valeur d'aspect scalaire ou multiple vers une liste exploitable."""
+    if isinstance(value, (list, tuple, set)):
+        return [str(item) for item in value if item is not None and not pd.isna(item)]
+    if value is None or pd.isna(value):
+        return []
+    return [str(value)]
+
+
+def _prepare_aspect_dataframe(dataframe: pd.DataFrame) -> pd.DataFrame:
+    """Prépare une vue explosée des aspects pour le calcul NSS par aspect."""
+    if dataframe.empty:
+        return dataframe.copy()
+
+    working = dataframe.copy()
+    source_column = "aspects" if "aspects" in working.columns else "aspect"
+    if source_column not in working.columns:
+        return pd.DataFrame(columns=list(working.columns) + ["aspect"])
+
+    working["aspect"] = working[source_column].apply(_normalize_aspect_values)
+    working = working.explode("aspect")
+    working = working.dropna(subset=["aspect"])
+    working["aspect"] = working["aspect"].astype(str).str.strip()
+    return working[working["aspect"] != ""]
+
+
 def _build_trends(dataframe: pd.DataFrame) -> pd.DataFrame:
     """Construit la tendance hebdomadaire du NSS."""
     if dataframe.empty:
@@ -117,10 +143,11 @@ def calculate_nss(dataframe: pd.DataFrame) -> dict[str, object]:
         }
 
     distribution = _build_distribution(dataframe)
+    aspect_dataframe = _prepare_aspect_dataframe(dataframe)
     return {
         "nss_global": _compute_nss_from_distribution(distribution),
         "nss_by_channel": _group_nss(dataframe, "channel"),
-        "nss_by_aspect": _group_nss(dataframe, "aspect"),
+        "nss_by_aspect": _group_nss(aspect_dataframe, "aspect"),
         "trends": _build_trends(dataframe),
         "volume_total": int(len(dataframe)),
         "distribution": distribution,
@@ -148,4 +175,4 @@ def calculate_nss_by_aspect(dataframe: pd.DataFrame) -> dict[str, float]:
     Returns:
         Dict {aspect: nss_value}.
     """
-    return _group_nss(dataframe, "aspect")
+    return _group_nss(_prepare_aspect_dataframe(dataframe), "aspect")
