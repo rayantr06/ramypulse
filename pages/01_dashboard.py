@@ -1,5 +1,6 @@
 """Dashboard principal ABSA + NSS pour RamyPulse."""
 
+import logging
 import sys
 from pathlib import Path
 
@@ -13,6 +14,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from config import ASPECT_LIST, CHANNELS, DATA_DIR, SENTIMENT_LABELS
 from core.analysis.nss_calculator import calculate_nss
+from pages.whatif_helpers import build_mock_df
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Constantes visuelles
@@ -58,13 +62,13 @@ def _nss_arrow(nss: float) -> str:
 
 @st.cache_data(ttl=300)
 def _load_data() -> pd.DataFrame:
-    """Charge le dataset annoté depuis le Parquet."""
-    if not _PARQUET_PATH.exists():
-        return pd.DataFrame(
-            columns=["text", "sentiment_label", "channel", "aspect",
-                      "source_url", "timestamp", "confidence"]
-        )
-    df = pd.read_parquet(_PARQUET_PATH)
+    """Charge le dataset annoté depuis le Parquet ou fallback démo."""
+    if _PARQUET_PATH.exists():
+        df = pd.read_parquet(_PARQUET_PATH)
+        df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
+        return df
+    logger.warning("Aucune donnée trouvée — mode démo avec données synthétiques.")
+    df = build_mock_df(n=500)
     df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
     return df
 
@@ -279,12 +283,11 @@ def main() -> None:
 
     raw = _load_data()
 
-    if raw.empty:
-        st.warning(
-            "Aucune donnée trouvée. "
-            f"Placez un fichier Parquet dans `{_PARQUET_PATH}`."
+    if not _PARQUET_PATH.exists():
+        st.info(
+            "📊 **Mode démo** — Données synthétiques. "
+            "Placez un fichier annoté dans `data/processed/` pour les vraies données."
         )
-        return
 
     filtered = _build_filters(raw)
     nss_result = calculate_nss(filtered)

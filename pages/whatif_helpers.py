@@ -5,6 +5,8 @@ Logique métier extraite de la page Streamlit pour permettre le TDD.
 import logging
 from datetime import datetime
 
+from datetime import timedelta
+
 import numpy as np
 import pandas as pd
 
@@ -130,7 +132,10 @@ def build_mock_df(n: int = 200) -> pd.DataFrame:
             "channel": rng.choice(canaux, n).tolist(),
             "aspect": rng.choice(aspects, n).tolist(),
             "source_url": [f"http://demo/{i}" for i in range(n)],
-            "timestamp": [datetime(2024, 1, 1).isoformat()] * n,
+            "timestamp": [
+                (datetime(2024, 1, 1) + timedelta(days=int(d))).isoformat()
+                for d in rng.integers(0, 56, n)
+            ],
             "confidence": rng.uniform(0.6, 1.0, n).round(3).tolist(),
         }
     )

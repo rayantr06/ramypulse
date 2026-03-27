@@ -31,8 +31,14 @@ st.markdown(
 )
 st.markdown("Utilisez la barre latérale pour naviguer entre les pages.")
 
-col1, col2 = st.columns(2)
-with col1:
-    st.info("**Dashboard** — KPIs, matrice ABSA, tendances")
-with col2:
-    st.info("**Explorateur** — Recherche et filtres avancés")
+c1, c2 = st.columns(2)
+c3, c4 = st.columns(2)
+
+with c1:
+    st.info("📊 **Dashboard** — KPIs, matrice ABSA, tendances")
+with c2:
+    st.info("🔍 **Explorateur** — Recherche et filtres avancés")
+with c3:
+    st.info("💬 **Chat Q&A** — Questions en langage naturel + sources")
+with c4:
+    st.info("🔮 **What-If** — Simulation d'impact par aspect")
