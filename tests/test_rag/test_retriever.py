@@ -1,7 +1,7 @@
 """Tests TDD pour core/rag/retriever.py.
 
 Utilise un VectorStore réel (vecteurs aléatoires) + Embedder mocké.
-Vérifie : nombre de résultats, clés, url non vides, scores RRF > 0, robustesse.
+Vérifie : API search/retrieve, résultats, provenance, RRF, doublons, robustesse.
 """
 import os
 import sys
@@ -56,16 +56,16 @@ def _mock_embedder() -> MagicMock:
 # ---------------------------------------------------------------------------
 
 def test_retrieve_retourne_top_k_resultats() -> None:
-    """retrieve(question, top_k=5) doit retourner 5 résultats."""
+    """search(question, top_k=5) doit retourner 5 résultats."""
     retriever = Retriever(_make_store(10), _mock_embedder())
-    results = retriever.retrieve("goût Ramy", top_k=5)
+    results = retriever.search("goût Ramy", top_k=5)
     assert len(results) == 5
 
 
 def test_chaque_resultat_possede_les_cles_requises() -> None:
     """Chaque résultat doit avoir text, channel, url, timestamp, score."""
     retriever = Retriever(_make_store(10), _mock_embedder())
-    for r in retriever.retrieve("emballage", top_k=3):
+    for r in retriever.search("emballage", top_k=3):
         assert "text" in r
         assert "channel" in r
         assert "url" in r
@@ -76,35 +76,95 @@ def test_chaque_resultat_possede_les_cles_requises() -> None:
 def test_chaque_resultat_a_une_url_non_vide() -> None:
     """url ne doit pas être une chaîne vide (source obligatoire)."""
     retriever = Retriever(_make_store(10), _mock_embedder())
-    for r in retriever.retrieve("prix", top_k=5):
+    for r in retriever.search("prix", top_k=5):
         assert r["url"] != ""
 
 
 def test_scores_rrf_sont_positifs() -> None:
     """Les scores RRF doivent être strictement positifs."""
     retriever = Retriever(_make_store(10), _mock_embedder())
-    for r in retriever.retrieve("disponibilité", top_k=3):
+    for r in retriever.search("disponibilité", top_k=3):
         assert r["score"] > 0.0
 
 
 def test_retrieve_top_k_superieur_corpus() -> None:
     """Si top_k > taille du corpus, retourner tout le corpus (pas d'erreur)."""
     retriever = Retriever(_make_store(3), _mock_embedder())
-    results = retriever.retrieve("fraîcheur", top_k=20)
+    results = retriever.search("fraîcheur", top_k=20)
     assert 0 < len(results) <= 3
 
 
 def test_retrieve_corpus_vide_retourne_liste_vide() -> None:
-    """Avec un VectorStore vide, retrieve doit retourner []."""
+    """Avec un VectorStore vide, search doit retourner []."""
     vs = VectorStore()  # index vide
     retriever = Retriever(vs, _mock_embedder())
-    results = retriever.retrieve("question", top_k=5)
+    results = retriever.search("question", top_k=5)
     assert results == []
 
 
 def test_resultats_tries_par_score_decroissant() -> None:
     """Les résultats doivent être triés du score RRF le plus élevé au plus bas."""
     retriever = Retriever(_make_store(10), _mock_embedder())
-    results = retriever.retrieve("goût", top_k=5)
+    results = retriever.search("goût", top_k=5)
     scores = [r["score"] for r in results]
     assert scores == sorted(scores, reverse=True)
+
+
+def test_retrieve_reste_un_alias_de_search() -> None:
+    """L'ancienne API retrieve() doit rester compatible avec search()."""
+    retriever = Retriever(_make_store(10), _mock_embedder())
+    assert retriever.retrieve("goût", top_k=4) == retriever.search("goût", top_k=4)
+
+
+def test_chunks_avec_textes_identiques_restent_distincts() -> None:
+    """Deux chunks identiques en texte mais différents en metadata doivent tous deux être conservés."""
+    vs = VectorStore()
+    vecs = _rand_vecs(2)
+    meta = [
+        {
+            "text": "Le jus Ramy est excellent",
+            "channel": "facebook",
+            "source_url": "http://fb/1",
+            "timestamp": "2024-01-01",
+        },
+        {
+            "text": "Le jus Ramy est excellent",
+            "channel": "youtube",
+            "source_url": "http://yt/2",
+            "timestamp": "2024-01-02",
+        },
+    ]
+    vs.add(vecs, meta)
+    embedder = _mock_embedder()
+    embedder.embed_query.return_value = vecs[:1]
+
+    retriever = Retriever(vs, embedder)
+    results = retriever.search("jus Ramy", top_k=2)
+
+    assert len(results) == 2
+    assert {r["url"] for r in results} == {"http://fb/1", "http://yt/2"}
+
+
+def test_dense_results_contribuent_apres_reconstruction_metadata() -> None:
+    """Le retriever doit fonctionner même si les objets metadata sont reconstruits (ex: save/load)."""
+    vs = VectorStore()
+    vecs = _rand_vecs(3)
+    meta = [
+        {"text": "texte alpha unique", "channel": "facebook", "source_url": "http://fb/a", "timestamp": "2024-01-01"},
+        {"text": "texte beta unique", "channel": "youtube", "source_url": "http://yt/b", "timestamp": "2024-01-02"},
+        {"text": "texte gamma unique", "channel": "audio", "source_url": "http://au/c", "timestamp": "2024-01-03"},
+    ]
+    vs.add(vecs, meta)
+
+    embedder = _mock_embedder()
+    embedder.embed_query.return_value = vecs[:1]
+
+    retriever = Retriever(vs, embedder)
+
+    # Simuler une reconstruction des objets metadata (comme après save/load)
+    vs.metadata = [dict(m) for m in vs.metadata]
+
+    results = retriever.search("texte alpha", top_k=3)
+    assert len(results) == 3
+    urls = {r["url"] for r in results}
+    assert "http://fb/a" in urls

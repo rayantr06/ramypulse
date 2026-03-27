@@ -21,7 +21,7 @@ _SYSTEM_PROMPT = (
 )
 
 _FALLBACK_NO_INFO = {
-    "answer": "Je ne dispose pas d'informations suffisantes pour répondre à cette question.",
+    "answer": "Je n'ai pas assez d'informations dans les données analysées.",
     "sources": [],
     "confidence": "low",
 }
@@ -68,11 +68,7 @@ class Generator:
             return self._parse(raw, chunks)
         except Exception as exc:
             logger.error("Erreur lors de la génération Ollama : %s", exc)
-            return {
-                "answer": "Une erreur s'est produite lors de la génération de la réponse.",
-                "sources": [],
-                "confidence": "low",
-            }
+            return self._fallback_with_source(chunks)
 
     def _parse(self, raw: str, chunks: list[dict]) -> dict:
         """Parse la réponse JSON d'Ollama et valide les indices de sources.
@@ -88,7 +84,7 @@ class Generator:
             data = json.loads(raw)
         except (json.JSONDecodeError, ValueError):
             logger.warning("Réponse Ollama non-JSON : %.80s…", raw)
-            return {"answer": raw, "sources": [], "confidence": "low"}
+            return self._fallback_with_source(chunks)
 
         answer = str(data.get("answer", ""))
         raw_confidence = data.get("confidence", "low")
@@ -103,6 +99,7 @@ class Generator:
                     c = chunks[idx]
                     sources.append(
                         {
+                            "text": c.get("text", ""),
                             "channel": c.get("channel", ""),
                             "url": c.get("url", ""),
                             "timestamp": c.get("timestamp", ""),
@@ -111,4 +108,29 @@ class Generator:
             except (ValueError, TypeError):
                 continue
 
+        if not sources:
+            return self._fallback_with_source(chunks)
+
+        if not answer.strip():
+            answer = _FALLBACK_NO_INFO["answer"]
+
         return {"answer": answer, "sources": sources, "confidence": confidence}
+
+    def _fallback_with_source(self, chunks: list[dict]) -> dict:
+        """Construit un fallback explicite avec au moins une source si possible."""
+        if not chunks:
+            return dict(_FALLBACK_NO_INFO)
+
+        source = chunks[0]
+        return {
+            "answer": _FALLBACK_NO_INFO["answer"],
+            "sources": [
+                {
+                    "text": source.get("text", ""),
+                    "channel": source.get("channel", ""),
+                    "url": source.get("url", ""),
+                    "timestamp": source.get("timestamp", ""),
+                }
+            ],
+            "confidence": "low",
+        }

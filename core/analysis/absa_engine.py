@@ -34,7 +34,7 @@ def _extract_sentence_for_span(text: str, start: int, end: int) -> str:
     if not text:
         return ""
 
-    for match in re.finditer(r"[^.!?\n]+[.!?\n]?", text):
+    for match in re.finditer(r"[^.!?\u061f\u061b\n]+[.!?\u061f\u061b\n]?", text):
         sentence = match.group(0).strip()
         if not sentence:
             continue

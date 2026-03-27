@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import json
 from pathlib import Path
 from typing import Optional, Union
 
@@ -14,7 +15,12 @@ except Exception:  # pragma: no cover - depend de l'environnement
     AutoModelForSequenceClassification = None
     AutoTokenizer = None
 
-from config import DZIRIBERT_MODEL_PATH, SENTIMENT_LABELS
+try:
+    import ollama
+except Exception:  # pragma: no cover - depend de l'environnement
+    ollama = None
+
+from config import DZIRIBERT_MODEL_PATH, OLLAMA_MODEL, SENTIMENT_LABELS
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +28,13 @@ _DEFAULT_MODEL_NAME = "alger-ia/dziribert"
 _MAX_SEQ_LEN = 128
 _POSITIVE_WORDS = {"bon", "bnin", "good", "mlih", "mli7", "wa3er", "frais", "excellent", "top"}
 _NEGATIVE_WORDS = {"ghali", "cher", "bad", "mauvais", "khayeb", "perime", "fuite", "rupture"}
+_OLLAMA_PROMPT = (
+    "Tu es un classifieur de sentiment pour RamyPulse. "
+    "Classe le texte dans exactement une des 5 classes suivantes: "
+    "très_positif, positif, neutre, négatif, très_négatif. "
+    "Réponds uniquement en JSON avec ce format exact: "
+    '{"label":"...", "confidence": 0.0}'
+)
 
 
 class _FallbackModelOutput:
@@ -98,6 +111,7 @@ class SentimentClassifier:
         self.device = self._resolve_device(device)
         self.num_labels = len(SENTIMENT_LABELS)
         self._fallback_mode = False
+        self._fallback_backend = "local"
 
         if model is not None and tokenizer is not None:
             self.model = model.to(self.device)
@@ -218,7 +232,7 @@ class SentimentClassifier:
                 "Transformers indisponible ou incomplet. Activation du fallback local pour %s.",
                 source,
             )
-            self._use_fallback_model()
+            self._use_best_available_fallback()
             return
 
         try:
@@ -236,17 +250,30 @@ class SentimentClassifier:
                 "Chargement DziriBERT impossible (%s). Activation du fallback local minimal.",
                 exc,
             )
-            self._use_fallback_model()
+            self._use_best_available_fallback()
 
-    def _use_fallback_model(self) -> None:
-        """Active le mode de secours local."""
+    def _use_best_available_fallback(self) -> None:
+        """Active le meilleur fallback disponible, avec priorité à Ollama."""
+        if ollama is not None:
+            self._fallback_mode = True
+            self._fallback_backend = "ollama"
+            self.tokenizer = _FallbackTokenizer()
+            self.model = _FallbackSequenceClassifier(self.num_labels).to(self.device)
+            return
+        self._use_local_fallback_model()
+
+    def _use_local_fallback_model(self) -> None:
+        """Active le mode de secours heuristique local."""
         self._fallback_mode = True
+        self._fallback_backend = "local"
         self.tokenizer = _FallbackTokenizer()
         self.model = _FallbackSequenceClassifier(self.num_labels).to(self.device)
 
     def _run_inference(self, texts: list) -> list:
         """Execute l'inference sur une liste de textes."""
         if self._fallback_mode:
+            if self._fallback_backend == "ollama":
+                return self._run_ollama_fallback_inference(texts)
             return self._run_fallback_inference(texts)
 
         inputs = self.tokenizer(
@@ -279,6 +306,45 @@ class SentimentClassifier:
                     "logits": [float(value) for value in logits_row],
                 }
             )
+        return results
+
+    def _run_ollama_fallback_inference(self, texts: list) -> list:
+        """Exécute une classification zero-shot locale via Ollama."""
+        results = []
+
+        for text in texts:
+            try:
+                response = ollama.chat(
+                    model=OLLAMA_MODEL,
+                    messages=[
+                        {"role": "system", "content": _OLLAMA_PROMPT},
+                        {"role": "user", "content": text},
+                    ],
+                )
+                payload = json.loads(response["message"]["content"])
+                label = str(payload.get("label", "neutre"))
+                if label not in SENTIMENT_LABELS:
+                    raise ValueError(f"Label invalide renvoyé par Ollama: {label}")
+
+                confidence = float(payload.get("confidence", 0.5))
+                confidence = min(max(confidence, 0.0), 1.0)
+                logits = [0.0] * self.num_labels
+                logits[SENTIMENT_LABELS.index(label)] = round(1.0 + confidence, 6)
+
+                results.append(
+                    {
+                        "label": label,
+                        "confidence": confidence,
+                        "logits": logits,
+                    }
+                )
+            except Exception as exc:
+                logger.warning(
+                    "Fallback Ollama indisponible ou invalide (%s). Repli heuristique local.",
+                    exc,
+                )
+                results.extend(self._run_fallback_inference([text]))
+
         return results
 
     def _run_fallback_inference(self, texts: list) -> list:

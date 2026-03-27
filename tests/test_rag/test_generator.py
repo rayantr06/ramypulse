@@ -48,6 +48,7 @@ def test_generate_retourne_cles_answer_sources_confidence(mock_ollama: MagicMock
     assert "answer" in result
     assert "sources" in result
     assert "confidence" in result
+    assert result["sources"][0]["text"] == CHUNKS[0]["text"]
 
 
 @patch("core.rag.generator.ollama")
@@ -84,6 +85,7 @@ def test_sources_sont_des_dicts_avec_metadata(mock_ollama: MagicMock) -> None:
     assert isinstance(result["sources"], list)
     for src in result["sources"]:
         assert isinstance(src, dict)
+        assert "text" in src
         assert "channel" in src
         assert "url" in src
         assert "timestamp" in src
@@ -91,10 +93,13 @@ def test_sources_sont_des_dicts_avec_metadata(mock_ollama: MagicMock) -> None:
 
 @patch("core.rag.generator.ollama")
 def test_source_indice_hors_borne_ignoree(mock_ollama: MagicMock) -> None:
-    """Un indice source hors bornes (ex: 99) doit être ignoré silencieusement."""
+    """Un indice source hors bornes doit déclencher un fallback avec source valide."""
     mock_ollama.chat.return_value = _ollama_resp("Analyse.", [99], "low")
     result = Generator().generate("question", CHUNKS)
-    assert result["sources"] == []
+    assert result["confidence"] == "low"
+    assert len(result["sources"]) == 1
+    assert result["sources"][0]["text"] == CHUNKS[0]["text"]
+    assert result["sources"][0]["url"] == CHUNKS[0]["url"]
 
 
 # ---------------------------------------------------------------------------
@@ -110,7 +115,9 @@ def test_reponse_ollama_non_json_retourne_fallback(mock_ollama: MagicMock) -> No
     result = Generator().generate("question", CHUNKS)
     assert "answer" in result
     assert "confidence" in result
-    assert result["confidence"] in ("high", "medium", "low")
+    assert result["confidence"] == "low"
+    assert len(result["sources"]) == 1
+    assert "pas assez d'informations" in result["answer"].lower()
 
 
 # ---------------------------------------------------------------------------
@@ -124,3 +131,30 @@ def test_exception_ollama_retourne_fallback(mock_ollama: MagicMock) -> None:
     result = Generator().generate("question", CHUNKS)
     assert "answer" in result
     assert result["confidence"] == "low"
+    assert len(result["sources"]) == 1
+    assert result["sources"][0]["text"] == CHUNKS[0]["text"]
+    assert "pas assez d'informations" in result["answer"].lower()
+
+
+# ---------------------------------------------------------------------------
+# Tests PRD : chaque source doit être cliquable (url non vide)
+# ---------------------------------------------------------------------------
+
+@patch("core.rag.generator.ollama")
+def test_sources_ont_url_non_vide(mock_ollama: MagicMock) -> None:
+    """PRD: toute réponse RAG DOIT inclure au moins 1 source cliquable (url non vide)."""
+    mock_ollama.chat.return_value = _ollama_resp("Bonne analyse [Source 1] [Source 2].", [1, 2], "high")
+    result = Generator().generate("question", CHUNKS)
+    assert len(result["sources"]) >= 1
+    for src in result["sources"]:
+        assert src["url"] != "", "Chaque source doit avoir une url cliquable"
+
+
+@patch("core.rag.generator.ollama")
+def test_multi_source_mapping_correct(mock_ollama: MagicMock) -> None:
+    """Deux indices de sources différents doivent correspondre aux bons chunks."""
+    mock_ollama.chat.return_value = _ollama_resp("Analyse.", [1, 2], "high")
+    result = Generator().generate("question", CHUNKS)
+    assert len(result["sources"]) == 2
+    assert result["sources"][0]["channel"] == "facebook"
+    assert result["sources"][1]["channel"] == "google_maps"

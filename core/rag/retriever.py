@@ -3,8 +3,8 @@
 Reciprocal Rank Fusion : score(d) = Σ 1 / (60 + rank_i)
 """
 import logging
+import re
 
-import numpy as np
 from rank_bm25 import BM25Okapi
 
 from core.rag.embedder import Embedder
@@ -29,12 +29,12 @@ class Retriever:
         self.embedder = embedder
         self._corpus: list[str] = [m.get("text", "") for m in vector_store.metadata]
         if self._corpus:
-            tokenized = [doc.lower().split() for doc in self._corpus]
+            tokenized = [self._tokenize(doc) for doc in self._corpus]
             self.bm25: BM25Okapi | None = BM25Okapi(tokenized)
         else:
             self.bm25 = None
 
-    def retrieve(self, question: str, top_k: int = 5) -> list[dict]:
+    def search(self, question: str, top_k: int = 5) -> list[dict]:
         """Recherche hybride dense + sparse avec fusion RRF.
 
         Args:
@@ -56,7 +56,7 @@ class Retriever:
         dense_results = self.vector_store.search(query_vec, k=k_fetch)
 
         # 2. Recherche sparse (BM25)
-        tokens = question.lower().split()
+        tokens = self._tokenize(question)
         if self.bm25 is not None:
             bm25_scores = self.bm25.get_scores(tokens)
             bm25_ranked = sorted(range(len(bm25_scores)), key=lambda i: bm25_scores[i], reverse=True)[:k_fetch]
@@ -66,10 +66,8 @@ class Retriever:
         # 3. RRF fusion — clé = index dans le corpus
         rrf: dict[int, float] = {}
 
-        for rank, (meta, _) in enumerate(dense_results):
-            idx = self._corpus_index(meta.get("text", ""))
-            if idx is not None:
-                rrf[idx] = rrf.get(idx, 0.0) + 1.0 / (_RRF_K + rank + 1)
+        for rank, (meta, _, idx) in enumerate(dense_results):
+            rrf[idx] = rrf.get(idx, 0.0) + 1.0 / (_RRF_K + rank + 1)
 
         for rank, idx in enumerate(bm25_ranked):
             rrf[idx] = rrf.get(idx, 0.0) + 1.0 / (_RRF_K + rank + 1)
@@ -91,16 +89,11 @@ class Retriever:
             )
         return results
 
-    def _corpus_index(self, text: str) -> int | None:
-        """Retrouve l'index d'un texte dans le corpus interne.
+    def retrieve(self, question: str, top_k: int = 5) -> list[dict]:
+        """Alias rétrocompatible de ``search``."""
+        return self.search(question, top_k=top_k)
 
-        Args:
-            text: Texte exact à rechercher.
-
-        Returns:
-            Index entier dans self._corpus, ou None si absent.
-        """
-        for i, t in enumerate(self._corpus):
-            if t == text:
-                return i
-        return None
+    @staticmethod
+    def _tokenize(text: str) -> list[str]:
+        """Tokenise un texte pour la BM25 de façon robuste et déterministe."""
+        return re.findall(r"\w+", text.lower())

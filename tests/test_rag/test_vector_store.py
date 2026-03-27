@@ -51,17 +51,18 @@ def test_add_et_search_retourne_k_resultats() -> None:
     assert len(results) == 3
 
 
-def test_search_retourne_tuples_metadata_score() -> None:
-    """Chaque résultat est un tuple (dict_metadata, float_score)."""
+def test_search_retourne_tuples_metadata_score_index() -> None:
+    """Chaque résultat est un tuple (dict_metadata, float_score, int_index)."""
     vs = VectorStore()
     vs.add(_rand_vecs(5), _make_meta(5))
     results = vs.search(_rand_vecs(1), k=2)
-    for meta, score in results:
+    for meta, score, idx in results:
         assert isinstance(meta, dict)
         assert "text" in meta
         assert "channel" in meta
         assert "source_url" in meta
         assert isinstance(score, float)
+        assert isinstance(idx, int)
 
 
 def test_metadata_accessible_apres_add() -> None:
@@ -132,5 +133,16 @@ def test_save_et_load_recherche_fonctionnelle(tmp_path: pytest.TempPathFactory) 
     vs2 = VectorStore.load(path)
     results = vs2.search(_rand_vecs(1), k=5)
     assert len(results) == 5
-    for meta, score in results:
+    for meta, score, idx in results:
         assert "text" in meta
+
+
+def test_search_retourne_index_positionnel() -> None:
+    """Chaque résultat de search doit inclure l'index positionnel dans metadata."""
+    vs = VectorStore()
+    vs.add(_rand_vecs(5), _make_meta(5))
+    results = vs.search(_rand_vecs(1), k=3)
+    for meta, score, idx in results:
+        assert isinstance(idx, int)
+        assert 0 <= idx < 5
+        assert vs.metadata[idx] is meta

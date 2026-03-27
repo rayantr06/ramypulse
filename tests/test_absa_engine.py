@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from config import SENTIMENT_LABELS
 from core.analysis import absa_engine
 
 
@@ -182,6 +183,58 @@ def test_pipeline_saves_output_parquet(monkeypatch, tmp_path: Path) -> None:
         "aspect_sentiments",
     ]
     assert len(reloaded) == 1
+
+
+def test_extract_sentence_handles_arabic_punctuation() -> None:
+    """La fonction d'extraction de phrase doit gérer la ponctuation arabe (؟ ، ؛)."""
+    text = "المنتج جيد؟ الطعم ممتاز، السعر مقبول"
+    # L'aspect "الطعم" (goût) commence à l'index 13, finit à 18
+    sentence = absa_engine._extract_sentence_for_span(text, 13, 18)
+    # La phrase doit être séparée par le ؟ arabe
+    assert "المنتج جيد" not in sentence
+    assert "الطعم" in sentence
+
+
+def test_extract_sentence_arabic_question_mark() -> None:
+    """Le point d'interrogation arabe ؟ doit servir de séparateur de phrases."""
+    text = "هل هذا غالي؟ الجودة ممتازة"
+    sentence = absa_engine._extract_sentence_for_span(text, 14, 20)
+    assert "غالي" not in sentence
+    assert "الجودة" in sentence
+
+
+def test_aspect_sentiments_utilisent_labels_prd(monkeypatch) -> None:
+    """PRD: les sentiments par aspect doivent utiliser les 5 classes discrètes officielles."""
+    df = build_input_dataframe(
+        [
+            {
+                "text": "Le goût est bon mais le prix est ghali.",
+                "channel": "facebook",
+                "source_url": "https://x/5",
+                "timestamp": "2026-01-05",
+            }
+        ]
+    )
+
+    monkeypatch.setattr(absa_engine, "classify_sentiment", fake_classifier)
+    monkeypatch.setattr(
+        absa_engine,
+        "extract_aspects",
+        lambda text: [
+            {"aspect": "goût", "mention": "goût", "start": 3, "end": 7},
+            {"aspect": "prix", "mention": "prix", "start": 25, "end": 29},
+        ],
+    )
+
+    result = absa_engine.run_absa_pipeline(df)
+    for annotation in result.loc[0, "aspect_sentiments"]:
+        assert annotation["sentiment"] in SENTIMENT_LABELS, (
+            f"Label aspect invalide: '{annotation['sentiment']}'. "
+            f"Attendu un de: {SENTIMENT_LABELS}"
+        )
+        assert 0.0 <= annotation["confidence"] <= 1.0
+        assert "aspect" in annotation
+        assert "mention" in annotation
 
 
 def test_pipeline_handles_hundred_texts_without_crashing(monkeypatch) -> None:

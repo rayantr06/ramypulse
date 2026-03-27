@@ -41,7 +41,7 @@ class VectorStore:
             self.index.add(vecs)
             logger.info("VectorStore : %d vecteurs indexés.", self.index.ntotal)
 
-    def search(self, query_vec: np.ndarray, k: int) -> list[tuple[dict, float]]:
+    def search(self, query_vec: np.ndarray, k: int) -> list[tuple[dict, float, int]]:
         """Recherche les k voisins les plus proches par distance L2.
 
         Args:
@@ -49,7 +49,8 @@ class VectorStore:
             k: Nombre maximum de résultats.
 
         Returns:
-            Liste de (metadata_dict, distance_l2) triée du plus proche au plus loin.
+            Liste de (metadata_dict, distance_l2, index_positionnel)
+            triée du plus proche au plus loin.
         """
         if self.index.ntotal == 0:
             return []
@@ -63,8 +64,9 @@ class VectorStore:
 
         results = []
         for dist, idx in zip(distances[0], indices[0]):
-            if 0 <= idx < len(self.metadata):
-                results.append((self.metadata[int(idx)], float(dist)))
+            pos = int(idx)
+            if 0 <= pos < len(self.metadata):
+                results.append((self.metadata[pos], float(dist), pos))
         return results
 
     def save(self, path: str) -> None:
