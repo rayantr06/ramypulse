@@ -158,3 +158,106 @@ def test_multi_source_mapping_correct(mock_ollama: MagicMock) -> None:
     assert len(result["sources"]) == 2
     assert result["sources"][0]["channel"] == "facebook"
     assert result["sources"][1]["channel"] == "google_maps"
+
+
+# ---------------------------------------------------------------------------
+# Tests Sprint 0c — JSON robuste
+# ---------------------------------------------------------------------------
+
+def test_extract_json_depuis_bloc_markdown_json() -> None:
+    """_extract_json() doit parser un JSON wrappé dans ```json...```."""
+    raw = '```json\n{"answer": "OK", "sources": [1], "confidence": "high"}\n```'
+    result = Generator._extract_json(raw)
+    assert result is not None
+    assert result["answer"] == "OK"
+    assert result["sources"] == [1]
+
+
+def test_extract_json_depuis_bloc_markdown_sans_tag() -> None:
+    """_extract_json() doit parser un JSON wrappé dans ```...``` (sans 'json')."""
+    raw = '```\n{"answer": "Test", "sources": [2], "confidence": "medium"}\n```'
+    result = Generator._extract_json(raw)
+    assert result is not None
+    assert result["answer"] == "Test"
+    assert result["confidence"] == "medium"
+
+
+def test_extract_json_avec_texte_autour() -> None:
+    """_extract_json() doit extraire le JSON quand du texte l'entoure."""
+    raw = 'Voici ma réponse :\n{"answer": "Extrait", "sources": [1], "confidence": "low"}\nFin.'
+    result = Generator._extract_json(raw)
+    assert result is not None
+    assert result["answer"] == "Extrait"
+
+
+# ---------------------------------------------------------------------------
+# Tests Sprint 0c — Retry avec backoff
+# ---------------------------------------------------------------------------
+
+@patch("core.rag.generator.time")
+@patch("core.rag.generator.ollama")
+def test_retry_3_echecs_consecutifs_retourne_fallback(
+    mock_ollama: MagicMock, mock_time: MagicMock
+) -> None:
+    """3 échecs Ollama consécutifs → fallback retourné après MAX_RETRIES tentatives."""
+    mock_ollama.chat.side_effect = ConnectionError("Ollama non disponible")
+    result = Generator().generate("question", CHUNKS)
+    assert mock_ollama.chat.call_count == 3
+    assert mock_time.sleep.call_count == 2  # sleep après tentative 1 et 2, pas après 3
+    assert result["confidence"] == "low"
+    assert "pas assez d'informations" in result["answer"].lower()
+    assert len(result["sources"]) == 1
+
+
+@patch("core.rag.generator.time")
+@patch("core.rag.generator.ollama")
+def test_retry_1_echec_puis_succes_retourne_reponse(
+    mock_ollama: MagicMock, mock_time: MagicMock
+) -> None:
+    """1 échec suivi d'un succès → réponse valide retournée à la 2e tentative."""
+    mock_ollama.chat.side_effect = [
+        ConnectionError("Temporairement indisponible"),
+        _ollama_resp("Réponse après retry.", [1], "high"),
+    ]
+    result = Generator().generate("question", CHUNKS)
+    assert mock_ollama.chat.call_count == 2
+    assert mock_time.sleep.call_count == 1
+    assert "answer" in result
+    assert len(result["sources"]) >= 1
+
+
+# ---------------------------------------------------------------------------
+# Tests Sprint 0c — Confidence par similarité
+# ---------------------------------------------------------------------------
+
+@patch("core.rag.generator.ollama")
+def test_confidence_high_quand_scores_eleves(mock_ollama: MagicMock) -> None:
+    """Chunks avec score > 0.7 → confidence 'high', même si LLM retourne 'low'."""
+    mock_ollama.chat.return_value = _ollama_resp("Bonne réponse.", [1], "low")
+    chunks_high = [
+        {"text": "super produit", "channel": "facebook", "url": "http://fb/1",
+         "timestamp": "2024-01-01", "score": 0.92},
+    ]
+    result = Generator().generate("question", chunks_high)
+    assert result["confidence"] == "high"
+
+
+@patch("core.rag.generator.ollama")
+def test_confidence_low_quand_scores_faibles(mock_ollama: MagicMock) -> None:
+    """Chunks avec score < 0.4 → confidence 'low', même si LLM retourne 'high'."""
+    mock_ollama.chat.return_value = _ollama_resp("Réponse.", [1], "high")
+    chunks_low = [
+        {"text": "produit bof", "channel": "google_maps", "url": "http://gm/1",
+         "timestamp": "2024-01-01", "score": 0.15},
+    ]
+    result = Generator().generate("question", chunks_low)
+    assert result["confidence"] == "low"
+
+
+def test_confidence_medium_sans_cle_score() -> None:
+    """_compute_confidence retourne 'medium' si aucun chunk n'a de clé 'score'."""
+    chunks_no_score = [
+        {"text": "texte A", "channel": "facebook", "url": "http://x"},
+        {"text": "texte B", "channel": "youtube", "url": "http://y"},
+    ]
+    assert Generator._compute_confidence(chunks_no_score) == "medium"
