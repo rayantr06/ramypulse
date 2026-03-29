@@ -146,3 +146,79 @@ def test_search_retourne_index_positionnel() -> None:
         assert isinstance(idx, int)
         assert 0 <= idx < 5
         assert vs.metadata[idx] is meta
+
+
+# ---------------------------------------------------------------------------
+# Tests add_incremental + ntotal
+# ---------------------------------------------------------------------------
+
+def test_add_incremental_accumule_vecteurs() -> None:
+    """Deux ajouts incrémentaux doivent accumuler les vecteurs et metadata."""
+    vs = VectorStore()
+    vs.add_incremental(_rand_vecs(10), _make_meta(10))
+    vs.add_incremental(_rand_vecs(5), _make_meta(5))
+
+    assert vs.ntotal == 15
+    assert len(vs.metadata) == 15
+
+
+def test_add_incremental_3_fois_sans_rebuild() -> None:
+    """Trois appels successifs à add_incremental doivent conserver l'accumulation."""
+    vs = VectorStore()
+    vs.add_incremental(_rand_vecs(4), _make_meta(4))
+    vs.add_incremental(_rand_vecs(3), _make_meta(3))
+    vs.add_incremental(_rand_vecs(2), _make_meta(2))
+
+    assert vs.ntotal == 9
+    assert len(vs.metadata) == 9
+
+
+def test_search_apres_add_incremental() -> None:
+    """La recherche doit retrouver des vecteurs ajoutés lors d'un second lot."""
+    vs = VectorStore()
+    first_batch = _rand_vecs(5)
+    second_batch = _rand_vecs(3)
+
+    vs.add_incremental(first_batch, _make_meta(5))
+    vs.add_incremental(second_batch, _make_meta(3))
+
+    query = second_batch[1]
+    results = vs.search(query, k=3)
+
+    assert results
+    top_meta, _, top_idx = results[0]
+    assert top_idx >= 5
+    assert top_meta["text"] == "avis produit numéro 1"
+
+
+def test_add_incremental_sur_index_vide() -> None:
+    """Un premier ajout incrémental sur un store vide doit fonctionner."""
+    vs = VectorStore()
+
+    vs.add_incremental(_rand_vecs(6), _make_meta(6))
+
+    assert vs.ntotal == 6
+    assert len(vs.metadata) == 6
+
+
+def test_ntotal_property() -> None:
+    """La propriété ntotal doit refléter le nombre réel de vecteurs indexés."""
+    vs = VectorStore()
+    assert vs.ntotal == 0
+
+    vs.add_incremental(_rand_vecs(7), _make_meta(7))
+    assert vs.ntotal == 7
+
+
+def test_save_load_apres_incremental(tmp_path: pytest.TempPathFactory) -> None:
+    """save/load doit préserver un index construit par ajouts incrémentaux."""
+    vs = VectorStore()
+    vs.add_incremental(_rand_vecs(5), _make_meta(5))
+    vs.add_incremental(_rand_vecs(4), _make_meta(4))
+
+    path = str(tmp_path / "idx_incremental")
+    vs.save(path)
+    reloaded = VectorStore.load(path)
+
+    assert reloaded.ntotal == 9
+    assert len(reloaded.metadata) == 9

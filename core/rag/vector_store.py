@@ -24,6 +24,11 @@ class VectorStore:
         self.index: faiss.IndexHNSWFlat = faiss.IndexHNSWFlat(_DIM, _HNSW_M)
         self.metadata: list[dict] = []
 
+    @property
+    def ntotal(self) -> int:
+        """Retourne le nombre réel de vecteurs présents dans l'index."""
+        return int(self.index.ntotal)
+
     def add(self, vectors: np.ndarray, metadata_list: list[dict]) -> None:
         """Recrée l'index et ajoute les vecteurs avec leur metadata.
 
@@ -40,6 +45,37 @@ class VectorStore:
             vecs = np.array(vectors, dtype=np.float32)
             self.index.add(vecs)
             logger.info("VectorStore : %d vecteurs indexés.", self.index.ntotal)
+
+    def add_incremental(self, vectors: np.ndarray, metadata_list: list[dict]) -> None:
+        """Ajoute des vecteurs à l'index existant sans le reconstruire.
+
+        Args:
+            vectors: Matrice de shape (n, 768) convertible en float32.
+            metadata_list: Liste de n métadonnées associées aux vecteurs.
+
+        Raises:
+            ValueError: Si la dimension des vecteurs ou la cardinalité diffèrent.
+        """
+        vecs = np.asarray(vectors, dtype=np.float32)
+        if vecs.ndim != 2 or vecs.shape[1] != _DIM:
+            raise ValueError(f"vectors doit être de shape (n, {_DIM}).")
+        if vecs.shape[0] != len(metadata_list):
+            raise ValueError("vectors et metadata_list doivent avoir la même longueur.")
+
+        if vecs.shape[0] == 0:
+            logger.info(
+                "VectorStore : 0 vecteur ajouté en incrémental (%d total).",
+                self.ntotal,
+            )
+            return
+
+        self.index.add(vecs)
+        self.metadata.extend(metadata_list)
+        logger.info(
+            "VectorStore : %d vecteurs ajoutés en incrémental (%d total).",
+            vecs.shape[0],
+            self.ntotal,
+        )
 
     def search(self, query_vec: np.ndarray, k: int) -> list[tuple[dict, float, int]]:
         """Recherche les k voisins les plus proches par distance L2.
