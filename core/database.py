@@ -1,11 +1,18 @@
-"""Infrastructure SQLite locale pour les objets métier RamyPulse."""
+"""Infrastructure SQLite locale pour les objets métier RamyPulse.
+
+Expose un gestionnaire unique compatible avec les besoins de l'infrastructure
+Phase 1 et des catalogues métier.
+"""
 
 from __future__ import annotations
 
+import logging
 import sqlite3
 from pathlib import Path
 
 from config import SQLITE_DB_PATH
+
+logger = logging.getLogger(__name__)
 
 
 _SCHEMA_STATEMENTS = [
@@ -29,15 +36,15 @@ _SCHEMA_STATEMENTS = [
     """,
     """
     CREATE TABLE IF NOT EXISTS products (
-        product_id TEXT PRIMARY KEY,
+        product_id INTEGER PRIMARY KEY AUTOINCREMENT,
         brand TEXT NOT NULL,
-        product_line TEXT,
+        product_line TEXT NOT NULL DEFAULT '',
         product_name TEXT NOT NULL,
-        sku TEXT,
-        category TEXT,
-        keywords_ar TEXT,
-        keywords_arabizi TEXT,
-        keywords_fr TEXT,
+        sku TEXT UNIQUE,
+        category TEXT NOT NULL DEFAULT '',
+        keywords_ar TEXT NOT NULL DEFAULT '[]',
+        keywords_arabizi TEXT NOT NULL DEFAULT '[]',
+        keywords_fr TEXT NOT NULL DEFAULT '[]',
         is_active BOOLEAN DEFAULT TRUE,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
@@ -45,20 +52,20 @@ _SCHEMA_STATEMENTS = [
     """
     CREATE TABLE IF NOT EXISTS wilayas (
         wilaya_code TEXT PRIMARY KEY,
-        wilaya_name_fr TEXT NOT NULL,
-        wilaya_name_ar TEXT NOT NULL,
-        keywords_arabizi TEXT,
-        region TEXT
+        name_fr TEXT NOT NULL,
+        name_ar TEXT NOT NULL DEFAULT '',
+        keywords_arabizi TEXT NOT NULL DEFAULT '[]',
+        region TEXT NOT NULL DEFAULT ''
     )
     """,
     """
     CREATE TABLE IF NOT EXISTS competitors (
-        competitor_id TEXT PRIMARY KEY,
-        brand_name TEXT NOT NULL,
-        category TEXT,
-        keywords_ar TEXT,
-        keywords_arabizi TEXT,
-        keywords_fr TEXT,
+        competitor_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        brand_name TEXT NOT NULL UNIQUE,
+        category TEXT NOT NULL DEFAULT '',
+        keywords_ar TEXT NOT NULL DEFAULT '[]',
+        keywords_arabizi TEXT NOT NULL DEFAULT '[]',
+        keywords_fr TEXT NOT NULL DEFAULT '[]',
         is_active BOOLEAN DEFAULT TRUE,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
@@ -201,26 +208,55 @@ class DatabaseManager:
         """Initialise la connexion SQLite et active les contraintes utiles."""
         resolved = SQLITE_DB_PATH if db_path is None else db_path
         self.db_path = str(resolved)
-        self.connection = self._connect()
+        self._conn: sqlite3.Connection | None = None
 
-    def _connect(self) -> sqlite3.Connection:
-        """Ouvre la connexion SQLite et prépare les pragmas requis."""
         if self.db_path != ":memory:":
             Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
 
-        connection = sqlite3.connect(self.db_path)
+    @property
+    def connection(self) -> sqlite3.Connection:
+        """Expose une connexion SQLite active compatible avec les anciens tests."""
+        return self.get_connection()
+
+    def _connect(self) -> sqlite3.Connection:
+        """Ouvre la connexion SQLite et prépare les pragmas requis."""
+        connection = sqlite3.connect(self.db_path, check_same_thread=False)
         connection.row_factory = sqlite3.Row
         connection.execute("PRAGMA foreign_keys = ON")
+        if self.db_path != ":memory:":
+            connection.execute("PRAGMA journal_mode=WAL")
+        logger.debug("Connexion SQLite ouverte : %s", self.db_path)
         return connection
+
+    def get_connection(self) -> sqlite3.Connection:
+        """Retourne la connexion SQLite, en la créant si nécessaire."""
+        if self._conn is None:
+            self._conn = self._connect()
+        return self._conn
+
+    def execute(self, sql: str, params: tuple = ()) -> sqlite3.Cursor:
+        """Exécute une requête SQL simple et retourne le curseur."""
+        return self.get_connection().execute(sql, params)
+
+    def executemany(self, sql: str, params_list: list[tuple]) -> sqlite3.Cursor:
+        """Exécute une requête SQL pour plusieurs jeux de paramètres."""
+        return self.get_connection().executemany(sql, params_list)
+
+    def commit(self) -> None:
+        """Valide la transaction courante."""
+        if self._conn is not None:
+            self._conn.commit()
 
     def create_tables(self) -> None:
         """Crée l'ensemble des tables SQLite du PRD si elles n'existent pas."""
-        cursor = self.connection.cursor()
+        cursor = self.get_connection().cursor()
         for statement in _SCHEMA_STATEMENTS:
             cursor.execute(statement)
-        self.connection.commit()
+        self.get_connection().commit()
 
     def close(self) -> None:
         """Ferme proprement la connexion SQLite."""
-        self.connection.close()
-
+        if self._conn is not None:
+            self._conn.close()
+            self._conn = None
+            logger.debug("Connexion SQLite fermée : %s", self.db_path)
