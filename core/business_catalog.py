@@ -1,19 +1,12 @@
-"""Catalogue métier RamyPulse : Produits, Wilayas, Concurrents.
+"""Catalogue metier RamyPulse : produits, wilayas, concurrents."""
 
-Ce module est la référence utilisée par l'Entity Resolver pour rattacher
-les mentions extraites des réseaux sociaux aux entités métier connues.
-
-Chaque catalogue expose une interface CRUD complète et une recherche
-multi-script (arabe / arabizi / français) via search_by_keyword().
-
-Dépendance : core/database.py (DatabaseManager).
-"""
 from __future__ import annotations
 
 import json
 import logging
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
+from uuid import uuid4
 
 from core.database import DatabaseManager
 
@@ -21,76 +14,55 @@ logger = logging.getLogger(__name__)
 
 _SEED_WILAYAS_PATH = Path(__file__).parent.parent / "data" / "seed" / "wilayas.json"
 
-
-# ---------------------------------------------------------------------------
-# DDL
-# ---------------------------------------------------------------------------
-
 _DDL_PRODUCTS = """
 CREATE TABLE IF NOT EXISTS products (
-    product_id    INTEGER PRIMARY KEY AUTOINCREMENT,
-    brand         TEXT    NOT NULL,
-    product_line  TEXT    NOT NULL DEFAULT '',
-    product_name  TEXT    NOT NULL,
-    sku           TEXT    UNIQUE,
-    category      TEXT    NOT NULL DEFAULT '',
-    keywords_ar   TEXT    NOT NULL DEFAULT '[]',
+    product_id TEXT PRIMARY KEY,
+    brand TEXT NOT NULL,
+    product_line TEXT NOT NULL DEFAULT '',
+    product_name TEXT NOT NULL,
+    sku TEXT UNIQUE,
+    category TEXT NOT NULL DEFAULT '',
+    keywords_ar TEXT NOT NULL DEFAULT '[]',
     keywords_arabizi TEXT NOT NULL DEFAULT '[]',
-    keywords_fr   TEXT    NOT NULL DEFAULT '[]',
-    is_active     INTEGER NOT NULL DEFAULT 1
+    keywords_fr TEXT NOT NULL DEFAULT '[]',
+    is_active INTEGER NOT NULL DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 )
 """
 
 _DDL_WILAYAS = """
 CREATE TABLE IF NOT EXISTS wilayas (
-    wilaya_code      TEXT PRIMARY KEY,
-    name_fr          TEXT NOT NULL,
-    name_ar          TEXT NOT NULL DEFAULT '',
+    wilaya_code TEXT PRIMARY KEY,
+    wilaya_name_fr TEXT NOT NULL,
+    wilaya_name_ar TEXT NOT NULL DEFAULT '',
     keywords_arabizi TEXT NOT NULL DEFAULT '[]',
-    region           TEXT NOT NULL DEFAULT ''
+    region TEXT NOT NULL DEFAULT ''
 )
 """
 
 _DDL_COMPETITORS = """
 CREATE TABLE IF NOT EXISTS competitors (
-    competitor_id  INTEGER PRIMARY KEY AUTOINCREMENT,
-    brand_name     TEXT    NOT NULL UNIQUE,
-    category       TEXT    NOT NULL DEFAULT '',
-    keywords_ar    TEXT    NOT NULL DEFAULT '[]',
-    keywords_arabizi TEXT  NOT NULL DEFAULT '[]',
-    keywords_fr    TEXT    NOT NULL DEFAULT '[]',
-    is_active      INTEGER NOT NULL DEFAULT 1
+    competitor_id TEXT PRIMARY KEY,
+    brand_name TEXT NOT NULL UNIQUE,
+    category TEXT NOT NULL DEFAULT '',
+    keywords_ar TEXT NOT NULL DEFAULT '[]',
+    keywords_arabizi TEXT NOT NULL DEFAULT '[]',
+    keywords_fr TEXT NOT NULL DEFAULT '[]',
+    is_active INTEGER NOT NULL DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 )
 """
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
 def _json_encode(value: Any) -> str:
-    """Sérialise une valeur Python en JSON compact.
-
-    Args:
-        value: Valeur à sérialiser (liste, dict, etc.).
-
-    Returns:
-        Chaîne JSON.
-    """
+    """Serialize une valeur Python en JSON compact."""
     if isinstance(value, str):
         return value
     return json.dumps(value, ensure_ascii=False)
 
 
 def _json_decode(value: str) -> Any:
-    """Désérialise une chaîne JSON en valeur Python.
-
-    Args:
-        value: Chaîne JSON à parser.
-
-    Returns:
-        Valeur Python (liste, dict, etc.) ou chaîne originale si échec.
-    """
+    """Deserialise une chaine JSON en valeur Python."""
     if not value:
         return []
     try:
@@ -99,30 +71,15 @@ def _json_decode(value: str) -> Any:
         return value
 
 
-def _row_to_dict(row) -> dict:
-    """Convertit une sqlite3.Row en dictionnaire Python standard.
-
-    Args:
-        row: Ligne SQLite (sqlite3.Row ou None).
-
-    Returns:
-        Dictionnaire ou None si row est None.
-    """
+def _row_to_dict(row) -> dict | None:
+    """Convertit une sqlite3.Row en dict standard."""
     if row is None:
         return None
     return dict(row)
 
 
-def _decode_keywords(record: dict, fields: list[str]) -> dict:
-    """Décode les champs JSON keywords d'un enregistrement.
-
-    Args:
-        record: Dictionnaire d'enregistrement.
-        fields: Liste des champs à décoder (contiennent du JSON).
-
-    Returns:
-        Enregistrement avec les champs décodés.
-    """
+def _decode_keywords(record: dict | None, fields: list[str]) -> dict | None:
+    """Decode les champs JSON de mots-cles d'un enregistrement."""
     if record is None:
         return None
     for field in fields:
@@ -131,25 +88,24 @@ def _decode_keywords(record: dict, fields: list[str]) -> dict:
     return record
 
 
-# ---------------------------------------------------------------------------
-# ProductCatalog
-# ---------------------------------------------------------------------------
+def _normalize_boolean_field(fields: dict[str, Any], name: str) -> None:
+    """Convertit un bool Python en entier SQLite si present."""
+    if name in fields and isinstance(fields[name], bool):
+        fields[name] = 1 if fields[name] else 0
+
+
+def _generate_entity_id(prefix: str) -> str:
+    """Genere un identifiant textuel stable pour une entite catalogue."""
+    return f"{prefix}-{uuid4().hex[:12]}"
+
 
 class ProductCatalog:
-    """Catalogue des produits Ramy avec CRUD et recherche multi-script.
-
-    Gère les produits (marque, gamme, SKU) avec leurs variantes de mots-clés
-    en arabe, arabizi et français pour la détection dans les mentions.
-    """
+    """Catalogue des produits Ramy avec CRUD et recherche multi-script."""
 
     _KEYWORD_FIELDS = ["keywords_ar", "keywords_arabizi", "keywords_fr"]
 
     def __init__(self, db: DatabaseManager) -> None:
-        """Initialise le catalogue et crée la table si nécessaire.
-
-        Args:
-            db: Gestionnaire de base de données SQLite.
-        """
+        """Initialise le catalogue produits."""
         self._db = db
         db.execute(_DDL_PRODUCTS)
         db.commit()
@@ -159,35 +115,33 @@ class ProductCatalog:
         brand: str,
         product_name: str,
         product_line: str = "",
-        sku: Optional[str] = None,
+        sku: str | None = None,
         category: str = "",
-        keywords_ar: list = None,
-        keywords_arabizi: list = None,
-        keywords_fr: list = None,
+        keywords_ar: list | None = None,
+        keywords_arabizi: list | None = None,
+        keywords_fr: list | None = None,
         is_active: bool = True,
-    ) -> int:
-        """Crée un nouveau produit dans le catalogue.
-
-        Args:
-            brand: Nom de la marque (ex: "Ramy").
-            product_name: Nom du produit (ex: "Jus d'orange").
-            product_line: Gamme de produit (ex: "Premium").
-            sku: Code SKU unique. None si non applicable.
-            category: Catégorie (ex: "jus", "nectar").
-            keywords_ar: Mots-clés en arabe.
-            keywords_arabizi: Mots-clés en arabizi.
-            keywords_fr: Mots-clés en français.
-            is_active: Produit actif (True par défaut).
-
-        Returns:
-            ID du produit créé.
-        """
-        cur = self._db.execute(
-            """INSERT INTO products
-               (brand, product_line, product_name, sku, category,
-                keywords_ar, keywords_arabizi, keywords_fr, is_active)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+    ) -> str:
+        """Cree un produit et retourne son identifiant textuel."""
+        product_id = _generate_entity_id("prod")
+        self._db.execute(
+            """
+            INSERT INTO products (
+                product_id,
+                brand,
+                product_line,
+                product_name,
+                sku,
+                category,
+                keywords_ar,
+                keywords_arabizi,
+                keywords_fr,
+                is_active
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
             (
+                product_id,
                 brand,
                 product_line or "",
                 product_name,
@@ -200,41 +154,26 @@ class ProductCatalog:
             ),
         )
         self._db.commit()
-        logger.debug("Produit créé : %s (id=%d)", product_name, cur.lastrowid)
-        return cur.lastrowid
+        logger.debug("Produit cree : %s (id=%s)", product_name, product_id)
+        return product_id
 
-    def get(self, product_id: int) -> Optional[dict]:
-        """Récupère un produit par son ID.
-
-        Args:
-            product_id: Identifiant du produit.
-
-        Returns:
-            Dictionnaire du produit ou None si introuvable.
-        """
+    def get(self, product_id: str) -> dict | None:
+        """Recupere un produit par son identifiant."""
         row = self._db.execute(
-            "SELECT * FROM products WHERE product_id = ?", (product_id,)
+            "SELECT * FROM products WHERE product_id = ?",
+            (product_id,),
         ).fetchone()
         return _decode_keywords(_row_to_dict(row), self._KEYWORD_FIELDS)
 
     def list(
         self,
-        brand: Optional[str] = None,
-        category: Optional[str] = None,
-        is_active: Optional[bool] = None,
+        brand: str | None = None,
+        category: str | None = None,
+        is_active: bool | None = None,
     ) -> list[dict]:
-        """Liste les produits avec filtres optionnels.
-
-        Args:
-            brand: Filtrer par marque (ex: "Ramy").
-            category: Filtrer par catégorie.
-            is_active: Filtrer par état actif/inactif.
-
-        Returns:
-            Liste de dictionnaires produits.
-        """
-        conditions = []
-        params = []
+        """Liste les produits avec filtres optionnels."""
+        conditions: list[str] = []
+        params: list[Any] = []
         if brand is not None:
             conditions.append("brand = ?")
             params.append(brand)
@@ -247,301 +186,214 @@ class ProductCatalog:
 
         where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
         rows = self._db.execute(
-            f"SELECT * FROM products {where} ORDER BY product_id", tuple(params)
+            f"SELECT * FROM products {where} ORDER BY rowid",
+            tuple(params),
         ).fetchall()
-        return [
-            _decode_keywords(_row_to_dict(r), self._KEYWORD_FIELDS) for r in rows
-        ]
+        return [_decode_keywords(_row_to_dict(row), self._KEYWORD_FIELDS) for row in rows]
 
-    def update(self, product_id: int, **fields) -> bool:
-        """Met à jour les champs d'un produit existant.
-
-        Args:
-            product_id: Identifiant du produit à modifier.
-            **fields: Champs à mettre à jour (brand, product_name, keywords_ar, etc.).
-
-        Returns:
-            True si la mise à jour a affecté une ligne, False sinon.
-        """
+    def update(self, product_id: str, **fields) -> bool:
+        """Met a jour les champs d'un produit existant."""
         if not fields:
             return False
 
-        # Encoder les champs JSON avant mise à jour
-        for kw_field in self._KEYWORD_FIELDS:
-            if kw_field in fields and isinstance(fields[kw_field], list):
-                fields[kw_field] = _json_encode(fields[kw_field])
-        if "is_active" in fields and isinstance(fields["is_active"], bool):
-            fields["is_active"] = 1 if fields["is_active"] else 0
+        for keyword_field in self._KEYWORD_FIELDS:
+            if keyword_field in fields and isinstance(fields[keyword_field], list):
+                fields[keyword_field] = _json_encode(fields[keyword_field])
+        _normalize_boolean_field(fields, "is_active")
 
-        set_clause = ", ".join(f"{k} = ?" for k in fields)
+        set_clause = ", ".join(f"{column} = ?" for column in fields)
         values = list(fields.values()) + [product_id]
-        cur = self._db.execute(
-            f"UPDATE products SET {set_clause} WHERE product_id = ?", tuple(values)
+        cursor = self._db.execute(
+            f"UPDATE products SET {set_clause} WHERE product_id = ?",
+            tuple(values),
         )
         self._db.commit()
-        return cur.rowcount > 0
+        return cursor.rowcount > 0
 
-    def delete(self, product_id: int) -> bool:
-        """Supprime un produit du catalogue.
-
-        Args:
-            product_id: Identifiant du produit à supprimer.
-
-        Returns:
-            True si supprimé, False si introuvable.
-        """
-        cur = self._db.execute(
-            "DELETE FROM products WHERE product_id = ?", (product_id,)
+    def delete(self, product_id: str) -> bool:
+        """Supprime un produit du catalogue."""
+        cursor = self._db.execute(
+            "DELETE FROM products WHERE product_id = ?",
+            (product_id,),
         )
         self._db.commit()
-        return cur.rowcount > 0
+        return cursor.rowcount > 0
 
     def search_by_keyword(self, keyword: str) -> list[dict]:
-        """Recherche des produits par mot-clé dans tous les scripts.
-
-        Recherche insensible à la casse dans product_name, brand,
-        keywords_ar, keywords_arabizi et keywords_fr.
-
-        Args:
-            keyword: Mot-clé à rechercher (arabe, arabizi ou français).
-
-        Returns:
-            Liste des produits correspondants.
-        """
-        kw = f"%{keyword.lower()}%"
+        """Recherche des produits par mot-cle dans tous les scripts."""
+        like_keyword = f"%{keyword.lower()}%"
         rows = self._db.execute(
-            """SELECT * FROM products
-               WHERE lower(product_name) LIKE ?
-                  OR lower(brand) LIKE ?
-                  OR lower(keywords_ar) LIKE ?
-                  OR lower(keywords_arabizi) LIKE ?
-                  OR lower(keywords_fr) LIKE ?
-               ORDER BY product_id""",
-            (kw, kw, kw, kw, kw),
+            """
+            SELECT * FROM products
+            WHERE lower(product_name) LIKE ?
+               OR lower(brand) LIKE ?
+               OR lower(keywords_ar) LIKE ?
+               OR lower(keywords_arabizi) LIKE ?
+               OR lower(keywords_fr) LIKE ?
+            ORDER BY rowid
+            """,
+            (like_keyword, like_keyword, like_keyword, like_keyword, like_keyword),
         ).fetchall()
-        return [
-            _decode_keywords(_row_to_dict(r), self._KEYWORD_FIELDS) for r in rows
-        ]
+        return [_decode_keywords(_row_to_dict(row), self._KEYWORD_FIELDS) for row in rows]
 
-
-# ---------------------------------------------------------------------------
-# WilayaCatalog
-# ---------------------------------------------------------------------------
 
 class WilayaCatalog:
-    """Catalogue des 58 wilayas algériennes avec CRUD et recherche multi-script.
-
-    Référence géographique utilisée par l'Entity Resolver pour localiser
-    les mentions. Peut être initialisé depuis data/seed/wilayas.json.
-    """
+    """Catalogue des wilayas algeriennes avec CRUD et recherche multi-script."""
 
     _KEYWORD_FIELDS = ["keywords_arabizi"]
 
     def __init__(self, db: DatabaseManager) -> None:
-        """Initialise le catalogue et crée la table si nécessaire.
-
-        Args:
-            db: Gestionnaire de base de données SQLite.
-        """
+        """Initialise le catalogue wilayas."""
         self._db = db
         db.execute(_DDL_WILAYAS)
         db.commit()
 
-    def seed_from_file(self, path: Optional[Path] = None) -> int:
-        """Charge les wilayas depuis le fichier JSON de seed.
-
-        Utilise INSERT OR IGNORE pour éviter les doublons lors d'appels
-        répétés. Le chemin par défaut est data/seed/wilayas.json.
-
-        Args:
-            path: Chemin optionnel vers un fichier JSON alternatif.
-
-        Returns:
-            Nombre de wilayas insérées (0 si déjà présentes).
-        """
+    def seed_from_file(self, path: Path | None = None) -> int:
+        """Charge les wilayas depuis le fichier JSON de seed."""
         seed_path = path or _SEED_WILAYAS_PATH
-        with open(seed_path, encoding="utf-8") as f:
-            wilayas = json.load(f)
+        with open(seed_path, encoding="utf-8") as handle:
+            wilayas = json.load(handle)
 
         before = self._db.execute("SELECT COUNT(*) FROM wilayas").fetchone()[0]
         self._db.executemany(
-            """INSERT OR IGNORE INTO wilayas
-               (wilaya_code, name_fr, name_ar, keywords_arabizi, region)
-               VALUES (?, ?, ?, ?, ?)""",
+            """
+            INSERT OR IGNORE INTO wilayas (
+                wilaya_code,
+                wilaya_name_fr,
+                wilaya_name_ar,
+                keywords_arabizi,
+                region
+            )
+            VALUES (?, ?, ?, ?, ?)
+            """,
             [
                 (
-                    w["code"],
-                    w["name_fr"],
-                    w.get("name_ar", ""),
-                    _json_encode(w.get("keywords_arabizi", [])),
-                    w.get("region", ""),
+                    wilaya["code"],
+                    wilaya["name_fr"],
+                    wilaya.get("name_ar", ""),
+                    _json_encode(wilaya.get("keywords_arabizi", [])),
+                    wilaya.get("region", ""),
                 )
-                for w in wilayas
+                for wilaya in wilayas
             ],
         )
         self._db.commit()
         after = self._db.execute("SELECT COUNT(*) FROM wilayas").fetchone()[0]
         inserted = after - before
-        logger.info("Seed wilayas : %d insérées (%d au total)", inserted, after)
+        logger.info("Seed wilayas : %d inserees (%d au total)", inserted, after)
         return inserted
 
     def create(
         self,
         wilaya_code: str,
-        name_fr: str,
+        name_fr: str | None = None,
         name_ar: str = "",
-        keywords_arabizi: list = None,
+        keywords_arabizi: list | None = None,
         region: str = "",
+        *,
+        wilaya_name_fr: str | None = None,
+        wilaya_name_ar: str | None = None,
     ) -> str:
-        """Crée une wilaya dans le catalogue.
-
-        Args:
-            wilaya_code: Code officiel (ex: "06" pour Béjaïa).
-            name_fr: Nom officiel en français.
-            name_ar: Nom officiel en arabe.
-            keywords_arabizi: Variantes arabizi courantes.
-            region: Région (Centre, Est, Ouest, Sud).
-
-        Returns:
-            Code de la wilaya créée.
-        """
+        """Cree une wilaya dans le catalogue."""
+        resolved_name_fr = wilaya_name_fr if wilaya_name_fr is not None else (name_fr or "")
+        resolved_name_ar = wilaya_name_ar if wilaya_name_ar is not None else (name_ar or "")
         self._db.execute(
-            """INSERT INTO wilayas
-               (wilaya_code, name_fr, name_ar, keywords_arabizi, region)
-               VALUES (?, ?, ?, ?, ?)""",
+            """
+            INSERT INTO wilayas (
+                wilaya_code,
+                wilaya_name_fr,
+                wilaya_name_ar,
+                keywords_arabizi,
+                region
+            )
+            VALUES (?, ?, ?, ?, ?)
+            """,
             (
                 wilaya_code,
-                name_fr,
-                name_ar or "",
+                resolved_name_fr,
+                resolved_name_ar,
                 _json_encode(keywords_arabizi or []),
                 region or "",
             ),
         )
         self._db.commit()
-        logger.debug("Wilaya créée : %s (%s)", wilaya_code, name_fr)
+        logger.debug("Wilaya creee : %s (%s)", wilaya_code, resolved_name_fr)
         return wilaya_code
 
-    def get(self, wilaya_code: str) -> Optional[dict]:
-        """Récupère une wilaya par son code officiel.
-
-        Args:
-            wilaya_code: Code officiel de la wilaya.
-
-        Returns:
-            Dictionnaire de la wilaya ou None si introuvable.
-        """
+    def get(self, wilaya_code: str) -> dict | None:
+        """Recupere une wilaya par son code."""
         row = self._db.execute(
-            "SELECT * FROM wilayas WHERE wilaya_code = ?", (wilaya_code,)
+            "SELECT * FROM wilayas WHERE wilaya_code = ?",
+            (wilaya_code,),
         ).fetchone()
         return _decode_keywords(_row_to_dict(row), self._KEYWORD_FIELDS)
 
-    def list(self, region: Optional[str] = None) -> list[dict]:
-        """Liste les wilayas avec filtre optionnel par région.
-
-        Args:
-            region: Filtrer par région (Centre, Est, Ouest, Sud).
-
-        Returns:
-            Liste de dictionnaires wilayas.
-        """
-        if region is not None:
+    def list(self, region: str | None = None) -> list[dict]:
+        """Liste les wilayas avec filtre optionnel par region."""
+        if region is None:
+            rows = self._db.execute(
+                "SELECT * FROM wilayas ORDER BY wilaya_code"
+            ).fetchall()
+        else:
             rows = self._db.execute(
                 "SELECT * FROM wilayas WHERE region = ? ORDER BY wilaya_code",
                 (region,),
             ).fetchall()
-        else:
-            rows = self._db.execute(
-                "SELECT * FROM wilayas ORDER BY wilaya_code"
-            ).fetchall()
-        return [
-            _decode_keywords(_row_to_dict(r), self._KEYWORD_FIELDS) for r in rows
-        ]
+        return [_decode_keywords(_row_to_dict(row), self._KEYWORD_FIELDS) for row in rows]
 
     def update(self, wilaya_code: str, **fields) -> bool:
-        """Met à jour les champs d'une wilaya existante.
-
-        Args:
-            wilaya_code: Code officiel de la wilaya à modifier.
-            **fields: Champs à mettre à jour.
-
-        Returns:
-            True si la mise à jour a affecté une ligne, False sinon.
-        """
+        """Met a jour les champs d'une wilaya existante."""
         if not fields:
             return False
 
-        if "keywords_arabizi" in fields and isinstance(
-            fields["keywords_arabizi"], list
-        ):
+        if "name_fr" in fields and "wilaya_name_fr" not in fields:
+            fields["wilaya_name_fr"] = fields.pop("name_fr")
+        if "name_ar" in fields and "wilaya_name_ar" not in fields:
+            fields["wilaya_name_ar"] = fields.pop("name_ar")
+        if "keywords_arabizi" in fields and isinstance(fields["keywords_arabizi"], list):
             fields["keywords_arabizi"] = _json_encode(fields["keywords_arabizi"])
 
-        set_clause = ", ".join(f"{k} = ?" for k in fields)
+        set_clause = ", ".join(f"{column} = ?" for column in fields)
         values = list(fields.values()) + [wilaya_code]
-        cur = self._db.execute(
-            f"UPDATE wilayas SET {set_clause} WHERE wilaya_code = ?", tuple(values)
+        cursor = self._db.execute(
+            f"UPDATE wilayas SET {set_clause} WHERE wilaya_code = ?",
+            tuple(values),
         )
         self._db.commit()
-        return cur.rowcount > 0
+        return cursor.rowcount > 0
 
     def delete(self, wilaya_code: str) -> bool:
-        """Supprime une wilaya du catalogue.
-
-        Args:
-            wilaya_code: Code officiel de la wilaya à supprimer.
-
-        Returns:
-            True si supprimée, False si introuvable.
-        """
-        cur = self._db.execute(
-            "DELETE FROM wilayas WHERE wilaya_code = ?", (wilaya_code,)
+        """Supprime une wilaya du catalogue."""
+        cursor = self._db.execute(
+            "DELETE FROM wilayas WHERE wilaya_code = ?",
+            (wilaya_code,),
         )
         self._db.commit()
-        return cur.rowcount > 0
+        return cursor.rowcount > 0
 
     def search_by_keyword(self, keyword: str) -> list[dict]:
-        """Recherche des wilayas par mot-clé dans tous les scripts.
-
-        Recherche dans name_fr, name_ar et keywords_arabizi.
-
-        Args:
-            keyword: Mot-clé à rechercher.
-
-        Returns:
-            Liste des wilayas correspondantes.
-        """
-        kw = f"%{keyword.lower()}%"
+        """Recherche des wilayas par mot-cle dans tous les scripts."""
+        like_keyword = f"%{keyword.lower()}%"
         rows = self._db.execute(
-            """SELECT * FROM wilayas
-               WHERE lower(name_fr) LIKE ?
-                  OR lower(name_ar) LIKE ?
-                  OR lower(keywords_arabizi) LIKE ?
-               ORDER BY wilaya_code""",
-            (kw, kw, kw),
+            """
+            SELECT * FROM wilayas
+            WHERE lower(wilaya_name_fr) LIKE ?
+               OR lower(wilaya_name_ar) LIKE ?
+               OR lower(keywords_arabizi) LIKE ?
+            ORDER BY wilaya_code
+            """,
+            (like_keyword, like_keyword, like_keyword),
         ).fetchall()
-        return [
-            _decode_keywords(_row_to_dict(r), self._KEYWORD_FIELDS) for r in rows
-        ]
+        return [_decode_keywords(_row_to_dict(row), self._KEYWORD_FIELDS) for row in rows]
 
-
-# ---------------------------------------------------------------------------
-# CompetitorCatalog
-# ---------------------------------------------------------------------------
 
 class CompetitorCatalog:
-    """Catalogue des marques concurrentes avec CRUD et recherche multi-script.
-
-    Référence utilisée par l'Entity Resolver pour identifier les mentions
-    de concurrents dans les données sociales analysées.
-    """
+    """Catalogue des marques concurrentes avec CRUD et recherche multi-script."""
 
     _KEYWORD_FIELDS = ["keywords_ar", "keywords_arabizi", "keywords_fr"]
 
     def __init__(self, db: DatabaseManager) -> None:
-        """Initialise le catalogue et crée la table si nécessaire.
-
-        Args:
-            db: Gestionnaire de base de données SQLite.
-        """
+        """Initialise le catalogue concurrents."""
         self._db = db
         db.execute(_DDL_COMPETITORS)
         db.commit()
@@ -550,30 +402,28 @@ class CompetitorCatalog:
         self,
         brand_name: str,
         category: str = "",
-        keywords_ar: list = None,
-        keywords_arabizi: list = None,
-        keywords_fr: list = None,
+        keywords_ar: list | None = None,
+        keywords_arabizi: list | None = None,
+        keywords_fr: list | None = None,
         is_active: bool = True,
-    ) -> int:
-        """Crée un concurrent dans le catalogue.
-
-        Args:
-            brand_name: Nom de la marque concurrente (ex: "Ifri", "Hamoud").
-            category: Catégorie de produit (ex: "eau", "jus", "soda").
-            keywords_ar: Mots-clés en arabe.
-            keywords_arabizi: Mots-clés en arabizi.
-            keywords_fr: Mots-clés en français.
-            is_active: Concurrent actif (True par défaut).
-
-        Returns:
-            ID du concurrent créé.
-        """
-        cur = self._db.execute(
-            """INSERT INTO competitors
-               (brand_name, category, keywords_ar, keywords_arabizi,
-                keywords_fr, is_active)
-               VALUES (?, ?, ?, ?, ?, ?)""",
+    ) -> str:
+        """Cree un concurrent et retourne son identifiant textuel."""
+        competitor_id = _generate_entity_id("comp")
+        self._db.execute(
+            """
+            INSERT INTO competitors (
+                competitor_id,
+                brand_name,
+                category,
+                keywords_ar,
+                keywords_arabizi,
+                keywords_fr,
+                is_active
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
             (
+                competitor_id,
                 brand_name,
                 category or "",
                 _json_encode(keywords_ar or []),
@@ -583,39 +433,25 @@ class CompetitorCatalog:
             ),
         )
         self._db.commit()
-        logger.debug("Concurrent créé : %s (id=%d)", brand_name, cur.lastrowid)
-        return cur.lastrowid
+        logger.debug("Concurrent cree : %s (id=%s)", brand_name, competitor_id)
+        return competitor_id
 
-    def get(self, competitor_id: int) -> Optional[dict]:
-        """Récupère un concurrent par son ID.
-
-        Args:
-            competitor_id: Identifiant du concurrent.
-
-        Returns:
-            Dictionnaire du concurrent ou None si introuvable.
-        """
+    def get(self, competitor_id: str) -> dict | None:
+        """Recupere un concurrent par son identifiant."""
         row = self._db.execute(
-            "SELECT * FROM competitors WHERE competitor_id = ?", (competitor_id,)
+            "SELECT * FROM competitors WHERE competitor_id = ?",
+            (competitor_id,),
         ).fetchone()
         return _decode_keywords(_row_to_dict(row), self._KEYWORD_FIELDS)
 
     def list(
         self,
-        category: Optional[str] = None,
-        is_active: Optional[bool] = None,
+        category: str | None = None,
+        is_active: bool | None = None,
     ) -> list[dict]:
-        """Liste les concurrents avec filtres optionnels.
-
-        Args:
-            category: Filtrer par catégorie.
-            is_active: Filtrer par état actif/inactif.
-
-        Returns:
-            Liste de dictionnaires concurrents.
-        """
-        conditions = []
-        params = []
+        """Liste les concurrents avec filtres optionnels."""
+        conditions: list[str] = []
+        params: list[Any] = []
         if category is not None:
             conditions.append("category = ?")
             params.append(category)
@@ -625,76 +461,51 @@ class CompetitorCatalog:
 
         where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
         rows = self._db.execute(
-            f"SELECT * FROM competitors {where} ORDER BY competitor_id", tuple(params)
+            f"SELECT * FROM competitors {where} ORDER BY rowid",
+            tuple(params),
         ).fetchall()
-        return [
-            _decode_keywords(_row_to_dict(r), self._KEYWORD_FIELDS) for r in rows
-        ]
+        return [_decode_keywords(_row_to_dict(row), self._KEYWORD_FIELDS) for row in rows]
 
-    def update(self, competitor_id: int, **fields) -> bool:
-        """Met à jour les champs d'un concurrent existant.
-
-        Args:
-            competitor_id: Identifiant du concurrent à modifier.
-            **fields: Champs à mettre à jour.
-
-        Returns:
-            True si la mise à jour a affecté une ligne, False sinon.
-        """
+    def update(self, competitor_id: str, **fields) -> bool:
+        """Met a jour les champs d'un concurrent existant."""
         if not fields:
             return False
 
-        for kw_field in self._KEYWORD_FIELDS:
-            if kw_field in fields and isinstance(fields[kw_field], list):
-                fields[kw_field] = _json_encode(fields[kw_field])
-        if "is_active" in fields and isinstance(fields["is_active"], bool):
-            fields["is_active"] = 1 if fields["is_active"] else 0
+        for keyword_field in self._KEYWORD_FIELDS:
+            if keyword_field in fields and isinstance(fields[keyword_field], list):
+                fields[keyword_field] = _json_encode(fields[keyword_field])
+        _normalize_boolean_field(fields, "is_active")
 
-        set_clause = ", ".join(f"{k} = ?" for k in fields)
+        set_clause = ", ".join(f"{column} = ?" for column in fields)
         values = list(fields.values()) + [competitor_id]
-        cur = self._db.execute(
+        cursor = self._db.execute(
             f"UPDATE competitors SET {set_clause} WHERE competitor_id = ?",
             tuple(values),
         )
         self._db.commit()
-        return cur.rowcount > 0
+        return cursor.rowcount > 0
 
-    def delete(self, competitor_id: int) -> bool:
-        """Supprime un concurrent du catalogue.
-
-        Args:
-            competitor_id: Identifiant du concurrent à supprimer.
-
-        Returns:
-            True si supprimé, False si introuvable.
-        """
-        cur = self._db.execute(
-            "DELETE FROM competitors WHERE competitor_id = ?", (competitor_id,)
+    def delete(self, competitor_id: str) -> bool:
+        """Supprime un concurrent du catalogue."""
+        cursor = self._db.execute(
+            "DELETE FROM competitors WHERE competitor_id = ?",
+            (competitor_id,),
         )
         self._db.commit()
-        return cur.rowcount > 0
+        return cursor.rowcount > 0
 
     def search_by_keyword(self, keyword: str) -> list[dict]:
-        """Recherche des concurrents par mot-clé dans tous les scripts.
-
-        Recherche dans brand_name, keywords_ar, keywords_arabizi et keywords_fr.
-
-        Args:
-            keyword: Mot-clé à rechercher (arabe, arabizi ou français).
-
-        Returns:
-            Liste des concurrents correspondants.
-        """
-        kw = f"%{keyword.lower()}%"
+        """Recherche des concurrents par mot-cle dans tous les scripts."""
+        like_keyword = f"%{keyword.lower()}%"
         rows = self._db.execute(
-            """SELECT * FROM competitors
-               WHERE lower(brand_name) LIKE ?
-                  OR lower(keywords_ar) LIKE ?
-                  OR lower(keywords_arabizi) LIKE ?
-                  OR lower(keywords_fr) LIKE ?
-               ORDER BY competitor_id""",
-            (kw, kw, kw, kw),
+            """
+            SELECT * FROM competitors
+            WHERE lower(brand_name) LIKE ?
+               OR lower(keywords_ar) LIKE ?
+               OR lower(keywords_arabizi) LIKE ?
+               OR lower(keywords_fr) LIKE ?
+            ORDER BY rowid
+            """,
+            (like_keyword, like_keyword, like_keyword, like_keyword),
         ).fetchall()
-        return [
-            _decode_keywords(_row_to_dict(r), self._KEYWORD_FIELDS) for r in rows
-        ]
+        return [_decode_keywords(_row_to_dict(row), self._KEYWORD_FIELDS) for row in rows]

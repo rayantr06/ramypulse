@@ -185,6 +185,33 @@ def test_pipeline_saves_output_parquet(monkeypatch, tmp_path: Path) -> None:
     assert len(reloaded) == 1
 
 
+def test_pipeline_peut_desactiver_persistance(monkeypatch, tmp_path: Path) -> None:
+    """Le pipeline ABSA doit pouvoir calculer sans ecrire de parquet."""
+    df = build_input_dataframe(
+        [
+            {
+                "text": "Le goût est bon.",
+                "channel": "facebook",
+                "source_url": "https://x/4",
+                "timestamp": "2026-01-04",
+            }
+        ]
+    )
+    output_path = tmp_path / "annotated.parquet"
+
+    monkeypatch.setattr(absa_engine, "classify_sentiment", fake_classifier)
+    monkeypatch.setattr(
+        absa_engine,
+        "extract_aspects",
+        lambda text: [{"aspect": "goût", "mention": "goût", "start": 3, "end": 7}],
+    )
+
+    result = absa_engine.run_absa_pipeline(df, output_path=output_path, persist_output=False)
+
+    assert len(result) == 1
+    assert not output_path.exists()
+
+
 def test_extract_sentence_handles_arabic_punctuation() -> None:
     """La fonction d'extraction de phrase doit gérer la ponctuation arabe (؟ ، ؛)."""
     text = "المنتج جيد؟ الطعم ممتاز، السعر مقبول"

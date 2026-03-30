@@ -72,6 +72,8 @@ def _render_create_source_form(registry: SourceRegistry) -> None:
                 st.rerun()
             except ValueError as exc:
                 st.error(str(exc))
+            except Exception as exc:  # pragma: no cover - garde-fou UI
+                st.error(f"Echec creation source: {exc}")
 
 
 def _render_source_actions(registry: SourceRegistry, records: list[dict]) -> None:
@@ -98,20 +100,29 @@ def _render_source_actions(registry: SourceRegistry, records: list[dict]) -> Non
     col1, col2, col3 = st.columns(3)
     with col1:
         if st.button("Marquer sync", use_container_width=True):
-            registry.mark_sync(selected_source_id)
-            st.success("Horodatage de sync mis a jour.")
-            st.rerun()
+            try:
+                registry.mark_sync(selected_source_id)
+                st.success("Horodatage de sync mis a jour.")
+                st.rerun()
+            except Exception as exc:  # pragma: no cover - garde-fou UI
+                st.error(f"Echec mise a jour sync: {exc}")
     with col2:
         if selected_source.get("is_active"):
             if st.button("Desactiver", use_container_width=True):
-                registry.deactivate_source(selected_source_id)
-                st.success("Source desactivee.")
-                st.rerun()
+                try:
+                    registry.deactivate_source(selected_source_id)
+                    st.success("Source desactivee.")
+                    st.rerun()
+                except Exception as exc:  # pragma: no cover - garde-fou UI
+                    st.error(f"Echec desactivation: {exc}")
         else:
             if st.button("Reactiver", use_container_width=True):
-                registry.reactivate_source(selected_source_id)
-                st.success("Source reactivee.")
-                st.rerun()
+                try:
+                    registry.reactivate_source(selected_source_id)
+                    st.success("Source reactivee.")
+                    st.rerun()
+                except Exception as exc:  # pragma: no cover - garde-fou UI
+                    st.error(f"Echec reactivation: {exc}")
     with col3:
         st.caption("Suppression non exposee ici pour rester conservative.")
 

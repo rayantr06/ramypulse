@@ -75,18 +75,21 @@ def _render_product_tab(products: ProductCatalog) -> None:
             keywords_ar = st.text_input("Keywords AR", key="product_keywords_ar")
             keywords_arabizi = st.text_input("Keywords Arabizi", key="product_keywords_arabizi")
         if st.form_submit_button("Creer le produit"):
-            products.create(
-                brand=brand,
-                product_line=product_line,
-                product_name=product_name,
-                sku=sku or None,
-                category=category,
-                keywords_fr=parse_keywords(keywords_fr),
-                keywords_ar=parse_keywords(keywords_ar),
-                keywords_arabizi=parse_keywords(keywords_arabizi),
-            )
-            st.success("Produit cree.")
-            st.rerun()
+            try:
+                products.create(
+                    brand=brand,
+                    product_line=product_line,
+                    product_name=product_name,
+                    sku=sku or None,
+                    category=category,
+                    keywords_fr=parse_keywords(keywords_fr),
+                    keywords_ar=parse_keywords(keywords_ar),
+                    keywords_arabizi=parse_keywords(keywords_arabizi),
+                )
+                st.success("Produit cree.")
+                st.rerun()
+            except Exception as exc:  # pragma: no cover - garde-fou UI
+                st.error(f"Echec creation produit: {exc}")
 
 
 def _render_wilaya_tab(wilayas: WilayaCatalog) -> None:
@@ -101,7 +104,7 @@ def _render_wilaya_tab(wilayas: WilayaCatalog) -> None:
 
     frame = build_catalog_frame(
         filtered,
-        ["wilaya_code", "name_fr", "name_ar", "region"],
+        ["wilaya_code", "wilaya_name_fr", "wilaya_name_ar", "region"],
     )
     if frame.empty:
         st.info("Aucune wilaya chargee pour le moment.")
@@ -120,21 +123,24 @@ def _render_wilaya_tab(wilayas: WilayaCatalog) -> None:
         col1, col2 = st.columns(2)
         with col1:
             wilaya_code = st.text_input("Code", key="wilaya_code")
-            name_fr = st.text_input("Nom FR", key="wilaya_name_fr")
-            name_ar = st.text_input("Nom AR", key="wilaya_name_ar")
+            wilaya_name_fr = st.text_input("Nom FR", key="wilaya_name_fr")
+            wilaya_name_ar = st.text_input("Nom AR", key="wilaya_name_ar")
         with col2:
             keywords_arabizi = st.text_input("Keywords Arabizi", key="wilaya_keywords_arabizi")
             region = st.text_input("Region", key="wilaya_region")
         if st.form_submit_button("Creer la wilaya"):
-            wilayas.create(
-                wilaya_code=wilaya_code,
-                name_fr=name_fr,
-                name_ar=name_ar,
-                keywords_arabizi=parse_keywords(keywords_arabizi),
-                region=region,
-            )
-            st.success("Wilaya creee.")
-            st.rerun()
+            try:
+                wilayas.create(
+                    wilaya_code=wilaya_code,
+                    wilaya_name_fr=wilaya_name_fr,
+                    wilaya_name_ar=wilaya_name_ar,
+                    keywords_arabizi=parse_keywords(keywords_arabizi),
+                    region=region,
+                )
+                st.success("Wilaya creee.")
+                st.rerun()
+            except Exception as exc:  # pragma: no cover - garde-fou UI
+                st.error(f"Echec creation wilaya: {exc}")
 
 
 def _render_competitor_tab(competitors: CompetitorCatalog) -> None:
@@ -167,15 +173,18 @@ def _render_competitor_tab(competitors: CompetitorCatalog) -> None:
             keywords_ar = st.text_input("Keywords AR", key="competitor_keywords_ar")
             keywords_arabizi = st.text_input("Keywords Arabizi", key="competitor_keywords_arabizi")
         if st.form_submit_button("Creer le concurrent"):
-            competitors.create(
-                brand_name=brand_name,
-                category=category,
-                keywords_fr=parse_keywords(keywords_fr),
-                keywords_ar=parse_keywords(keywords_ar),
-                keywords_arabizi=parse_keywords(keywords_arabizi),
-            )
-            st.success("Concurrent cree.")
-            st.rerun()
+            try:
+                competitors.create(
+                    brand_name=brand_name,
+                    category=category,
+                    keywords_fr=parse_keywords(keywords_fr),
+                    keywords_ar=parse_keywords(keywords_ar),
+                    keywords_arabizi=parse_keywords(keywords_arabizi),
+                )
+                st.success("Concurrent cree.")
+                st.rerun()
+            except Exception as exc:  # pragma: no cover - garde-fou UI
+                st.error(f"Echec creation concurrent: {exc}")
 
 
 def main() -> None:

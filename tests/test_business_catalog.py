@@ -4,6 +4,7 @@ Couvre le CRUD des 3 entités métier (ProductCatalog, WilayaCatalog,
 CompetitorCatalog), la recherche multi-script et le chargement du seed wilayas.
 Base SQLite :memory: — aucun fichier persistant créé.
 """
+
 import os
 import sys
 
@@ -14,10 +15,6 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from core.business_catalog import CompetitorCatalog, ProductCatalog, WilayaCatalog
 from core.database import DatabaseManager
 
-
-# ---------------------------------------------------------------------------
-# Fixtures
-# ---------------------------------------------------------------------------
 
 @pytest.fixture
 def db():
@@ -43,15 +40,11 @@ def competitors(db):
     return CompetitorCatalog(db)
 
 
-# ---------------------------------------------------------------------------
-# Tests ProductCatalog
-# ---------------------------------------------------------------------------
-
 def test_product_create_retourne_id(products):
-    """create() doit retourner un entier positif (ID auto-incrémenté)."""
+    """create() doit retourner un identifiant textuel non vide."""
     pid = products.create(brand="Ramy", product_name="Jus orange")
-    assert isinstance(pid, int)
-    assert pid > 0
+    assert isinstance(pid, str)
+    assert pid.startswith("prod-")
 
 
 def test_product_get_retourne_enregistrement(products):
@@ -65,18 +58,18 @@ def test_product_get_retourne_enregistrement(products):
         keywords_arabizi=["nectar"],
         keywords_fr=["nectar pêche"],
     )
-    p = products.get(pid)
-    assert p is not None
-    assert p["brand"] == "Ramy"
-    assert p["product_name"] == "Nectar pêche"
-    assert p["sku"] == "RAMY-NPC-001"
-    assert "نكتار" in p["keywords_ar"]
-    assert "nectar" in p["keywords_arabizi"]
+    product = products.get(pid)
+    assert product is not None
+    assert product["brand"] == "Ramy"
+    assert product["product_name"] == "Nectar pêche"
+    assert product["sku"] == "RAMY-NPC-001"
+    assert "نكتار" in product["keywords_ar"]
+    assert "nectar" in product["keywords_arabizi"]
 
 
 def test_product_get_inexistant_retourne_none(products):
     """get() doit retourner None pour un ID qui n'existe pas."""
-    assert products.get(9999) is None
+    assert products.get("prod-inexistant") is None
 
 
 def test_product_list_retourne_tous(products):
@@ -114,7 +107,7 @@ def test_product_update_modifie_champ(products):
 
 def test_product_update_inexistant_retourne_false(products):
     """update() sur un ID inexistant doit retourner False."""
-    assert products.update(9999, product_name="Fantôme") is False
+    assert products.update("prod-inexistant", product_name="Fantôme") is False
 
 
 def test_product_delete_supprime(products):
@@ -126,7 +119,7 @@ def test_product_delete_supprime(products):
 
 def test_product_delete_inexistant_retourne_false(products):
     """delete() sur un ID inexistant doit retourner False."""
-    assert products.delete(9999) is False
+    assert products.delete("prod-inexistant") is False
 
 
 def test_product_search_by_keyword_arabizi(products):
@@ -159,10 +152,6 @@ def test_product_search_by_keyword_nom_produit(products):
     assert len(products.search_by_keyword("inexistant_xyz")) == 0
 
 
-# ---------------------------------------------------------------------------
-# Tests WilayaCatalog
-# ---------------------------------------------------------------------------
-
 def test_wilaya_seed_charge_58_wilayas(wilayas):
     """seed_from_file() doit insérer 58 wilayas depuis le fichier JSON de seed."""
     inserted = wilayas.seed_from_file()
@@ -183,7 +172,7 @@ def test_wilaya_get_par_code(wilayas):
     wilayas.seed_from_file()
     bejaia = wilayas.get("06")
     assert bejaia is not None
-    assert bejaia["name_fr"] == "Béjaïa"
+    assert bejaia["wilaya_name_fr"] == "Béjaïa"
     assert "bejaia" in bejaia["keywords_arabizi"]
 
 
@@ -198,12 +187,12 @@ def test_wilaya_list_filtre_region_est(wilayas):
 def test_wilaya_create_update_delete(wilayas):
     """CRUD complet sur une wilaya créée manuellement."""
     wilayas.create("99", "Test Wilaya", "تست", ["test", "twilaya"], "Centre")
-    w = wilayas.get("99")
-    assert w["name_fr"] == "Test Wilaya"
+    wilaya = wilayas.get("99")
+    assert wilaya["wilaya_name_fr"] == "Test Wilaya"
 
-    updated = wilayas.update("99", name_fr="Test Wilaya Modifiée")
+    updated = wilayas.update("99", wilaya_name_fr="Test Wilaya Modifiée")
     assert updated is True
-    assert wilayas.get("99")["name_fr"] == "Test Wilaya Modifiée"
+    assert wilayas.get("99")["wilaya_name_fr"] == "Test Wilaya Modifiée"
 
     deleted = wilayas.delete("99")
     assert deleted is True
@@ -215,25 +204,21 @@ def test_wilaya_search_arabizi(wilayas):
     wilayas.seed_from_file()
     results = wilayas.search_by_keyword("dzayer")
     assert len(results) >= 1
-    assert any(w["name_fr"] == "Alger" for w in results)
+    assert any(w["wilaya_name_fr"] == "Alger" for w in results)
 
 
 def test_wilaya_search_nom_fr(wilayas):
     """search_by_keyword('oran') doit trouver Oran via son nom français."""
     wilayas.seed_from_file()
     results = wilayas.search_by_keyword("oran")
-    assert any(w["name_fr"] == "Oran" for w in results)
+    assert any(w["wilaya_name_fr"] == "Oran" for w in results)
 
-
-# ---------------------------------------------------------------------------
-# Tests CompetitorCatalog
-# ---------------------------------------------------------------------------
 
 def test_competitor_create_retourne_id(competitors):
-    """create() doit retourner un entier positif."""
+    """create() doit retourner un identifiant textuel non vide."""
     cid = competitors.create(brand_name="Ifri")
-    assert isinstance(cid, int)
-    assert cid > 0
+    assert isinstance(cid, str)
+    assert cid.startswith("comp-")
 
 
 def test_competitor_get_retourne_enregistrement(competitors):
@@ -245,11 +230,11 @@ def test_competitor_get_retourne_enregistrement(competitors):
         keywords_arabizi=["hamoud", "hamoud boualem"],
         keywords_fr=["hamoud boualem"],
     )
-    c = competitors.get(cid)
-    assert c is not None
-    assert c["brand_name"] == "Hamoud Boualem"
-    assert "حمود بوعلام" in c["keywords_ar"]
-    assert "hamoud" in c["keywords_arabizi"]
+    competitor = competitors.get(cid)
+    assert competitor is not None
+    assert competitor["brand_name"] == "Hamoud Boualem"
+    assert "حمود بوعلام" in competitor["keywords_ar"]
+    assert "hamoud" in competitor["keywords_arabizi"]
 
 
 def test_competitor_list_filtre_categorie(competitors):
@@ -261,34 +246,63 @@ def test_competitor_list_filtre_categorie(competitors):
     assert eau[0]["brand_name"] == "Ifri"
 
 
-def test_competitor_update_et_delete(competitors):
-    """update() et delete() fonctionnent correctement."""
-    cid = competitors.create(brand_name="ConcurrentTest", category="jus")
-    assert competitors.update(cid, category="nectar") is True
-    assert competitors.get(cid)["category"] == "nectar"
+def test_competitor_list_filtre_is_active(competitors):
+    """list(is_active=False) doit ne retourner que les concurrents inactifs."""
+    competitors.create(brand_name="Ancien", is_active=False)
+    competitors.create(brand_name="Actif", is_active=True)
+    inactifs = competitors.list(is_active=False)
+    assert len(inactifs) == 1
+    assert inactifs[0]["brand_name"] == "Ancien"
+
+
+def test_competitor_update_modifie_champ(competitors):
+    """update() doit modifier le champ demandé et retourner True."""
+    cid = competitors.create(brand_name="Ifri")
+    result = competitors.update(cid, brand_name="Ifri Premium")
+    assert result is True
+    assert competitors.get(cid)["brand_name"] == "Ifri Premium"
+
+
+def test_competitor_update_inexistant_retourne_false(competitors):
+    """update() sur un ID inexistant doit retourner False."""
+    assert competitors.update("comp-inexistant", brand_name="Fantôme") is False
+
+
+def test_competitor_delete_supprime(competitors):
+    """delete() doit supprimer le concurrent et retourner True."""
+    cid = competitors.create(brand_name="À supprimer")
     assert competitors.delete(cid) is True
     assert competitors.get(cid) is None
 
 
-def test_competitor_search_by_keyword_multi_script(competitors):
-    """search_by_keyword() trouve un concurrent en arabe, arabizi et français."""
+def test_competitor_delete_inexistant_retourne_false(competitors):
+    """delete() sur un ID inexistant doit retourner False."""
+    assert competitors.delete("comp-inexistant") is False
+
+
+def test_competitor_search_by_keyword_arabizi(competitors):
+    """search_by_keyword() doit trouver un concurrent par mot-clé arabizi."""
+    competitors.create(
+        brand_name="Hamoud Boualem",
+        keywords_arabizi=["hamoud", "hamoud boualem"],
+    )
+    results = competitors.search_by_keyword("hamoud")
+    assert len(results) == 1
+    assert results[0]["brand_name"] == "Hamoud Boualem"
+
+
+def test_competitor_search_by_keyword_arabe(competitors):
+    """search_by_keyword() doit trouver un concurrent par mot-clé arabe."""
     competitors.create(
         brand_name="Ifri",
-        category="eau",
         keywords_ar=["إفري"],
-        keywords_arabizi=["ifri", "ifry"],
-        keywords_fr=["eau ifri"],
     )
-    assert len(competitors.search_by_keyword("إفري")) == 1
-    assert len(competitors.search_by_keyword("ifry")) == 1
-    assert len(competitors.search_by_keyword("eau ifri")) == 1
-    assert len(competitors.search_by_keyword("introuvable_xyz")) == 0
+    results = competitors.search_by_keyword("إفري")
+    assert len(results) == 1
 
 
-def test_competitor_list_filtre_is_active(competitors):
-    """list(is_active=False) retourne uniquement les concurrents inactifs."""
-    competitors.create(brand_name="Actif", is_active=True)
-    competitors.create(brand_name="Inactif", is_active=False)
-    inactifs = competitors.list(is_active=False)
-    assert len(inactifs) == 1
-    assert inactifs[0]["brand_name"] == "Inactif"
+def test_competitor_search_nom_marque(competitors):
+    """search_by_keyword() doit trouver via brand_name."""
+    competitors.create(brand_name="Rouiba")
+    assert len(competitors.search_by_keyword("rouiba")) == 1
+    assert len(competitors.search_by_keyword("inexistant_xyz")) == 0

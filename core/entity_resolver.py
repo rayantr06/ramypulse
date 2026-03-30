@@ -50,7 +50,7 @@ class _ProductEntry(NamedTuple):
 
     keyword: str
     specificity: int
-    product_id: int
+    product_id: str
     brand: str
     product_name: str
     product_line: str
@@ -68,7 +68,7 @@ class _WilayaEntry(NamedTuple):
 
     keyword: str
     wilaya_code: str
-    name_fr: str
+    wilaya_name_fr: str
 
 
 class _CompetitorEntry(NamedTuple):
@@ -81,7 +81,7 @@ class _CompetitorEntry(NamedTuple):
     """
 
     keyword: str
-    competitor_id: int
+    competitor_id: str
     brand_name: str
 
 
@@ -184,16 +184,16 @@ class EntityResolver:
 
         for w in catalog.list():
             code = w["wilaya_code"]
-            name_fr = w.get("name_fr") or ""
+            wilaya_name_fr = w.get("wilaya_name_fr") or ""
 
             def _add(kw: str) -> None:
                 kw_clean = (kw or "").strip().lower()
                 if kw_clean:
-                    entries.append(_WilayaEntry(kw_clean, code, name_fr))
+                    entries.append(_WilayaEntry(kw_clean, code, wilaya_name_fr))
 
-            _add(name_fr)
-            if w.get("name_ar"):
-                _add(w["name_ar"])
+            _add(wilaya_name_fr)
+            if w.get("wilaya_name_ar"):
+                _add(w["wilaya_name_ar"])
             for kw in w.get("keywords_arabizi") or []:
                 _add(kw)
 
@@ -354,7 +354,7 @@ class EntityResolver:
             return
 
         # Collecter les matchs uniques par product_id
-        seen_pids: set[int] = set()
+        seen_pids: set[str] = set()
         matches: list[_ProductEntry] = []
         for entry in self._product_index:
             if _keyword_in_text(entry.keyword, text_lower) and entry.product_id not in seen_pids:
@@ -416,11 +416,11 @@ class EntityResolver:
             entry = matches[0]
             result["wilaya"] = entry.wilaya_code
             result["matched_keywords"].append(entry.keyword)
-            result["resolution_evidence"].append(f"wilaya:{entry.name_fr}")
+            result["resolution_evidence"].append(f"wilaya:{entry.wilaya_name_fr}")
         elif len(matches) > 1:
             logger.debug(
                 "Ambiguïté wilaya : %s — champ laissé à None",
-                [e.name_fr for e in matches],
+                [e.wilaya_name_fr for e in matches],
             )
 
     def _resolve_competitor(self, text_lower: str, result: dict) -> None:
@@ -435,7 +435,7 @@ class EntityResolver:
         if not text_lower:
             return
 
-        seen_cids: set[int] = set()
+        seen_cids: set[str] = set()
         matches: list[_CompetitorEntry] = []
         for entry in self._competitor_index:
             if _keyword_in_text(entry.keyword, text_lower) and entry.competitor_id not in seen_cids:
