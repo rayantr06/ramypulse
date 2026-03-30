@@ -23,6 +23,7 @@ RAW_DATA_DIR: Path = DATA_DIR / "raw"
 PROCESSED_DATA_DIR: Path = DATA_DIR / "processed"
 EMBEDDINGS_DIR: Path = DATA_DIR / "embeddings"
 DEMO_DATA_DIR: Path = DATA_DIR / "demo"
+SQLITE_DB_PATH: Path = DATA_DIR / "ramypulse.db"
 
 # Création automatique des dossiers si absents
 DATA_DIR.mkdir(parents=True, exist_ok=True)

@@ -70,7 +70,11 @@ def _build_aspect_sentiments(text: str, aspect_mentions: list[dict[str, object]]
     return annotations
 
 
-def run_absa_pipeline(dataframe: pd.DataFrame, output_path: str | Path | None = None) -> pd.DataFrame:
+def run_absa_pipeline(
+    dataframe: pd.DataFrame,
+    output_path: str | Path | None = None,
+    persist_output: bool = True,
+) -> pd.DataFrame:
     """Enrichit un DataFrame source avec le sentiment global et les sentiments par aspect."""
     _ensure_classifier_available()
 
@@ -108,8 +112,9 @@ def run_absa_pipeline(dataframe: pd.DataFrame, output_path: str | Path | None = 
     ]
     result = working.loc[:, final_columns]
 
-    output = Path(output_path) if output_path is not None else _default_output_path()
-    output.parent.mkdir(parents=True, exist_ok=True)
-    result.to_parquet(output, index=False)
+    if persist_output:
+        output = Path(output_path) if output_path is not None else _default_output_path()
+        output.parent.mkdir(parents=True, exist_ok=True)
+        result.to_parquet(output, index=False)
 
     return result
