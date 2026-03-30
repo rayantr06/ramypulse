@@ -1,4 +1,4 @@
-"""Point d'entrée Streamlit pour RamyPulse.
+"""Point d'entree Streamlit pour RamyPulse.
 
 Lance avec: streamlit run app.py
 """
@@ -12,33 +12,30 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ---------------------------------------------------------------------------
-# Sidebar — navigation et branding
-# ---------------------------------------------------------------------------
-
 st.sidebar.title("RamyPulse")
-st.sidebar.caption("Analyse de sentiment ABSA — Dialecte algérien")
+st.sidebar.caption("Analyse de sentiment ABSA - Dialecte algerien")
 st.sidebar.divider()
-
-# ---------------------------------------------------------------------------
-# Page d'accueil (si aucune page sélectionnée)
-# ---------------------------------------------------------------------------
 
 st.title("RamyPulse")
 st.markdown(
-    "Bienvenue sur **RamyPulse**, le tableau de bord d'analyse de sentiment "
+    "Bienvenue sur **RamyPulse**, la couche d'analyse et de pilotage "
     "multi-canal pour la marque Ramy."
 )
-st.markdown("Utilisez la barre latérale pour naviguer entre les pages.")
+st.markdown("Utilisez la barre laterale pour naviguer entre les pages.")
 
-c1, c2 = st.columns(2)
-c3, c4 = st.columns(2)
+row1 = st.columns(3)
+row2 = st.columns(3)
 
-with c1:
-    st.info("📊 **Dashboard** — KPIs, matrice ABSA, tendances")
-with c2:
-    st.info("🔍 **Explorateur** — Recherche et filtres avancés")
-with c3:
-    st.info("💬 **Chat Q&A** — Questions en langage naturel + sources")
-with c4:
-    st.info("🔮 **What-If** — Simulation d'impact par aspect")
+with row1[0]:
+    st.info("📊 **Dashboard** - KPIs, matrice ABSA, tendances et filtres metier")
+with row1[1]:
+    st.info("🔍 **Explorateur** - Recherche detaillee, filtres avances, colonnes metier")
+with row1[2]:
+    st.info("💬 **Chat Q&A** - Questions en langage naturel + sources")
+
+with row2[0]:
+    st.info("🔮 **What-If** - Simulation d'impact par aspect")
+with row2[1]:
+    st.info("🗂️ **Admin Sources** - Registre SQLite des sources surveillees")
+with row2[2]:
+    st.info("📚 **Admin Catalog** - Produits, wilayas et concurrents")
