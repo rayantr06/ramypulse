@@ -24,6 +24,10 @@ PROCESSED_DATA_DIR: Path = DATA_DIR / "processed"
 EMBEDDINGS_DIR: Path = DATA_DIR / "embeddings"
 DEMO_DATA_DIR: Path = DATA_DIR / "demo"
 SQLITE_DB_PATH: Path = DATA_DIR / "ramypulse.db"
+ANNOTATED_PARQUET_PATH: Path = PROCESSED_DATA_DIR / "annotated.parquet"
+DEFAULT_CLIENT_ID: str = "ramy_client_001"
+SOURCE_HEALTH_THRESHOLD: int = 60
+ALERT_DETECTION_INTERVAL_MINUTES: int = 30
 
 # Création automatique des dossiers si absents
 DATA_DIR.mkdir(parents=True, exist_ok=True)
