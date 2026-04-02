@@ -22,6 +22,7 @@ from config import (
     DEFAULT_CLIENT_ID,
     OLLAMA_BASE_URL,
 )
+from core.security.secret_manager import is_secret_reference, resolve_secret, store_secret
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +65,7 @@ if df.empty:
 try:
     from core.recommendation.recommendation_manager import (
         get_client_agent_config,
+        get_recommendation,
         list_recommendations,
         save_recommendation,
         update_client_agent_config,
@@ -80,7 +82,9 @@ if "reco_provider" not in st.session_state:
 if "reco_model" not in st.session_state:
     st.session_state["reco_model"] = agent_config.get("model") or DEFAULT_AGENT_MODEL
 if "reco_api_key" not in st.session_state:
-    st.session_state["reco_api_key"] = agent_config.get("api_key_encrypted") or ""
+    st.session_state["reco_api_key"] = ""
+if "reco_api_key_reference" not in st.session_state:
+    st.session_state["reco_api_key_reference"] = agent_config.get("api_key_encrypted") or ""
 if "reco_auto_trigger_on_alert" not in st.session_state:
     st.session_state["reco_auto_trigger_on_alert"] = bool(agent_config.get("auto_trigger_on_alert"))
 if "reco_auto_trigger_severity" not in st.session_state:
@@ -89,6 +93,16 @@ if "reco_weekly_enabled" not in st.session_state:
     st.session_state["reco_weekly_enabled"] = bool(agent_config.get("weekly_report_enabled"))
 if "reco_weekly_day" not in st.session_state:
     st.session_state["reco_weekly_day"] = int(agent_config.get("weekly_report_day") or 1)
+
+focused_recommendation_id = str(st.query_params.get("recommendation_id") or "").strip() or None
+if focused_recommendation_id:
+    focused_recommendation = get_recommendation(focused_recommendation_id)
+    if focused_recommendation:
+        st.info(
+            "Recommendation ciblee: "
+            f"{focused_recommendation_id[:8]}... | "
+            f"{focused_recommendation.get('analysis_summary') or 'Sans resume'}"
+        )
 
 
 # ─── Section 1 — Générer maintenant ──────────────────────────────────────────
@@ -121,7 +135,13 @@ generate_btn = st.button("Generer les recommandations", type="primary")
 if generate_btn:
     provider = st.session_state["reco_provider"]
     model = st.session_state["reco_model"] or None
-    api_key = st.session_state["reco_api_key"] or None
+    raw_api_key = st.session_state["reco_api_key"] or None
+    if raw_api_key and is_secret_reference(raw_api_key):
+        api_key = resolve_secret(raw_api_key)
+    elif raw_api_key:
+        api_key = raw_api_key
+    else:
+        api_key = resolve_secret(st.session_state.get("reco_api_key_reference"))
 
     with st.spinner("Analyse en cours — assemblage du contexte, appel a l'agent..."):
         try:
@@ -195,7 +215,7 @@ try:
                 f"provider: {provider_label} | {created_at}"
             )
 
-            with st.expander(header_label, expanded=False):
+            with st.expander(header_label, expanded=(focused_recommendation_id == rec_id)):
                 if summary:
                     st.markdown(f"**Situation :** {summary}")
                     st.divider()
@@ -273,7 +293,8 @@ try:
                     st.caption(f"ID : {rec_id[:8]}...")
                     if reco_row.get("alert_id"):
                         st.caption(f"Alerte source : {reco_row['alert_id'][:8]}...")
-                    if st.button("Ouvrir Campagnes", key=f"campaign_link_{rec_id}"):
+                    if st.button("Creer une campagne depuis cette reco", key=f"campaign_link_{rec_id}"):
+                        st.query_params["recommendation_id"] = rec_id
                         st.switch_page("pages/05_campaigns.py")
 
 except Exception as exc:
@@ -383,6 +404,13 @@ with st.form("agent_config_form"):
         )
 
     if selected_provider in ("anthropic", "openai"):
+        stored_reference = (
+            st.session_state.get("reco_api_key_reference")
+            or agent_config.get("api_key_encrypted")
+            or ""
+        )
+        if stored_reference:
+            st.caption(f"Reference secret actuellement stockee: {stored_reference}")
         api_key_input = st.text_input(
             f"Cle API {selected_provider.capitalize()}",
             value=st.session_state.get("reco_api_key", ""),
@@ -397,17 +425,28 @@ with st.form("agent_config_form"):
     if submitted:
         st.session_state["reco_provider"] = selected_provider
         st.session_state["reco_model"] = selected_model
-        st.session_state["reco_api_key"] = api_key_input
         st.session_state["reco_auto_trigger_on_alert"] = auto_trigger_on_alert
         st.session_state["reco_auto_trigger_severity"] = selected_auto_severity
         st.session_state["reco_weekly_enabled"] = weekly_enabled
         st.session_state["reco_weekly_day"] = weekly_day
         try:
+            if selected_provider in ("anthropic", "openai"):
+                if api_key_input.strip():
+                    secret_reference = store_secret(api_key_input.strip(), label=selected_provider)
+                else:
+                    secret_reference = (
+                        st.session_state.get("reco_api_key_reference")
+                        or agent_config.get("api_key_encrypted")
+                        or None
+                    )
+            else:
+                secret_reference = None
+
             persisted = update_client_agent_config(
                 {
                     "provider": selected_provider,
                     "model": selected_model or None,
-                    "api_key_encrypted": api_key_input or None,
+                    "api_key_encrypted": secret_reference,
                     "auto_trigger_on_alert": auto_trigger_on_alert,
                     "auto_trigger_severity": selected_auto_severity,
                     "weekly_report_enabled": weekly_enabled,
@@ -415,6 +454,8 @@ with st.form("agent_config_form"):
                 },
                 client_id=DEFAULT_CLIENT_ID,
             )
+            st.session_state["reco_api_key_reference"] = persisted.get("api_key_encrypted") or ""
+            st.session_state["reco_api_key"] = ""
             st.success(
                 "Configuration sauvegardee : "
                 f"{persisted['provider']} / {persisted.get('model') or 'defaut'}"

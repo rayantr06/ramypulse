@@ -6,10 +6,12 @@ import json
 import logging
 import sqlite3
 import uuid
+import importlib
 from datetime import datetime
 
 import config
 import pandas as pd
+from core.security.secret_manager import resolve_secret
 
 logger = logging.getLogger(__name__)
 
@@ -33,9 +35,15 @@ _REQUIRED_COLUMNS = {
 }
 
 
+def _config_module():
+    """Retourne le module config courant, meme apres reload dans les tests."""
+    return importlib.import_module("config")
+
+
 def _get_connection() -> sqlite3.Connection:
     """Retourne une connexion SQLite courte duree pour les alertes."""
-    connection = sqlite3.connect(config.SQLITE_DB_PATH)
+    cfg = _config_module()
+    connection = sqlite3.connect(cfg.SQLITE_DB_PATH)
     connection.row_factory = sqlite3.Row
     return connection
 
@@ -127,8 +135,9 @@ def _severity_rank(severity: str) -> int:
 
 def _load_dataframe_for_autotrigger() -> pd.DataFrame:
     """Charge les donnees annotees pour alimenter le contexte reco."""
+    cfg = _config_module()
     try:
-        dataframe = pd.read_parquet(config.ANNOTATED_PARQUET_PATH)
+        dataframe = pd.read_parquet(cfg.ANNOTATED_PARQUET_PATH)
     except FileNotFoundError:
         return pd.DataFrame()
     except Exception:
@@ -189,9 +198,9 @@ def _run_recommendation_auto_trigger(alert_id: str, severity: str) -> None:
         )
         result = generate_recommendations(
             context=context,
-            provider=agent_config.get("provider") or config.DEFAULT_AGENT_PROVIDER,
+            provider=agent_config.get("provider") or _config_module().DEFAULT_AGENT_PROVIDER,
             model=agent_config.get("model"),
-            api_key=agent_config.get("api_key_encrypted") or None,
+            api_key=resolve_secret(agent_config.get("api_key_encrypted")) or None,
         )
         result["alert_id"] = alert_id
         result["context_tokens"] = context.get("estimated_tokens")

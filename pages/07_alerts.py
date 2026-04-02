@@ -15,7 +15,7 @@ from core.alerts.alert_manager import list_alerts, update_alert_status
 
 logger = logging.getLogger(__name__)
 
-st.set_page_config(page_title="Alertes — RamyPulse", layout="wide")
+st.set_page_config(page_title="Alertes - RamyPulse", layout="wide")
 
 
 @st.cache_data(ttl=300)
@@ -23,10 +23,12 @@ def load_data() -> pd.DataFrame:
     """Charge les donnees annotees ou retourne un DataFrame vide."""
     try:
         dataframe = pd.read_parquet(ANNOTATED_PARQUET_PATH)
-        dataframe["timestamp"] = pd.to_datetime(dataframe["timestamp"], errors="coerce")
-        return dataframe
     except FileNotFoundError:
         return pd.DataFrame()
+
+    if "timestamp" in dataframe.columns:
+        dataframe["timestamp"] = pd.to_datetime(dataframe["timestamp"], errors="coerce")
+    return dataframe
 
 
 def _status_options() -> list[str]:
@@ -58,13 +60,20 @@ def _status_button(label: str, status: str, alert_id: str, disabled: bool = Fals
             st.rerun()
 
 
+def _open_recommendation_page(recommendation_id: str | None) -> None:
+    """Ouvre la page recommendation avec deep-link si un identifiant existe."""
+    if recommendation_id:
+        st.query_params["recommendation_id"] = recommendation_id
+    st.switch_page("pages/08_recommendations.py")
+
+
 df = load_data()
 
-st.title("🚨 Centre d'alertes")
+st.title("Centre d'alertes")
 st.caption(f"Cycle de vie des alertes pour le client {DEFAULT_CLIENT_ID}.")
 
 if df.empty:
-    st.warning("⚠️ Données non disponibles. Lancez d'abord scripts/run_demo_05.py")
+    st.warning("Donnees non disponibles. Lancez d'abord scripts/run_demo_05.py")
     st.stop()
 
 toolbar_left, toolbar_right = st.columns([1, 2])
@@ -97,10 +106,7 @@ summary[2].metric(
     "Critiques/hautes",
     sum(1 for alert in alerts if alert["severity"] in {"critical", "high"}),
 )
-summary[3].metric(
-    "Resolues",
-    sum(1 for alert in alerts if alert["status"] == "resolved"),
-)
+summary[3].metric("Resolues", sum(1 for alert in alerts if alert["status"] == "resolved"))
 
 st.divider()
 
@@ -108,7 +114,7 @@ if not alerts:
     st.info("Aucune alerte pour les filtres selectionnes.")
 
 for alert in alerts:
-    title = f"[{alert['severity'].upper()}] {alert['title']} — {alert['status']}"
+    title = f"[{alert['severity'].upper()}] {alert['title']} - {alert['status']}"
     with st.expander(title):
         st.write(alert["description"] or "Sans description detaillee.")
         meta_left, meta_mid, meta_right = st.columns(3)
@@ -120,8 +126,8 @@ for alert in alerts:
             st.code(alert["navigation_url"], language="text")
 
         payload = alert.get("alert_payload") or {}
+        recommendation_id = payload.get("recommendation_id") if payload else None
         if payload:
-            recommendation_id = payload.get("recommendation_id")
             if recommendation_id:
                 st.success(f"Recommandation liee: {recommendation_id}")
             elif payload.get("has_recommendations"):
@@ -154,13 +160,14 @@ for alert in alerts:
             )
 
         if Path(__file__).with_name("08_recommendations.py").exists():
-            st.page_link(
-                "pages/08_recommendations.py",
-                label=(
-                    f"Ouvrir Recommendations ({recommendation_id[:8]}...)"
-                    if payload.get("recommendation_id")
-                    else "Ouvrir Recommendations"
-                ),
-            )
+            if recommendation_id:
+                if st.button(
+                    f"Ouvrir la recommendation {recommendation_id[:8]}...",
+                    key=f"open_reco_{alert['alert_id']}",
+                    use_container_width=True,
+                ):
+                    _open_recommendation_page(recommendation_id)
+            else:
+                st.page_link("pages/08_recommendations.py", label="Ouvrir Recommendations")
         else:
-            st.caption("Lien Recommendations disponible quand la page 08 est installée.")
+            st.caption("Lien Recommendations disponible quand la page 08 est installee.")

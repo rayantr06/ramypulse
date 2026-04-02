@@ -8,6 +8,7 @@ import json
 import logging
 import sqlite3
 import uuid
+import importlib
 from datetime import datetime
 
 import config
@@ -35,6 +36,11 @@ CREATE TABLE IF NOT EXISTS client_agent_config (
 """
 
 
+def _config_module():
+    """Retourne le module config courant, meme apres reload dans les tests."""
+    return importlib.import_module("config")
+
+
 # ---------------------------------------------------------------------------
 # Helpers SQLite (Section 7 de INTERFACES.md)
 # ---------------------------------------------------------------------------
@@ -48,7 +54,8 @@ def _get_connection(db_path=None) -> sqlite3.Connection:
     Returns:
         Connexion SQLite avec sqlite3.Row factory.
     """
-    resolved = str(db_path) if db_path else str(getattr(config, "SQLITE_DB_PATH", SQLITE_DB_PATH))
+    cfg = _config_module()
+    resolved = str(db_path) if db_path else str(getattr(cfg, "SQLITE_DB_PATH", SQLITE_DB_PATH))
     conn = sqlite3.connect(resolved)
     conn.row_factory = sqlite3.Row
     return conn
@@ -102,12 +109,13 @@ def _ensure_client_agent_config_table(conn: sqlite3.Connection) -> None:
 
 def _default_agent_config_payload(client_id: str) -> tuple:
     """Construit la ligne de configuration par defaut pour un client."""
+    cfg = _config_module()
     now = _now()
     return (
         f"cfg-{client_id}",
         client_id,
-        getattr(config, "DEFAULT_AGENT_PROVIDER", "ollama_local"),
-        getattr(config, "DEFAULT_AGENT_MODEL", "qwen2.5:14b"),
+        getattr(cfg, "DEFAULT_AGENT_PROVIDER", "ollama_local"),
+        getattr(cfg, "DEFAULT_AGENT_MODEL", "qwen2.5:14b"),
         None,
         0,
         "critical",
@@ -269,8 +277,9 @@ def update_client_agent_config(
         payload["weekly_report_day"] = max(1, min(7, int(payload["weekly_report_day"])))
 
     if "provider" in payload:
+        cfg = _config_module()
         payload["provider"] = str(payload["provider"]).strip() or getattr(
-            config,
+            cfg,
             "DEFAULT_AGENT_PROVIDER",
             "ollama_local",
         )

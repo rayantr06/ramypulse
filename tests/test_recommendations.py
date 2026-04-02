@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 import sqlite3
 import sys
+import importlib
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -16,6 +17,11 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import config
+
+
+def _config_module():
+    """Retourne le module config courant, meme apres reload."""
+    return importlib.import_module("config")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -401,7 +407,7 @@ def tmp_db(tmp_path, monkeypatch):
     import core.watchlists.watchlist_manager as watchlist_manager
 
     db_path = tmp_path / "test_reco.db"
-    monkeypatch.setattr(config, "SQLITE_DB_PATH", db_path)
+    monkeypatch.setattr(_config_module(), "SQLITE_DB_PATH", db_path, raising=False)
     monkeypatch.setattr(alert_manager.config, "SQLITE_DB_PATH", db_path)
     monkeypatch.setattr(campaign_manager, "SQLITE_DB_PATH", db_path, raising=False)
     monkeypatch.setattr(recommendation_manager, "SQLITE_DB_PATH", db_path, raising=False)
