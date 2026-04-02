@@ -78,6 +78,8 @@ def _compute_nss_by_aspect(df: pd.DataFrame) -> dict:
         Dict {aspect: nss_value}. Les aspects sans donnees ont None.
     """
     result: dict = {}
+    if "aspect" not in df.columns:
+        return {aspect: None for aspect in ASPECT_LIST}
     for aspect in ASPECT_LIST:
         sub = df[df["aspect"] == aspect]
         result[aspect] = _compute_nss(sub)
