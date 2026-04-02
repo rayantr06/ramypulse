@@ -169,3 +169,100 @@ def test_get_system_prompt_version_explicite() -> None:
     """get_system_prompt(version='1.0') doit fonctionner."""
     from core.recommendation.prompt_manager import get_system_prompt
     assert isinstance(get_system_prompt(version="1.0"), str)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Task 4 — agent_client
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_parse_json_response_json_valide() -> None:
+    """Un JSON valide doit être parsé correctement."""
+    from core.recommendation.agent_client import _parse_json_response
+    raw = '{"analysis_summary": "test", "recommendations": [], "confidence_score": 0.8}'
+    result = _parse_json_response(raw)
+    assert result["analysis_summary"] == "test"
+    assert result["confidence_score"] == 0.8
+
+
+def test_parse_json_response_avec_fences_markdown() -> None:
+    """Les fences ```json ... ``` doivent être nettoyées avant le parse."""
+    from core.recommendation.agent_client import _parse_json_response
+    raw = '```json\n{"analysis_summary": "ok", "recommendations": []}\n```'
+    result = _parse_json_response(raw)
+    assert result["analysis_summary"] == "ok"
+
+
+def test_parse_json_response_fallback_json_invalide() -> None:
+    """Un JSON invalide doit retourner une structure d'erreur avec parse_success=False."""
+    from core.recommendation.agent_client import _parse_json_response
+    raw = "Voici mes recommandations : bla bla bla (pas de JSON)"
+    result = _parse_json_response(raw)
+    assert result["parse_success"] is False
+    assert result["recommendations"] == []
+    assert result["confidence_score"] == 0.0
+
+
+def test_parse_json_response_ajoute_parse_success_true() -> None:
+    """Un JSON valide doit avoir parse_success=True dans le résultat."""
+    from core.recommendation.agent_client import _parse_json_response
+    raw = '{"analysis_summary": "x", "recommendations": [], "confidence_score": 0.5}'
+    result = _parse_json_response(raw)
+    assert result["parse_success"] is True
+
+
+def test_generate_recommendations_structure_retour_ollama_mock() -> None:
+    """generate_recommendations doit retourner les clés obligatoires (mock Ollama)."""
+    from core.recommendation.agent_client import generate_recommendations
+
+    mock_payload = {
+        "analysis_summary": "NSS faible sur disponibilite.",
+        "recommendations": [{"id": "rec_001", "priority": "high", "title": "Test"}],
+        "watchlist_priorities": [],
+        "confidence_score": 0.7,
+        "data_quality_note": "Donnees suffisantes.",
+    }
+
+    with patch("core.recommendation.agent_client._call_ollama") as mock_call:
+        mock_call.return_value = mock_payload
+        result = generate_recommendations({"trigger": {"type": "manual"}}, provider="ollama_local")
+
+    assert "recommendations" in result
+    assert "analysis_summary" in result
+    assert "provider_used" in result
+    assert "model_used" in result
+    assert "generation_ms" in result
+    assert "parse_success" in result
+    assert isinstance(result["recommendations"], list)
+
+
+def test_generate_recommendations_provider_inconnu_leve_erreur() -> None:
+    """Un provider non supporte doit lever ValueError."""
+    from core.recommendation.agent_client import generate_recommendations
+    with pytest.raises(ValueError, match="Provider non supporte"):
+        generate_recommendations({}, provider="grok_local")
+
+
+def test_cle_api_absente_des_logs(caplog) -> None:
+    """La cle API ne doit jamais apparaitre dans les logs."""
+    import logging
+    from core.recommendation.agent_client import generate_recommendations
+
+    fake_key = "sk-ant-fake-secret-key-12345"
+
+    with patch("core.recommendation.agent_client._call_anthropic") as mock_call:
+        mock_call.return_value = {
+            "analysis_summary": "ok",
+            "recommendations": [],
+            "watchlist_priorities": [],
+            "confidence_score": 0.5,
+            "data_quality_note": "",
+        }
+        with caplog.at_level(logging.DEBUG):
+            generate_recommendations(
+                {"trigger": {"type": "manual"}},
+                provider="anthropic",
+                api_key=fake_key,
+            )
+
+    for record in caplog.records:
+        assert fake_key not in record.getMessage(), f"Cle API trouvee dans les logs: {record.getMessage()}"
