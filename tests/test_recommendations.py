@@ -266,3 +266,115 @@ def test_cle_api_absente_des_logs(caplog) -> None:
 
     for record in caplog.records:
         assert fake_key not in record.getMessage(), f"Cle API trouvee dans les logs: {record.getMessage()}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Task 5 — context_builder
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _make_minimal_df() -> pd.DataFrame:
+    """DataFrame annote minimal pour les tests."""
+    import numpy as np
+    n = 50
+    rng = np.random.default_rng(42)
+    sentiments = ["tres_positif", "positif", "neutre", "negatif", "tres_negatif"]
+    # Utiliser les vrais labels du projet
+    real_sentiments = ["tres_positif", "positif", "neutre", "negatif", "tres_negatif"]
+    real_sentiments_fr = ["très_positif", "positif", "neutre", "négatif", "très_négatif"]
+    aspects = ["gout", "emballage", "prix", "disponibilite", "fraicheur"]
+    real_aspects = ["goût", "emballage", "prix", "disponibilité", "fraîcheur"]
+    channels = ["facebook", "google_maps", "audio", "youtube"]
+    return pd.DataFrame({
+        "text": [f"avis numero {i}" for i in range(n)],
+        "text_original": [f"avis original {i}" for i in range(n)],
+        "sentiment_label": [real_sentiments_fr[i % 5] for i in range(n)],
+        "confidence": rng.uniform(0.6, 1.0, n),
+        "channel": [channels[i % 4] for i in range(n)],
+        "aspect": [real_aspects[i % 5] for i in range(n)],
+        "timestamp": pd.date_range("2026-01-01", periods=n, freq="D"),
+        "source_url": [f"http://source/{i}" for i in range(n)],
+    })
+
+
+def test_build_context_retourne_cles_requises() -> None:
+    """build_recommendation_context doit retourner toutes les cles INTERFACES.md."""
+    from core.recommendation.context_builder import build_recommendation_context
+    df = _make_minimal_df()
+    ctx = build_recommendation_context("manual", None, df)
+    required_keys = {
+        "client_profile", "trigger", "current_metrics",
+        "active_alerts", "active_watchlists", "recent_campaigns",
+        "rag_chunks", "estimated_tokens",
+    }
+    assert required_keys.issubset(ctx.keys()), f"Cles manquantes: {required_keys - ctx.keys()}"
+
+
+def test_build_context_trigger_type_preserve() -> None:
+    """Le trigger_type passe doit etre preserve dans le contexte."""
+    from core.recommendation.context_builder import build_recommendation_context
+    df = _make_minimal_df()
+    ctx = build_recommendation_context("alert_triggered", "some-alert-id", df)
+    assert ctx["trigger"]["type"] == "alert_triggered"
+    assert ctx["trigger"]["id"] == "some-alert-id"
+
+
+def test_build_context_current_metrics_contient_nss() -> None:
+    """current_metrics doit contenir nss_global, volume_total, nss_by_aspect."""
+    from core.recommendation.context_builder import build_recommendation_context
+    df = _make_minimal_df()
+    ctx = build_recommendation_context("manual", None, df)
+    metrics = ctx["current_metrics"]
+    assert "nss_global" in metrics
+    assert "volume_total" in metrics
+    assert "nss_by_aspect" in metrics
+    assert metrics["volume_total"] == 50
+
+
+def test_build_context_df_vide_ne_crash_pas() -> None:
+    """Un DataFrame vide ne doit pas faire planter le contexte."""
+    from core.recommendation.context_builder import build_recommendation_context
+    df = pd.DataFrame(columns=["text", "sentiment_label", "channel", "aspect", "timestamp", "source_url", "confidence", "text_original"])
+    ctx = build_recommendation_context("manual", None, df)
+    assert ctx["current_metrics"]["nss_global"] is None
+    assert ctx["current_metrics"]["volume_total"] == 0
+
+
+def test_build_context_estimated_tokens_positif() -> None:
+    """estimated_tokens doit etre > 0 si le DataFrame n'est pas vide."""
+    from core.recommendation.context_builder import build_recommendation_context
+    df = _make_minimal_df()
+    ctx = build_recommendation_context("manual", None, df)
+    assert ctx["estimated_tokens"] > 0
+
+
+def test_build_context_listes_sont_des_listes() -> None:
+    """active_alerts, active_watchlists, recent_campaigns, rag_chunks sont des list."""
+    from core.recommendation.context_builder import build_recommendation_context
+    df = _make_minimal_df()
+    ctx = build_recommendation_context("manual", None, df)
+    assert isinstance(ctx["active_alerts"], list)
+    assert isinstance(ctx["active_watchlists"], list)
+    assert isinstance(ctx["recent_campaigns"], list)
+    assert isinstance(ctx["rag_chunks"], list)
+
+
+def test_build_context_nss_global_calcule_correctement() -> None:
+    """Le NSS global doit etre calcule correctement sur un DataFrame connu."""
+    from core.recommendation.context_builder import build_recommendation_context
+    # 10 positifs, 10 tres_positifs, 10 negatifs, 10 tres_negatifs, 10 neutres → NSS = 0
+    df = pd.DataFrame({
+        "text": [f"t{i}" for i in range(50)],
+        "text_original": [f"t{i}" for i in range(50)],
+        "sentiment_label": (
+            ["très_positif"] * 10 + ["positif"] * 10 +
+            ["neutre"] * 10 + ["négatif"] * 10 + ["très_négatif"] * 10
+        ),
+        "confidence": [0.9] * 50,
+        "channel": ["facebook"] * 50,
+        "aspect": ["goût"] * 50,
+        "timestamp": pd.date_range("2026-01-01", periods=50, freq="D"),
+        "source_url": ["http://x"] * 50,
+    })
+    ctx = build_recommendation_context("manual", None, df)
+    nss = ctx["current_metrics"]["nss_global"]
+    assert nss == 0.0, f"NSS attendu 0.0, obtenu {nss}"
