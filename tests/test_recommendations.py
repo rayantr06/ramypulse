@@ -104,10 +104,10 @@ def test_recommendations_default_status_active() -> None:
     db.close()
 
 
-def test_migration_recommendations_renomme_ancien_schema() -> None:
-    """Si la table recommendations a l'ancien schema Phase 1, elle doit être renommée."""
+def test_migration_recommendations_recree_le_schema_wave5() -> None:
+    """La migration recommendations doit recreer le schema Wave 5 sans laisser de table temporaire."""
     import sqlite3
-    from core.database import DatabaseManager, _migrate_recommendations_if_needed
+    from core.database import _migrate_recommendations_if_needed
 
     # Simuler l'ancien schema Phase 1
     conn = sqlite3.connect(":memory:")
@@ -129,12 +129,16 @@ def test_migration_recommendations_renomme_ancien_schema() -> None:
     _migrate_recommendations_if_needed(conn)
     conn.commit()
 
-    # Vérifier que l'ancienne table a été renommée
+    # Vérifier que la table finale existe au format Wave 5
     tables = {row[0] for row in conn.execute(
         "SELECT name FROM sqlite_master WHERE type='table'"
     ).fetchall()}
-    assert "recommendations_legacy" in tables
-    assert "recommendations" not in tables  # elle sera recréée par CREATE TABLE IF NOT EXISTS
+    columns = {
+        row["name"] for row in conn.execute("PRAGMA table_info(recommendations)").fetchall()
+    }
+    assert "recommendations" in tables
+    assert "recommendations_legacy" not in tables
+    assert "trigger_type" in columns
     conn.close()
 
 

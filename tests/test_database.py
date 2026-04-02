@@ -224,3 +224,90 @@ def test_create_tables_migre_ancien_schema_vers_prd_v6(tmp_path) -> None:
     assert migrated_competitor["competitor_id"]
 
     db.close()
+
+
+def test_create_tables_migre_ancien_schema_recommendations_vers_wave5(tmp_path) -> None:
+    """La migration recommendations doit preservеr les donnees legacy et supprimer la table temporaire."""
+    db_path = tmp_path / "legacy_recommendations.db"
+    db = DatabaseManager(db_path)
+    connection = db.connection
+
+    connection.execute(
+        """
+        CREATE TABLE recommendations (
+            recommendation_id TEXT PRIMARY KEY,
+            alert_id TEXT,
+            signal_type TEXT NOT NULL,
+            problem TEXT NOT NULL,
+            evidence_summary TEXT,
+            urgency TEXT NOT NULL,
+            actions TEXT NOT NULL,
+            assumptions TEXT,
+            risks TEXT,
+            confidence TEXT NOT NULL,
+            generation_mode TEXT NOT NULL,
+            requires_human_validation BOOLEAN DEFAULT TRUE,
+            is_validated BOOLEAN DEFAULT FALSE,
+            validated_by TEXT,
+            validated_at DATETIME,
+            feedback TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+    connection.execute(
+        """
+        INSERT INTO recommendations (
+            recommendation_id,
+            alert_id,
+            signal_type,
+            problem,
+            evidence_summary,
+            urgency,
+            actions,
+            confidence,
+            generation_mode,
+            created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            "rec-001",
+            "alert-001",
+            "alert",
+            "Le packaging se degrade",
+            "Volume negatif en hausse",
+            "high",
+            "Renforcer la communication packaging",
+            "medium",
+            "manual_rules",
+            "2026-04-01T09:00:00",
+        ),
+    )
+    connection.commit()
+
+    db.create_tables()
+
+    columns = _column_definitions(db, "recommendations")
+    tables = _table_names(db)
+    migrated = db.connection.execute(
+        """
+        SELECT recommendation_id, alert_id, trigger_type, analysis_summary,
+               recommendations, provider_used, created_at
+        FROM recommendations
+        WHERE recommendation_id = ?
+        """,
+        ("rec-001",),
+    ).fetchone()
+
+    assert "trigger_type" in columns
+    assert "recommendations_legacy" not in tables
+    assert migrated is not None
+    assert migrated["recommendation_id"] == "rec-001"
+    assert migrated["alert_id"] == "alert-001"
+    assert migrated["trigger_type"] == "manual"
+    assert migrated["analysis_summary"] == "Le packaging se degrade"
+    assert migrated["recommendations"] == '["Renforcer la communication packaging"]'
+    assert migrated["provider_used"] == "manual_rules"
+    assert migrated["created_at"] == "2026-04-01T09:00:00"
+
+    db.close()

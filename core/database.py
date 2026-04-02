@@ -362,7 +362,8 @@ def _migrate_recommendations_if_needed(connection: sqlite3.Connection) -> None:
 
     Si la table n'existe pas, la fonction n'intervient pas.
     Si la table possede deja trigger_type (schema Wave 5), aucune action.
-    Sinon, renomme la table legacy et cree la nouvelle via CREATE TABLE IF NOT EXISTS.
+    Sinon, renomme la table legacy, recree la table cible, migre les donnees,
+    puis supprime la table temporaire.
     """
     if not _table_exists(connection, "recommendations"):
         return
@@ -371,6 +372,53 @@ def _migrate_recommendations_if_needed(connection: sqlite3.Connection) -> None:
         return
     logger.info("Migration SQLite : realignement de la table recommendations vers schema Wave 5")
     connection.execute("ALTER TABLE recommendations RENAME TO recommendations_legacy")
+    connection.execute(_SCHEMA_STATEMENTS["recommendations"])
+    connection.execute(
+        f"""
+        INSERT INTO recommendations (
+            recommendation_id,
+            client_id,
+            trigger_type,
+            trigger_id,
+            alert_id,
+            analysis_summary,
+            recommendations,
+            watchlist_priorities,
+            confidence_score,
+            data_quality_note,
+            provider_used,
+            model_used,
+            context_tokens,
+            generation_ms,
+            status,
+            created_at
+        )
+        SELECT
+            {_select_or_default(columns, "recommendation_id", "'rec-' || lower(hex(randomblob(6)))")},
+            'ramy_client_001',
+            'manual',
+            NULL,
+            {_select_or_default(columns, "alert_id", "NULL")},
+            {_select_or_default(columns, "problem", "''")},
+            CASE
+                WHEN {_select_or_default(columns, "actions", "NULL")} IS NULL
+                    OR {_select_or_default(columns, "actions", "NULL")} = ''
+                THEN '[]'
+                ELSE json_array({_select_or_default(columns, "actions", "NULL")})
+            END,
+            '[]',
+            NULL,
+            {_select_or_default(columns, "evidence_summary", "NULL")},
+            {_select_or_default(columns, "generation_mode", "NULL")},
+            NULL,
+            NULL,
+            NULL,
+            'active',
+            {_select_or_default(columns, "created_at", "CURRENT_TIMESTAMP")}
+        FROM recommendations_legacy
+        """
+    )
+    connection.execute("DROP TABLE recommendations_legacy")
 
 
 class DatabaseManager:
