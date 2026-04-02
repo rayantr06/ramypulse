@@ -136,3 +136,36 @@ def test_migration_recommendations_renomme_ancien_schema() -> None:
     assert "recommendations_legacy" in tables
     assert "recommendations" not in tables  # elle sera recréée par CREATE TABLE IF NOT EXISTS
     conn.close()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Task 3 — prompt_manager
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_get_system_prompt_retourne_string() -> None:
+    """get_system_prompt() doit retourner une chaîne non vide."""
+    from core.recommendation.prompt_manager import get_system_prompt
+    prompt = get_system_prompt()
+    assert isinstance(prompt, str)
+    assert len(prompt) > 100
+
+
+def test_get_system_prompt_contient_format_json() -> None:
+    """Le prompt système doit mentionner le format JSON attendu."""
+    from core.recommendation.prompt_manager import get_system_prompt
+    prompt = get_system_prompt()
+    assert "analysis_summary" in prompt
+    assert "recommendations" in prompt
+
+
+def test_get_system_prompt_version_inconnue_leve_erreur() -> None:
+    """Une version inconnue doit lever ValueError."""
+    from core.recommendation.prompt_manager import get_system_prompt
+    with pytest.raises(ValueError):
+        get_system_prompt(version="99.0")
+
+
+def test_get_system_prompt_version_explicite() -> None:
+    """get_system_prompt(version='1.0') doit fonctionner."""
+    from core.recommendation.prompt_manager import get_system_prompt
+    assert isinstance(get_system_prompt(version="1.0"), str)
