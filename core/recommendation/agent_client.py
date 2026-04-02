@@ -27,8 +27,34 @@ logger = logging.getLogger(__name__)
 _ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
 _OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
 _ANTHROPIC_VERSION_HEADER = "2023-06-01"
-_DEFAULT_MAX_TOKENS = 2000
-_TIMEOUT_SECONDS = 120
+_DEFAULT_MAX_TOKENS = 4096
+_TIMEOUT_SECONDS = 180
+
+# Catalogue des modèles recommandés par provider — utilisé par l'UI
+MODEL_CATALOG: dict[str, list[dict]] = {
+    "anthropic": [
+        {"id": "claude-opus-4-6", "label": "Claude Opus 4.6 (le plus puissant)", "recommended": True},
+        {"id": "claude-sonnet-4-6", "label": "Claude Sonnet 4.6 (équilibre coût/qualité)", "recommended": False},
+        {"id": "claude-haiku-4-5-20251001", "label": "Claude Haiku 4.5 (rapide, économique)", "recommended": False},
+    ],
+    "openai": [
+        {"id": "gpt-4o", "label": "GPT-4o (recommandé)", "recommended": True},
+        {"id": "gpt-4-turbo", "label": "GPT-4 Turbo", "recommended": False},
+        {"id": "o1-preview", "label": "o1 Preview (raisonnement avancé)", "recommended": False},
+    ],
+    "ollama_local": [
+        {"id": "qwen2.5:14b", "label": "Qwen 2.5 14B (recommandé local)", "recommended": True},
+        {"id": "llama3.2:3b", "label": "Llama 3.2 3B (léger)", "recommended": False},
+        {"id": "mistral:7b", "label": "Mistral 7B", "recommended": False},
+    ],
+}
+
+# Modèles par défaut par provider
+_DEFAULT_MODELS: dict[str, str] = {
+    "anthropic": "claude-opus-4-6",
+    "openai": "gpt-4o",
+    "ollama_local": "qwen2.5:14b",
+}
 
 
 # ---------------------------------------------------------------------------
@@ -267,15 +293,15 @@ def generate_recommendations(
     t_start = time.monotonic()
 
     if provider == "anthropic":
-        resolved_model = model or "claude-sonnet-4-6"
+        resolved_model = model or _DEFAULT_MODELS["anthropic"]
         resolved_key = api_key or ANTHROPIC_API_KEY
         result = _call_anthropic(resolved_key, resolved_model, user_prompt, system_prompt)
     elif provider == "openai":
-        resolved_model = model or "gpt-4o"
+        resolved_model = model or _DEFAULT_MODELS["openai"]
         resolved_key = api_key or OPENAI_API_KEY
         result = _call_openai(resolved_key, resolved_model, user_prompt, system_prompt)
     elif provider == "ollama_local":
-        resolved_model = model or DEFAULT_AGENT_MODEL
+        resolved_model = model or _DEFAULT_MODELS.get("ollama_local", DEFAULT_AGENT_MODEL)
         result = _call_ollama(resolved_model, user_prompt, system_prompt)
     else:
         raise ValueError(

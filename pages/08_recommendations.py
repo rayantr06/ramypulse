@@ -22,6 +22,7 @@ from config import (
     DEFAULT_CLIENT_ID,
     OLLAMA_BASE_URL,
 )
+from core.recommendation.agent_client import MODEL_CATALOG
 from core.security.secret_manager import is_secret_reference, resolve_secret, store_secret
 
 logger = logging.getLogger(__name__)
@@ -130,7 +131,53 @@ with col_scope:
     elif trigger_type == "scheduled":
         st.info("Mode planifie — utilise toutes les watchlists actives comme contexte.")
 
-generate_btn = st.button("Generer les recommandations", type="primary")
+col_gen, col_prev = st.columns([2, 1])
+generate_btn = col_gen.button("Generer les recommandations", type="primary")
+preview_btn = col_prev.button("Previsualiser le contexte client")
+
+if preview_btn:
+    with st.spinner("Assemblage du contexte..."):
+        try:
+            from core.recommendation.context_builder import build_recommendation_context
+            ctx = build_recommendation_context(
+                trigger_type=trigger_type,
+                trigger_id=trigger_id,
+                df_annotated=df,
+                max_rag_chunks=8,
+            )
+            metrics = ctx.get("current_metrics", {})
+            st.markdown("#### Contexte qui sera envoyé au LLM")
+            col_m1, col_m2, col_m3 = st.columns(3)
+            col_m1.metric("NSS global", f"{metrics.get('nss_global') or 0:.1f}")
+            col_m2.metric("Volume signaux", metrics.get("volume_total", 0))
+            col_m3.metric("Tokens estimés", ctx.get("estimated_tokens", 0))
+
+            col_d1, col_d2, col_d3 = st.columns(3)
+            col_d1.metric("Alertes actives", len(ctx.get("active_alerts", [])))
+            col_d2.metric("Watchlists actives", len(ctx.get("active_watchlists", [])))
+            col_d3.metric("Campagnes récentes", len(ctx.get("recent_campaigns", [])))
+
+            rag = ctx.get("rag_chunks", [])
+            if rag:
+                st.success(f"{len(rag)} extraits RAG chargés depuis l'index FAISS")
+            else:
+                st.info("Aucun chunk RAG (index FAISS absent ou vide — le LLM utilisera uniquement les métriques)")
+
+            top_neg = metrics.get("top_negative_aspects", [])
+            if top_neg:
+                st.warning(f"Aspects les plus problématiques : **{', '.join(top_neg)}**")
+
+            with st.expander("Voir NSS par aspect"):
+                asp_data = metrics.get("nss_by_aspect", {})
+                if asp_data:
+                    import pandas as _pd
+                    asp_df = _pd.DataFrame(
+                        [(k, v) for k, v in asp_data.items() if v is not None],
+                        columns=["Aspect", "NSS"],
+                    ).sort_values("NSS")
+                    st.bar_chart(asp_df.set_index("Aspect")["NSS"])
+        except Exception as exc:
+            st.error(f"Erreur assemblage contexte : {exc}")
 
 if generate_btn:
     provider = st.session_state["reco_provider"]
@@ -360,16 +407,37 @@ with st.form("agent_config_form"):
         )
 
     with col_mod:
-        model_defaults = {
-            "ollama_local": "qwen2.5:14b",
-            "anthropic": "claude-sonnet-4-6",
-            "openai": "gpt-4o",
-        }
-        selected_model = st.text_input(
+        catalog_for_provider = MODEL_CATALOG.get(selected_provider, [])
+        catalog_ids = [m["id"] for m in catalog_for_provider]
+        catalog_labels = {m["id"]: m["label"] for m in catalog_for_provider}
+
+        current_model = st.session_state.get("reco_model") or ""
+        use_custom = current_model not in catalog_ids and current_model != ""
+
+        model_select_options = catalog_ids + (["autre..."] if catalog_ids else [])
+        try:
+            default_sel_idx = catalog_ids.index(current_model) if current_model in catalog_ids else 0
+        except ValueError:
+            default_sel_idx = 0
+
+        selected_from_catalog = st.selectbox(
             "Modele",
-            value=st.session_state.get("reco_model") or model_defaults.get(selected_provider, ""),
-            placeholder=model_defaults.get(selected_provider, ""),
+            options=model_select_options,
+            index=default_sel_idx,
+            format_func=lambda x: catalog_labels.get(x, x),
+            key=f"model_catalog_{selected_provider}",
         )
+
+        if selected_from_catalog == "autre...":
+            selected_model = st.text_input(
+                "ID du modele personnalise",
+                value=current_model if use_custom else "",
+                placeholder="Ex: claude-opus-4-6, gpt-4o, mistral:latest",
+            )
+        else:
+            selected_model = selected_from_catalog
+            if not selected_model and catalog_ids:
+                selected_model = catalog_ids[0]
 
     col_auto, col_weekly = st.columns(2)
     with col_auto:
