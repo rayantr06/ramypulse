@@ -129,13 +129,13 @@ class TestLabelsEtListes:
         cfg = _reload_config()
         assert isinstance(cfg.CHANNELS, list)
 
-    def test_channels_4_elements(self):
+    def test_channels_5_elements(self):
         cfg = _reload_config()
-        assert len(cfg.CHANNELS) == 4
+        assert len(cfg.CHANNELS) == 5
 
     def test_channels_contenu(self):
         cfg = _reload_config()
-        attendus = {"facebook", "google_maps", "audio", "youtube"}
+        attendus = {"facebook", "google_maps", "audio", "youtube", "instagram"}
         assert set(cfg.CHANNELS) == attendus
 
 
@@ -185,6 +185,13 @@ class TestValeursSansEnv:
             "FAISS_INDEX_PATH", "EMBEDDING_MODEL", "EMBEDDING_DIM",
             "SENTIMENT_LABELS", "ASPECT_LIST", "CHANNELS", "NSS_FORMULA",
             "APIFY_API_KEY",
+            # Wave 5
+            "DEFAULT_CLIENT_ID", "ANTHROPIC_API_KEY", "OPENAI_API_KEY",
+            "DEFAULT_AGENT_PROVIDER", "DEFAULT_AGENT_MODEL",
+            "DEFAULT_PRE_WINDOW_DAYS", "DEFAULT_POST_WINDOW_DAYS",
+            "MIN_SIGNALS_FOR_ATTRIBUTION",
+            "SOURCE_HEALTH_THRESHOLD", "ALERT_DETECTION_INTERVAL_MINUTES",
+            "ANNOTATED_PARQUET_PATH", "CLEAN_PARQUET_PATH",
         ]
         for nom in obligatoires:
             assert hasattr(cfg, nom), f"Constante manquante: {nom}"

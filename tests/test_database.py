@@ -94,15 +94,15 @@ def test_foreign_keys_activees() -> None:
     db.close()
 
 
-def test_alerts_reference_watchlists() -> None:
-    """La table alerts doit porter une clé étrangère vers watchlists."""
+def test_alerts_watchlist_id_nullable() -> None:
+    """La table alerts doit avoir watchlist_id nullable (schema Wave 5, sans FK hard)."""
     db = DatabaseManager(":memory:")
     db.create_tables()
 
-    rows = db.connection.execute("PRAGMA foreign_key_list(alerts)").fetchall()
-    references = {(row["table"], row["from"], row["to"]) for row in rows}
-
-    assert ("watchlists", "watchlist_id", "watchlist_id") in references
+    cols = {row["name"]: row for row in db.connection.execute("PRAGMA table_info(alerts)").fetchall()}
+    assert "watchlist_id" in cols, "La colonne watchlist_id doit exister dans alerts"
+    # Wave 5 : watchlist_id est nullable — pas de NOT NULL
+    assert cols["watchlist_id"]["notnull"] == 0, "watchlist_id doit être nullable (Wave 5)"
     db.close()
 
 
