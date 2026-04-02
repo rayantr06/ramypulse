@@ -6,11 +6,17 @@ Phase 1 et des catalogues metier.
 
 from __future__ import annotations
 
+import json
 import logging
 import sqlite3
 from pathlib import Path
 
-from config import SQLITE_DB_PATH
+from config import (
+    DEFAULT_AGENT_MODEL,
+    DEFAULT_AGENT_PROVIDER,
+    DEFAULT_CLIENT_ID,
+    SQLITE_DB_PATH,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -72,92 +78,147 @@ _SCHEMA_STATEMENTS = {
     """,
     "watchlists": """
         CREATE TABLE IF NOT EXISTS watchlists (
-            watchlist_id TEXT PRIMARY KEY,
-            name TEXT NOT NULL,
-            description TEXT,
-            scope_type TEXT NOT NULL,
-            products TEXT,
-            competitors TEXT,
-            wilayas TEXT,
-            channels TEXT,
-            aspects TEXT,
-            keywords TEXT,
-            source_registry_ids TEXT,
-            metric_type TEXT NOT NULL,
-            baseline_window INTEGER DEFAULT 30,
-            alert_threshold REAL,
-            alert_direction TEXT,
-            owner TEXT,
-            is_active BOOLEAN DEFAULT TRUE,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME
+            watchlist_id      TEXT PRIMARY KEY,
+            client_id         TEXT NOT NULL DEFAULT 'ramy_client_001',
+            watchlist_name    TEXT NOT NULL,
+            description       TEXT,
+            scope_type        TEXT,
+            filters           TEXT,
+            is_active         INTEGER DEFAULT 1,
+            created_at        TEXT,
+            updated_at        TEXT
+        )
+    """,
+    "watchlist_metric_snapshots": """
+        CREATE TABLE IF NOT EXISTS watchlist_metric_snapshots (
+            snapshot_id        TEXT PRIMARY KEY,
+            watchlist_id       TEXT NOT NULL,
+            nss_current        REAL,
+            nss_previous       REAL,
+            volume_current     INTEGER DEFAULT 0,
+            volume_previous    INTEGER DEFAULT 0,
+            delta_nss          REAL,
+            delta_volume_pct   REAL,
+            aspect_breakdown   TEXT DEFAULT '{}',
+            computed_at        TEXT NOT NULL
         )
     """,
     "campaigns": """
         CREATE TABLE IF NOT EXISTS campaigns (
-            campaign_id TEXT PRIMARY KEY,
-            name TEXT NOT NULL,
-            event_type TEXT NOT NULL,
-            brand TEXT NOT NULL,
-            products TEXT,
-            wilayas TEXT,
-            channels TEXT,
-            start_at DATETIME NOT NULL,
-            end_at DATETIME,
-            goal TEXT,
-            budget REAL,
-            hashtags TEXT,
-            keywords TEXT,
-            tracked_accounts TEXT,
-            tracked_posts TEXT,
-            tracked_urls TEXT,
-            creator_profiles TEXT,
-            before_window INTEGER DEFAULT 30,
-            after_window INTEGER DEFAULT 14,
-            status TEXT DEFAULT 'draft',
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME
+            campaign_id       TEXT PRIMARY KEY,
+            client_id         TEXT NOT NULL DEFAULT 'ramy_client_001',
+            campaign_name     TEXT NOT NULL,
+            campaign_type     TEXT,
+            platform          TEXT,
+            description       TEXT,
+            influencer_handle TEXT,
+            influencer_tier   TEXT,
+            target_segment    TEXT,
+            target_aspects    TEXT,
+            target_regions    TEXT,
+            keywords          TEXT,
+            budget_dza        INTEGER,
+            start_date        TEXT,
+            end_date          TEXT,
+            pre_window_days   INTEGER DEFAULT 14,
+            post_window_days  INTEGER DEFAULT 14,
+            status            TEXT DEFAULT 'planned',
+            created_at        TEXT,
+            updated_at        TEXT
+        )
+    """,
+    "campaign_metrics_snapshots": """
+        CREATE TABLE IF NOT EXISTS campaign_metrics_snapshots (
+            snapshot_id         TEXT PRIMARY KEY,
+            campaign_id         TEXT NOT NULL,
+            phase               TEXT NOT NULL,
+            metric_date         TEXT NOT NULL,
+            nss_filtered        REAL,
+            nss_baseline        REAL,
+            nss_uplift          REAL,
+            volume_filtered     INTEGER DEFAULT 0,
+            volume_baseline     INTEGER DEFAULT 0,
+            volume_lift_pct     REAL,
+            aspect_breakdown    TEXT DEFAULT '{}',
+            sentiment_breakdown TEXT DEFAULT '{}',
+            computed_at         TEXT NOT NULL,
+            UNIQUE(campaign_id, phase, metric_date)
+        )
+    """,
+    "campaign_signal_links": """
+        CREATE TABLE IF NOT EXISTS campaign_signal_links (
+            link_id             TEXT PRIMARY KEY,
+            campaign_id         TEXT NOT NULL,
+            signal_id           TEXT NOT NULL,
+            phase               TEXT NOT NULL,
+            attribution_score   REAL,
+            attributed_at       TEXT NOT NULL
+        )
+    """,
+    "alert_rules": """
+        CREATE TABLE IF NOT EXISTS alert_rules (
+            alert_rule_id       TEXT PRIMARY KEY,
+            client_id           TEXT NOT NULL DEFAULT 'ramy_client_001',
+            watchlist_id        TEXT,
+            rule_name           TEXT NOT NULL,
+            rule_type           TEXT NOT NULL,
+            threshold_value     REAL,
+            comparator          TEXT,
+            lookback_window     TEXT,
+            severity_level      TEXT NOT NULL,
+            is_active           INTEGER NOT NULL DEFAULT 1
         )
     """,
     "alerts": """
         CREATE TABLE IF NOT EXISTS alerts (
-            alert_id TEXT PRIMARY KEY,
-            watchlist_id TEXT NOT NULL,
-            alert_type TEXT NOT NULL,
-            severity TEXT NOT NULL,
-            title TEXT NOT NULL,
-            description TEXT,
-            metric_name TEXT,
-            metric_value REAL,
-            baseline_value REAL,
-            delta REAL,
-            evidence TEXT,
-            is_acknowledged BOOLEAN DEFAULT FALSE,
-            acknowledged_by TEXT,
-            acknowledged_at DATETIME,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (watchlist_id) REFERENCES watchlists(watchlist_id)
+            alert_id          TEXT PRIMARY KEY,
+            client_id         TEXT NOT NULL DEFAULT 'ramy_client_001',
+            watchlist_id      TEXT,
+            alert_rule_id     TEXT,
+            title             TEXT NOT NULL,
+            description       TEXT,
+            severity          TEXT,
+            status            TEXT DEFAULT 'new',
+            detected_at       TEXT,
+            resolved_at       TEXT,
+            alert_payload     TEXT,
+            dedup_key         TEXT,
+            navigation_url    TEXT
+        )
+    """,
+    "client_agent_config": """
+        CREATE TABLE IF NOT EXISTS client_agent_config (
+            config_id               TEXT PRIMARY KEY,
+            client_id               TEXT NOT NULL UNIQUE DEFAULT 'ramy_client_001',
+            provider                TEXT NOT NULL DEFAULT 'ollama_local',
+            model                   TEXT,
+            api_key_encrypted       TEXT,
+            auto_trigger_on_alert   INTEGER NOT NULL DEFAULT 0,
+            auto_trigger_severity   TEXT DEFAULT 'critical',
+            weekly_report_enabled   INTEGER NOT NULL DEFAULT 0,
+            weekly_report_day       INTEGER DEFAULT 1,
+            created_at              TEXT NOT NULL,
+            updated_at              TEXT NOT NULL
         )
     """,
     "recommendations": """
         CREATE TABLE IF NOT EXISTS recommendations (
             recommendation_id TEXT PRIMARY KEY,
-            alert_id TEXT,
-            signal_type TEXT NOT NULL,
-            problem TEXT NOT NULL,
-            evidence_summary TEXT,
-            urgency TEXT NOT NULL,
-            actions TEXT NOT NULL,
-            assumptions TEXT,
-            risks TEXT,
-            confidence TEXT NOT NULL,
-            generation_mode TEXT NOT NULL,
-            requires_human_validation BOOLEAN DEFAULT TRUE,
-            is_validated BOOLEAN DEFAULT FALSE,
-            validated_by TEXT,
-            validated_at DATETIME,
-            feedback TEXT,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            client_id         TEXT NOT NULL DEFAULT 'ramy_client_001',
+            trigger_type      TEXT,
+            trigger_id        TEXT,
+            alert_id          TEXT,
+            analysis_summary  TEXT,
+            recommendations   TEXT,
+            watchlist_priorities TEXT,
+            confidence_score  REAL,
+            data_quality_note TEXT,
+            provider_used     TEXT,
+            model_used        TEXT,
+            context_tokens    INTEGER,
+            generation_ms     INTEGER,
+            status            TEXT DEFAULT 'active',
+            created_at        TEXT
         )
     """,
     "creator_profiles": """
@@ -176,17 +237,16 @@ _SCHEMA_STATEMENTS = {
     """,
     "notifications": """
         CREATE TABLE IF NOT EXISTS notifications (
-            notification_id TEXT PRIMARY KEY,
-            alert_id TEXT,
-            recommendation_id TEXT,
-            channel TEXT NOT NULL,
-            recipient TEXT,
-            title TEXT NOT NULL,
-            body TEXT,
-            is_read BOOLEAN DEFAULT FALSE,
-            delivered_at DATETIME,
-            read_at DATETIME,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            notification_id   TEXT PRIMARY KEY,
+            client_id         TEXT NOT NULL DEFAULT 'ramy_client_001',
+            notification_type TEXT,
+            reference_id      TEXT,
+            title             TEXT NOT NULL,
+            message           TEXT,
+            channel           TEXT,
+            status            TEXT DEFAULT 'unread',
+            created_at        TEXT,
+            read_at           TEXT
         )
     """,
     "audit_log": """
@@ -251,6 +311,51 @@ def _select_or_default(
 ) -> str:
     """Selectionne une colonne si elle existe, sinon une valeur par defaut."""
     return column_name if column_name in columns else default_sql
+
+
+def _deserialize_json_list(value: object) -> list[str]:
+    """Retourne une liste de chaines depuis une valeur JSON ou scalaire."""
+    if value in (None, ""):
+        return []
+    if isinstance(value, list):
+        return [str(item) for item in value if item not in (None, "")]
+    if isinstance(value, tuple):
+        return [str(item) for item in value if item not in (None, "")]
+    if isinstance(value, str):
+        try:
+            payload = json.loads(value)
+        except json.JSONDecodeError:
+            payload = value
+        if isinstance(payload, list):
+            return [str(item) for item in payload if item not in (None, "")]
+        if payload in (None, ""):
+            return []
+        return [str(payload)]
+    return [str(value)]
+
+
+def _serialize_json_list(values: list[str]) -> str:
+    """Serialise une liste pour stockage SQLite."""
+    return json.dumps(values, ensure_ascii=False)
+
+
+def _serialize_json_dict(payload: dict[str, object]) -> str:
+    """Serialise un dictionnaire pour stockage SQLite."""
+    return json.dumps(payload, ensure_ascii=False)
+
+
+def _first_json_value(value: object) -> str | None:
+    """Retourne la premiere valeur utile d'une liste JSON."""
+    items = _deserialize_json_list(value)
+    return items[0] if items else None
+
+
+def _to_iso_date(value: object) -> str | None:
+    """Convertit une date legacy en format YYYY-MM-DD."""
+    if value in (None, ""):
+        return None
+    text = str(value)
+    return text[:10]
 
 
 def _migrate_products_if_needed(connection: sqlite3.Connection) -> None:
@@ -374,6 +479,388 @@ def _migrate_competitors_if_needed(connection: sqlite3.Connection) -> None:
     connection.execute("DROP TABLE competitors_legacy")
 
 
+def _migrate_watchlists_if_needed(connection: sqlite3.Connection) -> None:
+    """Migre la table watchlists du schema legacy main vers Wave 5."""
+    if not _table_exists(connection, "watchlists"):
+        return
+
+    columns = _column_definitions(connection, "watchlists")
+    if "watchlist_name" in columns and "filters" in columns and "client_id" in columns:
+        return
+
+    logger.info("Migration SQLite : realignement de la table watchlists vers schema Wave 5")
+    rows = [dict(row) for row in connection.execute("SELECT * FROM watchlists").fetchall()]
+    connection.execute("ALTER TABLE watchlists RENAME TO watchlists_legacy")
+    connection.execute(_SCHEMA_STATEMENTS["watchlists"])
+
+    for row in rows:
+        filters = {
+            "channel": _first_json_value(row.get("channels")),
+            "aspect": _first_json_value(row.get("aspects")),
+            "wilaya": _first_json_value(row.get("wilayas")),
+            "product": _first_json_value(row.get("products")),
+            "sentiment": None,
+            "period_days": int(row.get("baseline_window") or 7),
+            "min_volume": 10,
+        }
+        connection.execute(
+            """
+            INSERT INTO watchlists (
+                watchlist_id,
+                client_id,
+                watchlist_name,
+                description,
+                scope_type,
+                filters,
+                is_active,
+                created_at,
+                updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                row.get("watchlist_id"),
+                DEFAULT_CLIENT_ID,
+                row.get("name", ""),
+                row.get("description"),
+                row.get("scope_type"),
+                _serialize_json_dict(filters),
+                1 if row.get("is_active", 1) else 0,
+                row.get("created_at"),
+                row.get("updated_at"),
+            ),
+        )
+
+    connection.execute("DROP TABLE watchlists_legacy")
+
+
+def _migrate_campaigns_if_needed(connection: sqlite3.Connection) -> None:
+    """Migre la table campaigns du schema legacy main vers Wave 5."""
+    if not _table_exists(connection, "campaigns"):
+        return
+
+    columns = _column_definitions(connection, "campaigns")
+    if "campaign_name" in columns and "client_id" in columns:
+        return
+
+    logger.info("Migration SQLite : realignement de la table campaigns vers schema Wave 5")
+    rows = [dict(row) for row in connection.execute("SELECT * FROM campaigns").fetchall()]
+    connection.execute("ALTER TABLE campaigns RENAME TO campaigns_legacy")
+    connection.execute(_SCHEMA_STATEMENTS["campaigns"])
+
+    for row in rows:
+        channels = _deserialize_json_list(row.get("channels"))
+        platform = None
+        if len(channels) > 1:
+            platform = "multi_platform"
+        elif len(channels) == 1:
+            platform = channels[0]
+
+        connection.execute(
+            """
+            INSERT INTO campaigns (
+                campaign_id,
+                client_id,
+                campaign_name,
+                campaign_type,
+                platform,
+                description,
+                influencer_handle,
+                influencer_tier,
+                target_segment,
+                target_aspects,
+                target_regions,
+                keywords,
+                budget_dza,
+                start_date,
+                end_date,
+                pre_window_days,
+                post_window_days,
+                status,
+                created_at,
+                updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                row.get("campaign_id"),
+                DEFAULT_CLIENT_ID,
+                row.get("name", ""),
+                row.get("event_type"),
+                platform,
+                row.get("goal"),
+                None,
+                None,
+                None,
+                _serialize_json_list([]),
+                _serialize_json_list(_deserialize_json_list(row.get("wilayas"))),
+                _serialize_json_list(_deserialize_json_list(row.get("keywords"))),
+                int(row.get("budget")) if row.get("budget") not in (None, "") else None,
+                _to_iso_date(row.get("start_at")),
+                _to_iso_date(row.get("end_at")),
+                int(row.get("before_window") or 14),
+                int(row.get("after_window") or 14),
+                row.get("status") if row.get("status") not in (None, "", "draft") else "planned",
+                row.get("created_at"),
+                row.get("updated_at"),
+            ),
+        )
+
+    connection.execute("DROP TABLE campaigns_legacy")
+
+
+def _migrate_alerts_if_needed(connection: sqlite3.Connection) -> None:
+    """Migre la table alerts du schema legacy main vers Wave 5."""
+    if not _table_exists(connection, "alerts"):
+        return
+
+    columns = _column_definitions(connection, "alerts")
+    if "client_id" in columns and "alert_rule_id" in columns and "alert_payload" in columns:
+        return
+
+    logger.info("Migration SQLite : realignement de la table alerts vers schema Wave 5")
+    rows = [dict(row) for row in connection.execute("SELECT * FROM alerts").fetchall()]
+    connection.execute("ALTER TABLE alerts RENAME TO alerts_legacy")
+    connection.execute(_SCHEMA_STATEMENTS["alerts"])
+
+    for row in rows:
+        payload = {
+            "metric_name": row.get("metric_name"),
+            "metric_value": row.get("metric_value"),
+            "baseline_value": row.get("baseline_value"),
+            "delta": row.get("delta"),
+            "evidence": row.get("evidence"),
+        }
+        status = "acknowledged" if row.get("is_acknowledged") else "new"
+        connection.execute(
+            """
+            INSERT INTO alerts (
+                alert_id,
+                client_id,
+                watchlist_id,
+                alert_rule_id,
+                title,
+                description,
+                severity,
+                status,
+                detected_at,
+                resolved_at,
+                alert_payload,
+                dedup_key,
+                navigation_url
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                row.get("alert_id"),
+                DEFAULT_CLIENT_ID,
+                row.get("watchlist_id"),
+                row.get("alert_type"),
+                row.get("title", ""),
+                row.get("description"),
+                row.get("severity"),
+                status,
+                row.get("created_at"),
+                None,
+                _serialize_json_dict(payload),
+                None,
+                None,
+            ),
+        )
+
+    connection.execute("DROP TABLE alerts_legacy")
+
+
+def _migrate_notifications_if_needed(connection: sqlite3.Connection) -> None:
+    """Migre la table notifications du schema legacy main vers Wave 5."""
+    if not _table_exists(connection, "notifications"):
+        return
+
+    columns = _column_definitions(connection, "notifications")
+    if "client_id" in columns and "notification_type" in columns and "message" in columns:
+        return
+
+    logger.info("Migration SQLite : realignement de la table notifications vers schema Wave 5")
+    rows = [dict(row) for row in connection.execute("SELECT * FROM notifications").fetchall()]
+    connection.execute("ALTER TABLE notifications RENAME TO notifications_legacy")
+    connection.execute(_SCHEMA_STATEMENTS["notifications"])
+
+    for row in rows:
+        reference_id = row.get("alert_id") or row.get("recommendation_id")
+        if row.get("alert_id"):
+            notification_type = "alert"
+        elif row.get("recommendation_id"):
+            notification_type = "recommendation"
+        else:
+            notification_type = "system"
+        status = "read" if row.get("is_read") else "unread"
+        connection.execute(
+            """
+            INSERT INTO notifications (
+                notification_id,
+                client_id,
+                notification_type,
+                reference_id,
+                title,
+                message,
+                channel,
+                status,
+                created_at,
+                read_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                row.get("notification_id"),
+                DEFAULT_CLIENT_ID,
+                notification_type,
+                reference_id,
+                row.get("title", ""),
+                row.get("body"),
+                row.get("channel"),
+                status,
+                row.get("created_at"),
+                row.get("read_at"),
+            ),
+        )
+
+    connection.execute("DROP TABLE notifications_legacy")
+
+
+def _migrate_recommendations_if_needed(connection: sqlite3.Connection) -> None:
+    """Migre la table recommendations du schema Phase 1 vers le schema Wave 5.
+
+    Si la table n'existe pas, la fonction n'intervient pas.
+    Si la table possede deja trigger_type (schema Wave 5), aucune action.
+    Sinon, renomme la table legacy, recree la table cible, migre les donnees,
+    puis supprime la table temporaire.
+    """
+    if not _table_exists(connection, "recommendations"):
+        return
+    columns = _column_definitions(connection, "recommendations")
+    if "trigger_type" in columns:
+        return
+    logger.info("Migration SQLite : realignement de la table recommendations vers schema Wave 5")
+    connection.execute("ALTER TABLE recommendations RENAME TO recommendations_legacy")
+    connection.execute(_SCHEMA_STATEMENTS["recommendations"])
+    connection.execute(
+        f"""
+        INSERT INTO recommendations (
+            recommendation_id,
+            client_id,
+            trigger_type,
+            trigger_id,
+            alert_id,
+            analysis_summary,
+            recommendations,
+            watchlist_priorities,
+            confidence_score,
+            data_quality_note,
+            provider_used,
+            model_used,
+            context_tokens,
+            generation_ms,
+            status,
+            created_at
+        )
+        SELECT
+            {_select_or_default(columns, "recommendation_id", "'rec-' || lower(hex(randomblob(6)))")},
+            'ramy_client_001',
+            'manual',
+            NULL,
+            {_select_or_default(columns, "alert_id", "NULL")},
+            {_select_or_default(columns, "problem", "''")},
+            CASE
+                WHEN {_select_or_default(columns, "actions", "NULL")} IS NULL
+                    OR {_select_or_default(columns, "actions", "NULL")} = ''
+                THEN '[]'
+                ELSE json_array({_select_or_default(columns, "actions", "NULL")})
+            END,
+            '[]',
+            NULL,
+            {_select_or_default(columns, "evidence_summary", "NULL")},
+            {_select_or_default(columns, "generation_mode", "NULL")},
+            NULL,
+            NULL,
+            NULL,
+            'active',
+            {_select_or_default(columns, "created_at", "CURRENT_TIMESTAMP")}
+        FROM recommendations_legacy
+        """
+    )
+    connection.execute("DROP TABLE recommendations_legacy")
+
+
+def _seed_default_alert_rules(connection: sqlite3.Connection) -> None:
+    """Insere les regles v1 si elles sont absentes."""
+    defaults = [
+        ("nss_critical_low", "NSS critique bas", "absolute", 20.0, "lt", "7d", "high"),
+        ("negative_volume_surge", "Pic de volume negatif", "relative", 60.0, "gt", "7d", "high"),
+        ("no_recent_signals", "Aucun signal recent", "drift", 7.0, "gte", "7d", "high"),
+        ("aspect_critical", "Aspect critique", "absolute", -10.0, "lt", "7d", "high"),
+        ("volume_drop", "Chute de volume", "relative", 50.0, "lt", "7d", "medium"),
+        ("campaign_impact_positive", "Impact campagne positif", "relative", 10.0, "gt", "30d", "high"),
+        ("campaign_underperformance", "Sous-performance campagne", "relative", 0.0, "lte", "7d", "medium"),
+    ]
+    for alert_rule_id, rule_name, rule_type, threshold_value, comparator, lookback_window, severity in defaults:
+        connection.execute(
+            """
+            INSERT OR IGNORE INTO alert_rules (
+                alert_rule_id,
+                client_id,
+                watchlist_id,
+                rule_name,
+                rule_type,
+                threshold_value,
+                comparator,
+                lookback_window,
+                severity_level,
+                is_active
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                alert_rule_id,
+                DEFAULT_CLIENT_ID,
+                None,
+                rule_name,
+                rule_type,
+                threshold_value,
+                comparator,
+                lookback_window,
+                severity,
+                1,
+            ),
+        )
+
+
+def _seed_default_client_agent_config(connection: sqlite3.Connection) -> None:
+    """Insere une configuration agent par defaut pour le client mono-tenant."""
+    connection.execute(
+        """
+        INSERT OR IGNORE INTO client_agent_config (
+            config_id,
+            client_id,
+            provider,
+            model,
+            api_key_encrypted,
+            auto_trigger_on_alert,
+            auto_trigger_severity,
+            weekly_report_enabled,
+            weekly_report_day,
+            created_at,
+            updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        """,
+        (
+            "cfg-default-agent",
+            DEFAULT_CLIENT_ID,
+            DEFAULT_AGENT_PROVIDER,
+            DEFAULT_AGENT_MODEL,
+            None,
+            0,
+            "critical",
+            0,
+            1,
+        ),
+    )
+
+
 class DatabaseManager:
     """Gestionnaire de connexion SQLite pour RamyPulse."""
 
@@ -428,9 +915,16 @@ class DatabaseManager:
             _migrate_products_if_needed(connection)
             _migrate_wilayas_if_needed(connection)
             _migrate_competitors_if_needed(connection)
+            _migrate_watchlists_if_needed(connection)
+            _migrate_campaigns_if_needed(connection)
+            _migrate_alerts_if_needed(connection)
+            _migrate_notifications_if_needed(connection)
+            _migrate_recommendations_if_needed(connection)
 
             for statement in _SCHEMA_STATEMENTS.values():
                 connection.execute(statement)
+            _seed_default_alert_rules(connection)
+            _seed_default_client_agent_config(connection)
             connection.commit()
         finally:
             connection.execute("PRAGMA foreign_keys = ON")
