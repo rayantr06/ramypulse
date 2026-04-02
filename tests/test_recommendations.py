@@ -378,3 +378,115 @@ def test_build_context_nss_global_calcule_correctement() -> None:
     ctx = build_recommendation_context("manual", None, df)
     nss = ctx["current_metrics"]["nss_global"]
     assert nss == 0.0, f"NSS attendu 0.0, obtenu {nss}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Task 6 — recommendation_manager
+# ─────────────────────────────────────────────────────────────────────────────
+
+@pytest.fixture
+def tmp_db(tmp_path):
+    """Base SQLite temporaire avec schema Wave 5 pour les tests."""
+    from core.database import DatabaseManager
+    db_path = tmp_path / "test_reco.db"
+    db = DatabaseManager(str(db_path))
+    db.create_tables()
+    db.close()
+    return str(db_path)
+
+
+def _make_result() -> dict:
+    """Dict de resultat minimal pour save_recommendation."""
+    return {
+        "analysis_summary": "NSS faible sur disponibilite.",
+        "recommendations": [{"id": "rec_001", "priority": "high", "title": "Test"}],
+        "watchlist_priorities": ["NSS Oran"],
+        "confidence_score": 0.8,
+        "data_quality_note": "Donnees ok.",
+        "provider_used": "ollama_local",
+        "model_used": "qwen2.5:14b",
+        "generation_ms": 3200,
+        "parse_success": True,
+    }
+
+
+def test_save_recommendation_retourne_uuid(tmp_db) -> None:
+    """save_recommendation doit retourner un UUID string non vide."""
+    from core.recommendation.recommendation_manager import save_recommendation
+    rec_id = save_recommendation(_make_result(), "manual", None, db_path=tmp_db)
+    assert isinstance(rec_id, str)
+    assert len(rec_id) == 36  # UUID v4 format
+
+
+def test_list_recommendations_retourne_liste(tmp_db) -> None:
+    """list_recommendations doit retourner une liste (vide ou non)."""
+    from core.recommendation.recommendation_manager import list_recommendations
+    result = list_recommendations(db_path=tmp_db)
+    assert isinstance(result, list)
+
+
+def test_save_and_list_roundtrip(tmp_db) -> None:
+    """Une recommandation sauvee doit apparaitre dans list_recommendations."""
+    from core.recommendation.recommendation_manager import save_recommendation, list_recommendations
+    save_recommendation(_make_result(), "manual", None, db_path=tmp_db)
+    results = list_recommendations(db_path=tmp_db)
+    assert len(results) == 1
+    assert results[0]["trigger_type"] == "manual"
+    assert isinstance(results[0]["recommendations"], list)
+    assert results[0]["recommendations"][0]["id"] == "rec_001"
+
+
+def test_get_recommendation_retourne_dict(tmp_db) -> None:
+    """get_recommendation doit retourner le dict complet ou None si absent."""
+    from core.recommendation.recommendation_manager import save_recommendation, get_recommendation
+    rec_id = save_recommendation(_make_result(), "alert_triggered", "alert-123", db_path=tmp_db)
+    rec = get_recommendation(rec_id, db_path=tmp_db)
+    assert rec is not None
+    assert rec["recommendation_id"] == rec_id
+    assert isinstance(rec["recommendations"], list)
+    assert rec["trigger_id"] == "alert-123"
+    assert get_recommendation("non-existent-id", db_path=tmp_db) is None
+
+
+def test_update_recommendation_status(tmp_db) -> None:
+    """update_recommendation_status doit modifier le statut correctement."""
+    from core.recommendation.recommendation_manager import (
+        save_recommendation, get_recommendation, update_recommendation_status,
+    )
+    rec_id = save_recommendation(_make_result(), "manual", None, db_path=tmp_db)
+    assert update_recommendation_status(rec_id, "archived", db_path=tmp_db) is True
+    rec = get_recommendation(rec_id, db_path=tmp_db)
+    assert rec["status"] == "archived"
+
+
+def test_update_status_invalide_leve_erreur(tmp_db) -> None:
+    """Un statut invalide doit lever ValueError."""
+    from core.recommendation.recommendation_manager import save_recommendation, update_recommendation_status
+    rec_id = save_recommendation(_make_result(), "manual", None, db_path=tmp_db)
+    with pytest.raises(ValueError):
+        update_recommendation_status(rec_id, "invalid_status", db_path=tmp_db)
+
+
+def test_list_recommendations_filtre_par_status(tmp_db) -> None:
+    """list_recommendations avec status='archived' ne doit retourner que les archived."""
+    from core.recommendation.recommendation_manager import (
+        save_recommendation, list_recommendations, update_recommendation_status,
+    )
+    rec_id1 = save_recommendation(_make_result(), "manual", None, db_path=tmp_db)
+    save_recommendation(_make_result(), "manual", None, db_path=tmp_db)  # active
+    update_recommendation_status(rec_id1, "archived", db_path=tmp_db)
+    archived = list_recommendations(status="archived", db_path=tmp_db)
+    active = list_recommendations(status="active", db_path=tmp_db)
+    assert len(archived) == 1
+    assert len(active) == 1
+
+
+def test_watchlist_priorities_deserialisees(tmp_db) -> None:
+    """watchlist_priorities doit etre deserialisee en list dans les retours."""
+    from core.recommendation.recommendation_manager import save_recommendation, get_recommendation
+    result = _make_result()
+    result["watchlist_priorities"] = ["NSS Oran", "Volume Alger"]
+    rec_id = save_recommendation(result, "manual", None, db_path=tmp_db)
+    rec = get_recommendation(rec_id, db_path=tmp_db)
+    assert isinstance(rec["watchlist_priorities"], list)
+    assert "NSS Oran" in rec["watchlist_priorities"]
