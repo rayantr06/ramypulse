@@ -9,7 +9,7 @@ import uuid
 from datetime import datetime
 
 import config
-from core.watchlists.watchlist_manager import _ensure_watchlists_table
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -87,7 +87,6 @@ def _table_columns(connection: sqlite3.Connection, table_name: str) -> set[str]:
 
 def _ensure_alerts_table(connection: sqlite3.Connection) -> None:
     """Garantit la presence de la table alerts conforme au contrat."""
-    _ensure_watchlists_table(connection)
     if _table_exists(connection, "alerts"):
         columns = _table_columns(connection, "alerts")
         missing = _REQUIRED_COLUMNS - columns
@@ -113,12 +112,103 @@ def _ensure_alerts_table(connection: sqlite3.Connection) -> None:
             resolved_at TEXT,
             alert_payload TEXT,
             dedup_key TEXT,
-            navigation_url TEXT,
-            FOREIGN KEY (watchlist_id) REFERENCES watchlists(watchlist_id)
+            navigation_url TEXT
         )
         """
     )
     connection.commit()
+
+
+def _severity_rank(severity: str) -> int:
+    """Convertit une severite en rang croissant de criticite."""
+    order = {"low": 0, "medium": 1, "high": 2, "critical": 3}
+    return order.get(str(severity).strip().lower(), -1)
+
+
+def _load_dataframe_for_autotrigger() -> pd.DataFrame:
+    """Charge les donnees annotees pour alimenter le contexte reco."""
+    try:
+        dataframe = pd.read_parquet(config.ANNOTATED_PARQUET_PATH)
+    except FileNotFoundError:
+        return pd.DataFrame()
+    except Exception:
+        logger.exception("Impossible de charger annotated.parquet pour auto-trigger")
+        return pd.DataFrame()
+
+    if "timestamp" in dataframe.columns:
+        dataframe["timestamp"] = pd.to_datetime(dataframe["timestamp"], errors="coerce")
+    return dataframe
+
+
+def _patch_alert_payload(alert_id: str, patch: dict) -> None:
+    """Met a jour partiellement le payload JSON d'une alerte existante."""
+    with _get_connection() as connection:
+        _ensure_alerts_table(connection)
+        row = connection.execute(
+            "SELECT alert_payload FROM alerts WHERE alert_id = ?",
+            (alert_id,),
+        ).fetchone()
+        if row is None:
+            return
+        payload = _deserialize_dict(row["alert_payload"])
+        payload.update(patch)
+        connection.execute(
+            "UPDATE alerts SET alert_payload = ? WHERE alert_id = ?",
+            (_serialize_dict(payload), alert_id),
+        )
+        connection.commit()
+
+
+def _should_auto_trigger(agent_config: dict, severity: str) -> bool:
+    """Indique si une alerte respecte la politique de declenchement auto."""
+    if not agent_config.get("auto_trigger_on_alert"):
+        return False
+    return _severity_rank(severity) >= _severity_rank(agent_config.get("auto_trigger_severity", "critical"))
+
+
+def _run_recommendation_auto_trigger(alert_id: str, severity: str) -> None:
+    """Genere une recommandation automatiquement si la configuration le permet."""
+    try:
+        from core.recommendation.agent_client import generate_recommendations
+        from core.recommendation.context_builder import build_recommendation_context
+        from core.recommendation.recommendation_manager import (
+            get_client_agent_config,
+            save_recommendation,
+        )
+
+        agent_config = get_client_agent_config()
+        if not _should_auto_trigger(agent_config, severity):
+            return
+
+        dataframe = _load_dataframe_for_autotrigger()
+        context = build_recommendation_context(
+            trigger_type="alert_triggered",
+            trigger_id=alert_id,
+            df_annotated=dataframe,
+            max_rag_chunks=8,
+        )
+        result = generate_recommendations(
+            context=context,
+            provider=agent_config.get("provider") or config.DEFAULT_AGENT_PROVIDER,
+            model=agent_config.get("model"),
+            api_key=agent_config.get("api_key_encrypted") or None,
+        )
+        result["alert_id"] = alert_id
+        result["context_tokens"] = context.get("estimated_tokens")
+        recommendation_id = save_recommendation(
+            result=result,
+            trigger_type="alert_triggered",
+            trigger_id=alert_id,
+        )
+        _patch_alert_payload(
+            alert_id,
+            {
+                "has_recommendations": True,
+                "recommendation_id": recommendation_id,
+            },
+        )
+    except Exception:
+        logger.exception("Echec auto-trigger recommandation pour alerte %s", alert_id)
 
 
 def _row_to_alert(row: sqlite3.Row | None) -> dict | None:
@@ -205,6 +295,7 @@ def create_alert(
         connection.commit()
 
     logger.info("Alerte creee: %s", alert_id)
+    _run_recommendation_auto_trigger(alert_id, severity)
     return alert_id
 
 

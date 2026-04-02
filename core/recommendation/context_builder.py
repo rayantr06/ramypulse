@@ -7,10 +7,12 @@ Degrade gracieusement si les modules des autres agents sont absents.
 
 import json
 import logging
+import sqlite3
 from typing import Any
 
 import pandas as pd
 
+import config
 from config import ASPECT_LIST, FAISS_INDEX_PATH
 
 logger = logging.getLogger(__name__)
@@ -102,6 +104,76 @@ def _compute_nss_by_channel(df: pd.DataFrame) -> dict:
     return result
 
 
+def _get_connection() -> sqlite3.Connection:
+    """Ouvre une connexion SQLite courte duree pour les enrichissements contexte."""
+    connection = sqlite3.connect(str(config.SQLITE_DB_PATH))
+    connection.row_factory = sqlite3.Row
+    return connection
+
+
+def _latest_watchlist_metrics_map() -> dict[str, dict]:
+    """Retourne le dernier snapshot connu par watchlist."""
+    try:
+        with _get_connection() as connection:
+            rows = connection.execute(
+                """
+                SELECT w1.*
+                FROM watchlist_metric_snapshots w1
+                JOIN (
+                    SELECT watchlist_id, MAX(computed_at) AS max_computed_at
+                    FROM watchlist_metric_snapshots
+                    GROUP BY watchlist_id
+                ) latest
+                  ON latest.watchlist_id = w1.watchlist_id
+                 AND latest.max_computed_at = w1.computed_at
+                """
+            ).fetchall()
+    except sqlite3.Error:
+        return {}
+
+    payload: dict[str, dict] = {}
+    for row in rows:
+        item = dict(row)
+        try:
+            item["aspect_breakdown"] = json.loads(item.get("aspect_breakdown") or "{}")
+        except (TypeError, ValueError, json.JSONDecodeError):
+            item["aspect_breakdown"] = {}
+        payload[str(item["watchlist_id"])] = item
+    return payload
+
+
+def _latest_campaign_snapshot_map() -> dict[str, dict]:
+    """Retourne le dernier snapshot campagne utile pour l'uplift récent."""
+    try:
+        with _get_connection() as connection:
+            rows = connection.execute(
+                """
+                SELECT c1.*
+                FROM campaign_metrics_snapshots c1
+                JOIN (
+                    SELECT campaign_id, MAX(computed_at) AS max_computed_at
+                    FROM campaign_metrics_snapshots
+                    GROUP BY campaign_id
+                ) latest
+                  ON latest.campaign_id = c1.campaign_id
+                 AND latest.max_computed_at = c1.computed_at
+                ORDER BY c1.computed_at DESC
+                """
+            ).fetchall()
+    except sqlite3.Error:
+        return {}
+
+    payload: dict[str, dict] = {}
+    for row in rows:
+        item = dict(row)
+        try:
+            item["aspect_breakdown"] = json.loads(item.get("aspect_breakdown") or "{}")
+        except (TypeError, ValueError, json.JSONDecodeError):
+            item["aspect_breakdown"] = {}
+        payload[str(item["campaign_id"])] = item
+    return payload
+
+
 def _top_negative_aspects(df: pd.DataFrame, n: int = 3) -> list:
     """Retourne les n aspects avec le NSS le plus faible.
 
@@ -189,6 +261,40 @@ def _build_rag_query(trigger_type: str, trigger_id: str | None, metrics: dict) -
     return base
 
 
+def _enrich_active_alerts(alerts: list[dict], trigger_id: str | None) -> list[dict]:
+    """Trie les alertes actives en mettant l'alerte déclencheuse en tete si connue."""
+    if not trigger_id:
+        return alerts
+    triggering = [alert for alert in alerts if alert.get("alert_id") == trigger_id]
+    others = [alert for alert in alerts if alert.get("alert_id") != trigger_id]
+    return triggering + others
+
+
+def _enrich_watchlists(watchlists: list[dict]) -> list[dict]:
+    """Ajoute les dernieres métriques persistées aux watchlists actives."""
+    latest_metrics = _latest_watchlist_metrics_map()
+    enriched: list[dict] = []
+    for watchlist in watchlists:
+        item = dict(watchlist)
+        item["latest_metrics"] = latest_metrics.get(str(watchlist.get("watchlist_id")), {})
+        enriched.append(item)
+    return enriched
+
+
+def _enrich_campaigns(campaigns: list[dict]) -> list[dict]:
+    """Ajoute l'uplift récent et le dernier snapshot aux campagnes récentes."""
+    latest_snapshots = _latest_campaign_snapshot_map()
+    enriched: list[dict] = []
+    for campaign in campaigns:
+        item = dict(campaign)
+        latest_snapshot = latest_snapshots.get(str(campaign.get("campaign_id")), {})
+        item["latest_snapshot"] = latest_snapshot
+        item["latest_uplift_nss"] = latest_snapshot.get("nss_uplift")
+        item["latest_volume_lift_pct"] = latest_snapshot.get("volume_lift_pct")
+        enriched.append(item)
+    return enriched
+
+
 # ---------------------------------------------------------------------------
 # Interface publique
 # ---------------------------------------------------------------------------
@@ -255,7 +361,7 @@ def build_recommendation_context(
             ]
             _sev_order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
             active.sort(key=lambda a: _sev_order.get(a.get("severity", "low"), 4))
-            active_alerts = active[:5]
+            active_alerts = _enrich_active_alerts(active[:5], trigger_id)
         except Exception as exc:
             logger.warning("Erreur chargement alertes : %s", exc)
 
@@ -265,7 +371,7 @@ def build_recommendation_context(
     active_watchlists: list = []
     if _HAS_WATCHLISTS:
         try:
-            active_watchlists = _list_watchlists(is_active=True)[:5]
+            active_watchlists = _enrich_watchlists(_list_watchlists(is_active=True)[:5])
         except Exception as exc:
             logger.warning("Erreur chargement watchlists : %s", exc)
 
@@ -275,7 +381,7 @@ def build_recommendation_context(
     recent_campaigns: list = []
     if _HAS_CAMPAIGNS:
         try:
-            recent_campaigns = _list_campaigns(limit=3)
+            recent_campaigns = _enrich_campaigns(_list_campaigns(limit=3))
         except Exception as exc:
             logger.warning("Erreur chargement campagnes : %s", exc)
 

@@ -6,10 +6,12 @@ Conforme au template Section 6 de INTERFACES.md.
 
 from __future__ import annotations
 
+import sqlite3
+
 import pandas as pd
 import streamlit as st
 
-from config import ANNOTATED_PARQUET_PATH, DEFAULT_CLIENT_ID
+from config import ANNOTATED_PARQUET_PATH, DEFAULT_CLIENT_ID, SQLITE_DB_PATH
 
 st.set_page_config(page_title="Campagnes — RamyPulse", layout="wide")
 
@@ -26,6 +28,38 @@ def load_data() -> pd.DataFrame:
         return df
     except FileNotFoundError:
         return pd.DataFrame()
+
+
+def load_campaign_snapshots(campaign_id: str) -> pd.DataFrame:
+    """Charge les derniers snapshots persistés d'une campagne."""
+    with sqlite3.connect(SQLITE_DB_PATH) as connection:
+        return pd.read_sql_query(
+            """
+            SELECT phase, metric_date, nss_filtered, nss_baseline, nss_uplift,
+                   volume_filtered, volume_baseline, volume_lift_pct, computed_at
+            FROM campaign_metrics_snapshots
+            WHERE campaign_id = ?
+            ORDER BY computed_at DESC, phase ASC
+            """,
+            connection,
+            params=(campaign_id,),
+        )
+
+
+def load_campaign_signal_links(campaign_id: str, limit: int = 10) -> pd.DataFrame:
+    """Charge les signaux attribués les plus forts pour une campagne."""
+    with sqlite3.connect(SQLITE_DB_PATH) as connection:
+        return pd.read_sql_query(
+            """
+            SELECT phase, signal_id, attribution_score, attributed_at
+            FROM campaign_signal_links
+            WHERE campaign_id = ?
+            ORDER BY attribution_score DESC, attributed_at DESC
+            LIMIT ?
+            """,
+            connection,
+            params=(campaign_id, limit),
+        )
 
 
 df = load_data()
@@ -247,6 +281,16 @@ with tab_impact:
                         columns=["Aspect", "NSS"],
                     ).sort_values("NSS", ascending=True)
                     st.bar_chart(aspect_df.set_index("Aspect")["NSS"])
+
+                snapshots_df = load_campaign_snapshots(selected_id)
+                if not snapshots_df.empty:
+                    st.markdown("#### Snapshots persistés")
+                    st.dataframe(snapshots_df, use_container_width=True)
+
+                links_df = load_campaign_signal_links(selected_id)
+                if not links_df.empty:
+                    st.markdown("#### Top signaux attribués")
+                    st.dataframe(links_df, use_container_width=True)
 
             except Exception as exc:
                 st.error(f"Erreur lors du calcul : {exc}")

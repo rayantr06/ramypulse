@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sqlite3
 import sys
 from pathlib import Path
 
@@ -17,8 +18,13 @@ EXPECTED_TABLES = {
     "wilayas",
     "competitors",
     "watchlists",
+    "watchlist_metric_snapshots",
     "campaigns",
+    "campaign_metrics_snapshots",
+    "campaign_signal_links",
+    "alert_rules",
     "alerts",
+    "client_agent_config",
     "recommendations",
     "creator_profiles",
     "notifications",
@@ -103,6 +109,17 @@ def test_alerts_watchlist_id_nullable() -> None:
     assert "watchlist_id" in cols, "La colonne watchlist_id doit exister dans alerts"
     # Wave 5 : watchlist_id est nullable — pas de NOT NULL
     assert cols["watchlist_id"]["notnull"] == 0, "watchlist_id doit être nullable (Wave 5)"
+    db.close()
+
+
+def test_alerts_watchlist_id_sans_fk_forcee() -> None:
+    """Le schema Wave 5 ne doit pas recreer de FK SQLite sur alerts.watchlist_id."""
+    db = DatabaseManager(":memory:")
+    db.create_tables()
+
+    foreign_keys = db.connection.execute("PRAGMA foreign_key_list(alerts)").fetchall()
+
+    assert foreign_keys == []
     db.close()
 
 
@@ -310,4 +327,331 @@ def test_create_tables_migre_ancien_schema_recommendations_vers_wave5(tmp_path) 
     assert migrated["provider_used"] == "manual_rules"
     assert migrated["created_at"] == "2026-04-01T09:00:00"
 
+    db.close()
+
+
+def test_create_tables_migre_watchlists_legacy_vers_wave5(tmp_path) -> None:
+    """La migration watchlists doit realigner l'ancien schema main vers Wave 5."""
+    db_path = tmp_path / "legacy_watchlists.db"
+    db = DatabaseManager(db_path)
+    connection = db.connection
+
+    connection.execute(
+        """
+        CREATE TABLE watchlists (
+            watchlist_id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            description TEXT,
+            scope_type TEXT NOT NULL,
+            products TEXT,
+            competitors TEXT,
+            wilayas TEXT,
+            channels TEXT,
+            aspects TEXT,
+            keywords TEXT,
+            source_registry_ids TEXT,
+            metric_type TEXT NOT NULL,
+            baseline_window INTEGER DEFAULT 30,
+            alert_threshold REAL,
+            alert_direction TEXT,
+            owner TEXT,
+            is_active BOOLEAN DEFAULT TRUE,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME
+        )
+        """
+    )
+    connection.execute(
+        """
+        INSERT INTO watchlists (
+            watchlist_id, name, description, scope_type, products, wilayas,
+            channels, aspects, baseline_window, is_active, created_at, updated_at,
+            metric_type
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            "wl-001",
+            "Legacy Oran",
+            "description",
+            "region",
+            '["ramy_citron", "ramy_orange"]',
+            '["oran", "tlemcen"]',
+            '["google_maps", "facebook"]',
+            '["disponibilité", "prix"]',
+            14,
+            1,
+            "2026-03-01T10:00:00",
+            "2026-03-02T10:00:00",
+            "nss_aspect",
+        ),
+    )
+    connection.commit()
+
+    db.create_tables()
+
+    columns = _column_definitions(db, "watchlists")
+    migrated = db.connection.execute(
+        """
+        SELECT watchlist_id, client_id, watchlist_name, description, scope_type, filters, is_active
+        FROM watchlists
+        WHERE watchlist_id = ?
+        """,
+        ("wl-001",),
+    ).fetchone()
+
+    assert "watchlist_name" in columns
+    assert "filters" in columns
+    assert migrated is not None
+    assert migrated["client_id"] == "ramy_client_001"
+    assert migrated["watchlist_name"] == "Legacy Oran"
+    assert migrated["scope_type"] == "region"
+    assert migrated["is_active"] == 1
+    assert migrated["filters"] == (
+        '{"channel": "google_maps", "aspect": "disponibilité", '
+        '"wilaya": "oran", "product": "ramy_citron", "sentiment": null, '
+        '"period_days": 14, "min_volume": 10}'
+    )
+    db.close()
+
+
+def test_create_tables_migre_campaigns_legacy_vers_wave5(tmp_path) -> None:
+    """La migration campaigns doit realigner l'ancien schema main vers Wave 5."""
+    db_path = tmp_path / "legacy_campaigns.db"
+    db = DatabaseManager(db_path)
+    connection = db.connection
+
+    connection.execute(
+        """
+        CREATE TABLE campaigns (
+            campaign_id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            event_type TEXT NOT NULL,
+            brand TEXT NOT NULL,
+            products TEXT,
+            wilayas TEXT,
+            channels TEXT,
+            start_at DATETIME NOT NULL,
+            end_at DATETIME,
+            goal TEXT,
+            budget REAL,
+            hashtags TEXT,
+            keywords TEXT,
+            tracked_accounts TEXT,
+            tracked_posts TEXT,
+            tracked_urls TEXT,
+            creator_profiles TEXT,
+            before_window INTEGER DEFAULT 30,
+            after_window INTEGER DEFAULT 14,
+            status TEXT DEFAULT 'draft',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME
+        )
+        """
+    )
+    connection.execute(
+        """
+        INSERT INTO campaigns (
+            campaign_id, name, event_type, products, wilayas, channels, start_at,
+            end_at, goal, budget, keywords, before_window, after_window, status,
+            brand, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            "camp-001",
+            "Legacy Campaign",
+            "promotion",
+            '["ramy_citron"]',
+            '["oran", "tlemcen"]',
+            '["instagram", "facebook"]',
+            "2026-03-01T08:00:00",
+            "2026-03-15T22:00:00",
+            "Boost awareness",
+            125000.0,
+            '["ramy", "promo"]',
+            10,
+            7,
+            "active",
+            "Ramy",
+            "2026-02-20T10:00:00",
+            "2026-02-21T10:00:00",
+        ),
+    )
+    connection.commit()
+
+    db.create_tables()
+
+    migrated = db.connection.execute(
+        """
+        SELECT campaign_id, client_id, campaign_name, campaign_type, platform,
+               description, target_regions, keywords, start_date, end_date,
+               pre_window_days, post_window_days, status
+        FROM campaigns
+        WHERE campaign_id = ?
+        """,
+        ("camp-001",),
+    ).fetchone()
+
+    assert migrated is not None
+    assert migrated["client_id"] == "ramy_client_001"
+    assert migrated["campaign_name"] == "Legacy Campaign"
+    assert migrated["campaign_type"] == "promotion"
+    assert migrated["platform"] == "multi_platform"
+    assert migrated["description"] == "Boost awareness"
+    assert migrated["target_regions"] == '["oran", "tlemcen"]'
+    assert migrated["keywords"] == '["ramy", "promo"]'
+    assert migrated["start_date"] == "2026-03-01"
+    assert migrated["end_date"] == "2026-03-15"
+    assert migrated["pre_window_days"] == 10
+    assert migrated["post_window_days"] == 7
+    assert migrated["status"] == "active"
+    db.close()
+
+
+def test_create_tables_migre_alerts_legacy_vers_wave5(tmp_path) -> None:
+    """La migration alerts doit convertir le payload legacy vers le schema Wave 5."""
+    db_path = tmp_path / "legacy_alerts.db"
+    db = DatabaseManager(db_path)
+    connection = db.connection
+
+    connection.execute(
+        """
+        CREATE TABLE alerts (
+            alert_id TEXT PRIMARY KEY,
+            watchlist_id TEXT NOT NULL,
+            alert_type TEXT NOT NULL,
+            severity TEXT NOT NULL,
+            title TEXT NOT NULL,
+            description TEXT,
+            metric_name TEXT,
+            metric_value REAL,
+            baseline_value REAL,
+            delta REAL,
+            evidence TEXT,
+            is_acknowledged BOOLEAN DEFAULT FALSE,
+            acknowledged_by TEXT,
+            acknowledged_at DATETIME,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+    connection.execute(
+        """
+        INSERT INTO alerts (
+            alert_id, watchlist_id, alert_type, severity, title, description,
+            metric_name, metric_value, baseline_value, delta, evidence,
+            is_acknowledged, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            "alert-001",
+            "wl-001",
+            "volume_drop",
+            "high",
+            "Volume en baisse",
+            "description",
+            "volume",
+            21.0,
+            42.0,
+            -21.0,
+            "evidence",
+            1,
+            "2026-03-21T10:00:00",
+        ),
+    )
+    connection.commit()
+
+    db.create_tables()
+
+    migrated = db.connection.execute(
+        """
+        SELECT alert_id, client_id, watchlist_id, alert_rule_id, status, detected_at,
+               alert_payload, dedup_key, navigation_url
+        FROM alerts
+        WHERE alert_id = ?
+        """,
+        ("alert-001",),
+    ).fetchone()
+
+    assert migrated is not None
+    assert migrated["client_id"] == "ramy_client_001"
+    assert migrated["watchlist_id"] == "wl-001"
+    assert migrated["alert_rule_id"] == "volume_drop"
+    assert migrated["status"] == "acknowledged"
+    assert migrated["detected_at"] == "2026-03-21T10:00:00"
+    assert migrated["dedup_key"] is None
+    assert migrated["navigation_url"] is None
+    assert migrated["alert_payload"] == (
+        '{"metric_name": "volume", "metric_value": 21.0, "baseline_value": 42.0, '
+        '"delta": -21.0, "evidence": "evidence"}'
+    )
+    db.close()
+
+
+def test_create_tables_migre_notifications_legacy_vers_wave5(tmp_path) -> None:
+    """La migration notifications doit realigner body/is_read/reference_id."""
+    db_path = tmp_path / "legacy_notifications.db"
+    db = DatabaseManager(db_path)
+    connection = db.connection
+
+    connection.execute(
+        """
+        CREATE TABLE notifications (
+            notification_id TEXT PRIMARY KEY,
+            alert_id TEXT,
+            recommendation_id TEXT,
+            channel TEXT NOT NULL,
+            recipient TEXT,
+            title TEXT NOT NULL,
+            body TEXT,
+            is_read BOOLEAN DEFAULT FALSE,
+            delivered_at DATETIME,
+            read_at DATETIME,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+    connection.execute(
+        """
+        INSERT INTO notifications (
+            notification_id, alert_id, recommendation_id, channel, recipient,
+            title, body, is_read, delivered_at, read_at, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            "notif-001",
+            "alert-001",
+            None,
+            "email",
+            "ops@example.test",
+            "Titre",
+            "Message",
+            1,
+            "2026-03-21T10:05:00",
+            "2026-03-21T10:06:00",
+            "2026-03-21T10:00:00",
+        ),
+    )
+    connection.commit()
+
+    db.create_tables()
+
+    migrated = db.connection.execute(
+        """
+        SELECT notification_id, client_id, notification_type, reference_id, title,
+               message, channel, status, created_at, read_at
+        FROM notifications
+        WHERE notification_id = ?
+        """,
+        ("notif-001",),
+    ).fetchone()
+
+    assert migrated is not None
+    assert migrated["client_id"] == "ramy_client_001"
+    assert migrated["notification_type"] == "alert"
+    assert migrated["reference_id"] == "alert-001"
+    assert migrated["message"] == "Message"
+    assert migrated["channel"] == "email"
+    assert migrated["status"] == "read"
+    assert migrated["read_at"] == "2026-03-21T10:06:00"
+    assert migrated["created_at"] == "2026-03-21T10:00:00"
     db.close()

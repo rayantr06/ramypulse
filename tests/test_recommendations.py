@@ -5,6 +5,7 @@ Ordre d'exécution : pytest tests/test_recommendations.py -v
 from __future__ import annotations
 
 import json
+import sqlite3
 import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -13,6 +14,8 @@ import pandas as pd
 import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
+
+import config
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -389,10 +392,20 @@ def test_build_context_nss_global_calcule_correctement() -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 @pytest.fixture
-def tmp_db(tmp_path):
+def tmp_db(tmp_path, monkeypatch):
     """Base SQLite temporaire avec schema Wave 5 pour les tests."""
     from core.database import DatabaseManager
+    import core.alerts.alert_manager as alert_manager
+    import core.campaigns.campaign_manager as campaign_manager
+    import core.recommendation.recommendation_manager as recommendation_manager
+    import core.watchlists.watchlist_manager as watchlist_manager
+
     db_path = tmp_path / "test_reco.db"
+    monkeypatch.setattr(config, "SQLITE_DB_PATH", db_path)
+    monkeypatch.setattr(alert_manager.config, "SQLITE_DB_PATH", db_path)
+    monkeypatch.setattr(campaign_manager, "SQLITE_DB_PATH", db_path, raising=False)
+    monkeypatch.setattr(recommendation_manager, "SQLITE_DB_PATH", db_path, raising=False)
+    monkeypatch.setattr(watchlist_manager.config, "SQLITE_DB_PATH", db_path)
     db = DatabaseManager(str(db_path))
     db.create_tables()
     db.close()
@@ -494,3 +507,230 @@ def test_watchlist_priorities_deserialisees(tmp_db) -> None:
     rec = get_recommendation(rec_id, db_path=tmp_db)
     assert isinstance(rec["watchlist_priorities"], list)
     assert "NSS Oran" in rec["watchlist_priorities"]
+
+
+def test_client_agent_config_roundtrip(tmp_db) -> None:
+    """La configuration agent client doit etre lisible et modifiable en base."""
+    from core.recommendation.recommendation_manager import (
+        get_client_agent_config,
+        update_client_agent_config,
+    )
+
+    initial = get_client_agent_config(db_path=tmp_db)
+    assert initial["client_id"] == config.DEFAULT_CLIENT_ID
+
+    updated = update_client_agent_config(
+        {
+            "provider": "openai",
+            "model": "gpt-4o-mini",
+            "api_key_encrypted": "secret-ref",
+            "auto_trigger_on_alert": True,
+            "auto_trigger_severity": "high",
+            "weekly_report_enabled": True,
+            "weekly_report_day": 4,
+        },
+        db_path=tmp_db,
+    )
+
+    assert updated["provider"] == "openai"
+    assert updated["auto_trigger_on_alert"] is True
+    assert updated["weekly_report_day"] == 4
+
+    reloaded = get_client_agent_config(db_path=tmp_db)
+    assert reloaded["model"] == "gpt-4o-mini"
+    assert reloaded["api_key_encrypted"] == "secret-ref"
+    assert reloaded["weekly_report_enabled"] is True
+
+
+def test_build_context_enrichit_watchlists_et_campagnes_depuis_snapshots(tmp_db) -> None:
+    """Le contexte doit enrichir watchlists et campagnes avec leurs derniers snapshots."""
+    from core.alerts.alert_manager import create_alert
+    from core.campaigns.campaign_manager import create_campaign
+    from core.recommendation.context_builder import build_recommendation_context
+    from core.watchlists.watchlist_manager import create_watchlist
+
+    watchlist_id = create_watchlist(
+        name="Watchlist Oran",
+        description="desc",
+        scope_type="region",
+        filters={
+            "channel": "google_maps",
+            "aspect": "disponibilité",
+            "wilaya": "oran",
+            "product": "ramy_citron",
+            "sentiment": None,
+            "period_days": 7,
+            "min_volume": 3,
+        },
+    )
+    campaign_id = create_campaign(
+        {
+            "campaign_name": "Campagne Snapshot",
+            "campaign_type": "promotion",
+            "platform": "multi_platform",
+            "target_aspects": ["disponibilité"],
+            "target_regions": ["oran"],
+            "keywords": ["ramy"],
+            "start_date": "2026-03-01",
+            "end_date": "2026-03-20",
+            "status": "active",
+        }
+    )
+    alert_id = create_alert(
+        title="Alerte prioritaire",
+        description="desc",
+        severity="high",
+        watchlist_id=watchlist_id,
+        alert_payload={"rule_id": "nss_critical_low"},
+    )
+
+    with sqlite3.connect(tmp_db) as connection:
+        connection.execute(
+            """
+            INSERT INTO watchlist_metric_snapshots (
+                snapshot_id, watchlist_id, nss_current, nss_previous,
+                volume_current, volume_previous, delta_nss, delta_volume_pct,
+                aspect_breakdown, computed_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                "snap-watchlist-1",
+                watchlist_id,
+                -25.0,
+                10.0,
+                12,
+                8,
+                -35.0,
+                50.0,
+                '{"disponibilité": -25.0}',
+                "2026-03-21T10:00:00",
+            ),
+        )
+        connection.execute(
+            """
+            INSERT INTO campaign_metrics_snapshots (
+                snapshot_id, campaign_id, phase, metric_date, nss_filtered,
+                nss_baseline, nss_uplift, volume_filtered, volume_baseline,
+                volume_lift_pct, aspect_breakdown, sentiment_breakdown, computed_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                "snap-campaign-1",
+                campaign_id,
+                "post",
+                "2026-03-20",
+                22.0,
+                5.0,
+                17.0,
+                18,
+                9,
+                100.0,
+                '{"disponibilité": 22.0}',
+                '{"positif": 12}',
+                "2026-03-21T10:00:00",
+            ),
+        )
+        connection.commit()
+
+    context = build_recommendation_context("alert_triggered", alert_id, _make_minimal_df())
+
+    assert context["active_alerts"][0]["alert_id"] == alert_id
+    assert context["active_watchlists"][0]["latest_metrics"]["volume_current"] == 12
+    assert context["recent_campaigns"][0]["latest_uplift_nss"] == 17.0
+
+
+def test_create_alert_declenche_recommandation_si_auto_trigger_active(tmp_db, monkeypatch) -> None:
+    """Une alerte high/critical doit pouvoir creer une recommandation automatiquement."""
+    import core.alerts.alert_manager as alert_manager
+    import core.recommendation.agent_client as agent_client
+    import core.recommendation.context_builder as context_builder
+    from core.recommendation.recommendation_manager import (
+        get_client_agent_config,
+        get_recommendation,
+        update_client_agent_config,
+    )
+
+    update_client_agent_config(
+        {
+            "provider": "ollama_local",
+            "model": "qwen2.5:14b",
+            "auto_trigger_on_alert": True,
+            "auto_trigger_severity": "high",
+        },
+        db_path=tmp_db,
+    )
+    monkeypatch.setattr(
+        context_builder,
+        "build_recommendation_context",
+        lambda trigger_type, trigger_id, df_annotated, max_rag_chunks=8: {
+            "trigger": {"type": trigger_type, "id": trigger_id},
+            "estimated_tokens": 321,
+            "active_alerts": [],
+            "active_watchlists": [],
+            "recent_campaigns": [],
+            "rag_chunks": [],
+            "current_metrics": {},
+            "client_profile": {"client_name": "Ramy"},
+        },
+    )
+    monkeypatch.setattr(agent_client, "generate_recommendations", lambda **kwargs: _make_result())
+
+    alert_id = alert_manager.create_alert(
+        title="Alerte critique",
+        description="desc",
+        severity="high",
+        alert_payload={"rule_id": "nss_critical_low"},
+    )
+
+    alert = alert_manager.get_alert(alert_id)
+    assert alert is not None
+    assert alert["alert_payload"]["has_recommendations"] is True
+    recommendation_id = alert["alert_payload"]["recommendation_id"]
+    assert isinstance(recommendation_id, str)
+
+    recommendation = get_recommendation(recommendation_id, db_path=tmp_db)
+    assert recommendation is not None
+    assert recommendation["alert_id"] == alert_id
+    assert recommendation["trigger_type"] == "alert_triggered"
+    assert get_client_agent_config(db_path=tmp_db)["auto_trigger_on_alert"] is True
+
+
+def test_create_alert_auto_trigger_respecte_seuil_de_severite(tmp_db, monkeypatch) -> None:
+    """Une alerte sous le seuil de severite ne doit pas lancer la generation automatique."""
+    import core.alerts.alert_manager as alert_manager
+    import core.recommendation.agent_client as agent_client
+    import core.recommendation.context_builder as context_builder
+    from core.recommendation.recommendation_manager import list_recommendations, update_client_agent_config
+
+    update_client_agent_config(
+        {
+            "provider": "ollama_local",
+            "model": "qwen2.5:14b",
+            "auto_trigger_on_alert": True,
+            "auto_trigger_severity": "high",
+        },
+        db_path=tmp_db,
+    )
+    mocked_generate = MagicMock(return_value=_make_result())
+    monkeypatch.setattr(
+        context_builder,
+        "build_recommendation_context",
+        lambda trigger_type, trigger_id, df_annotated, max_rag_chunks=8: {
+            "trigger": {"type": trigger_type, "id": trigger_id},
+            "estimated_tokens": 321,
+        },
+    )
+    monkeypatch.setattr(agent_client, "generate_recommendations", mocked_generate)
+
+    alert_id = alert_manager.create_alert(
+        title="Alerte mineure",
+        description="desc",
+        severity="medium",
+        alert_payload={"rule_id": "volume_drop"},
+    )
+
+    alert = alert_manager.get_alert(alert_id)
+    assert alert is not None
+    assert "recommendation_id" not in alert["alert_payload"]
+    assert mocked_generate.call_count == 0
+    assert list_recommendations(db_path=tmp_db) == []

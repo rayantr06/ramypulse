@@ -61,12 +61,34 @@ if df.empty:
 
 # ─── Session state ────────────────────────────────────────────────────────────
 
+try:
+    from core.recommendation.recommendation_manager import (
+        get_client_agent_config,
+        list_recommendations,
+        save_recommendation,
+        update_client_agent_config,
+        update_recommendation_status,
+    )
+
+    agent_config = get_client_agent_config(client_id=DEFAULT_CLIENT_ID)
+except Exception as exc:
+    st.error(f"Impossible de charger la configuration agent: {exc}")
+    st.stop()
+
 if "reco_provider" not in st.session_state:
-    st.session_state["reco_provider"] = DEFAULT_AGENT_PROVIDER
+    st.session_state["reco_provider"] = agent_config.get("provider") or DEFAULT_AGENT_PROVIDER
 if "reco_model" not in st.session_state:
-    st.session_state["reco_model"] = DEFAULT_AGENT_MODEL
+    st.session_state["reco_model"] = agent_config.get("model") or DEFAULT_AGENT_MODEL
 if "reco_api_key" not in st.session_state:
-    st.session_state["reco_api_key"] = ""
+    st.session_state["reco_api_key"] = agent_config.get("api_key_encrypted") or ""
+if "reco_auto_trigger_on_alert" not in st.session_state:
+    st.session_state["reco_auto_trigger_on_alert"] = bool(agent_config.get("auto_trigger_on_alert"))
+if "reco_auto_trigger_severity" not in st.session_state:
+    st.session_state["reco_auto_trigger_severity"] = agent_config.get("auto_trigger_severity", "critical")
+if "reco_weekly_enabled" not in st.session_state:
+    st.session_state["reco_weekly_enabled"] = bool(agent_config.get("weekly_report_enabled"))
+if "reco_weekly_day" not in st.session_state:
+    st.session_state["reco_weekly_day"] = int(agent_config.get("weekly_report_day") or 1)
 
 
 # ─── Section 1 — Générer maintenant ──────────────────────────────────────────
@@ -105,7 +127,6 @@ if generate_btn:
         try:
             from core.recommendation.agent_client import generate_recommendations
             from core.recommendation.context_builder import build_recommendation_context
-            from core.recommendation.recommendation_manager import save_recommendation
 
             context = build_recommendation_context(
                 trigger_type=trigger_type,
@@ -156,11 +177,6 @@ st.divider()
 st.header("2. Recommandations actives")
 
 try:
-    from core.recommendation.recommendation_manager import (
-        list_recommendations,
-        update_recommendation_status,
-    )
-
     active_recos = list_recommendations(status="active", limit=10)
 
     if not active_recos:
@@ -255,6 +271,10 @@ try:
                             st.error(f"Erreur : {exc}")
                 with col_a3:
                     st.caption(f"ID : {rec_id[:8]}...")
+                    if reco_row.get("alert_id"):
+                        st.caption(f"Alerte source : {reco_row['alert_id'][:8]}...")
+                    if st.button("Ouvrir Campagnes", key=f"campaign_link_{rec_id}"):
+                        st.switch_page("pages/05_campaigns.py")
 
 except Exception as exc:
     st.error(f"Impossible de charger les recommandations : {exc}")
@@ -330,12 +350,44 @@ with st.form("agent_config_form"):
             placeholder=model_defaults.get(selected_provider, ""),
         )
 
+    col_auto, col_weekly = st.columns(2)
+    with col_auto:
+        auto_trigger_on_alert = st.checkbox(
+            "Auto-trigger sur alertes",
+            value=bool(st.session_state.get("reco_auto_trigger_on_alert", False)),
+        )
+        severity_options = ["low", "medium", "high", "critical"]
+        selected_auto_severity = st.selectbox(
+            "Severite minimale auto-trigger",
+            options=severity_options,
+            index=severity_options.index(st.session_state.get("reco_auto_trigger_severity", "critical")),
+        )
+    with col_weekly:
+        weekly_enabled = st.checkbox(
+            "Rapport hebdo active",
+            value=bool(st.session_state.get("reco_weekly_enabled", False)),
+        )
+        weekly_day = st.selectbox(
+            "Jour du rapport hebdo",
+            options=[1, 2, 3, 4, 5, 6, 7],
+            format_func=lambda value: {
+                1: "Lundi",
+                2: "Mardi",
+                3: "Mercredi",
+                4: "Jeudi",
+                5: "Vendredi",
+                6: "Samedi",
+                7: "Dimanche",
+            }[value],
+            index=max(0, min(6, int(st.session_state.get("reco_weekly_day", 1)) - 1)),
+        )
+
     if selected_provider in ("anthropic", "openai"):
         api_key_input = st.text_input(
             f"Cle API {selected_provider.capitalize()}",
             value=st.session_state.get("reco_api_key", ""),
             type="password",
-            help="La cle n'est jamais affichee en clair ni stockee en base.",
+            help="La cle ou reference est persistée pour l'auto-trigger.",
         )
     else:
         api_key_input = ""
@@ -346,6 +398,26 @@ with st.form("agent_config_form"):
         st.session_state["reco_provider"] = selected_provider
         st.session_state["reco_model"] = selected_model
         st.session_state["reco_api_key"] = api_key_input
-        st.success(
-            f"Configuration sauvegardee : {selected_provider} / {selected_model or 'defaut'}"
-        )
+        st.session_state["reco_auto_trigger_on_alert"] = auto_trigger_on_alert
+        st.session_state["reco_auto_trigger_severity"] = selected_auto_severity
+        st.session_state["reco_weekly_enabled"] = weekly_enabled
+        st.session_state["reco_weekly_day"] = weekly_day
+        try:
+            persisted = update_client_agent_config(
+                {
+                    "provider": selected_provider,
+                    "model": selected_model or None,
+                    "api_key_encrypted": api_key_input or None,
+                    "auto_trigger_on_alert": auto_trigger_on_alert,
+                    "auto_trigger_severity": selected_auto_severity,
+                    "weekly_report_enabled": weekly_enabled,
+                    "weekly_report_day": weekly_day,
+                },
+                client_id=DEFAULT_CLIENT_ID,
+            )
+            st.success(
+                "Configuration sauvegardee : "
+                f"{persisted['provider']} / {persisted.get('model') or 'defaut'}"
+            )
+        except Exception as exc:
+            st.error(f"Impossible de sauvegarder la configuration : {exc}")

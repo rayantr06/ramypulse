@@ -13,6 +13,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import config  # noqa: E402
+from core.database import DatabaseManager  # noqa: E402
 
 
 def _import_or_fail(module_name: str):
@@ -477,3 +478,87 @@ def test_run_alert_detection_declenche_volume_drop_sans_doublon(
         alert for alert in alerts if alert["alert_payload"].get("rule_id") == "volume_drop"
     ]
     assert len(volume_drop_alerts) == 1
+
+
+def test_run_alert_detection_respecte_min_volume_pour_regles_metriques(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Les regles metriques ne doivent pas declencher sous le min_volume de la watchlist."""
+    db_path = _prepare_sqlite(monkeypatch, tmp_path)
+    DatabaseManager(str(db_path)).create_tables()
+    watchlist_manager = _import_or_fail("core.watchlists.watchlist_manager")
+    alert_manager = _import_or_fail("core.alerts.alert_manager")
+    detector = _import_or_fail("core.alerts.alert_detector")
+
+    _create_watchlist(
+        watchlist_manager,
+        filters=_watchlist_filters(aspect="fraicheur", min_volume=5),
+    )
+    df_annotated = _frame(
+        [
+            _signal("2026-03-07T10:00:00", "positif", aspect="fraîcheur"),
+            _signal("2026-03-08T10:00:00", "positif", aspect="fraîcheur"),
+            _signal("2026-03-09T10:00:00", "positif", aspect="fraîcheur"),
+            _signal("2026-03-10T10:00:00", "positif", aspect="fraîcheur"),
+            _signal("2026-03-11T10:00:00", "positif", aspect="fraîcheur"),
+            _signal("2026-03-12T10:00:00", "positif", aspect="fraîcheur"),
+            _signal("2026-03-18T10:00:00", "négatif", aspect="fraîcheur"),
+            _signal("2026-03-19T10:00:00", "très_négatif", aspect="fraîcheur"),
+            _signal("2026-03-20T10:00:00", "négatif", aspect="fraîcheur"),
+        ]
+    )
+
+    detector.run_alert_detection(df_annotated)
+
+    rule_ids = _list_rule_ids(alert_manager)
+    assert "nss_critical_low" not in rule_ids
+    assert "negative_volume_surge" not in rule_ids
+    assert "volume_drop" not in rule_ids
+    assert not any(rule_id.startswith("aspect_critical_") for rule_id in rule_ids)
+
+
+def test_run_alert_detection_persiste_watchlist_metric_snapshots(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Chaque cycle doit persister un snapshot de metriques par watchlist analysee."""
+    db_path = _prepare_sqlite(monkeypatch, tmp_path)
+    DatabaseManager(str(db_path)).create_tables()
+    watchlist_manager = _import_or_fail("core.watchlists.watchlist_manager")
+    detector = _import_or_fail("core.alerts.alert_detector")
+
+    watchlist_id = _create_watchlist(
+        watchlist_manager,
+        filters=_watchlist_filters(aspect="disponibilite"),
+    )
+    df_annotated = _frame(
+        [
+            _signal("2026-03-08T10:00:00", "positif", aspect="disponibilité"),
+            _signal("2026-03-09T10:00:00", "positif", aspect="disponibilité"),
+            _signal("2026-03-18T10:00:00", "négatif", aspect="disponibilité"),
+            _signal("2026-03-19T10:00:00", "négatif", aspect="disponibilité"),
+            _signal("2026-03-20T10:00:00", "positif", aspect="disponibilité"),
+        ]
+    )
+
+    detector.run_alert_detection(df_annotated)
+
+    with sqlite3.connect(config.SQLITE_DB_PATH) as connection:
+        row = connection.execute(
+            """
+            SELECT watchlist_id, volume_current, volume_previous, delta_nss, aspect_breakdown
+            FROM watchlist_metric_snapshots
+            WHERE watchlist_id = ?
+            ORDER BY computed_at DESC
+            LIMIT 1
+            """,
+            (watchlist_id,),
+        ).fetchone()
+
+    assert row is not None
+    assert row[0] == watchlist_id
+    assert row[1] == 3
+    assert row[2] == 2
+    assert row[3] is not None
+    assert "disponibilité" in row[4]

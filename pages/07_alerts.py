@@ -121,6 +121,11 @@ for alert in alerts:
 
         payload = alert.get("alert_payload") or {}
         if payload:
+            recommendation_id = payload.get("recommendation_id")
+            if recommendation_id:
+                st.success(f"Recommandation liee: {recommendation_id}")
+            elif payload.get("has_recommendations"):
+                st.info("Une recommandation associee est disponible pour cette alerte.")
             st.json(payload)
 
         action_cols = st.columns(4)
@@ -151,7 +156,11 @@ for alert in alerts:
         if Path(__file__).with_name("08_recommendations.py").exists():
             st.page_link(
                 "pages/08_recommendations.py",
-                label="Ouvrir Recommendations",
+                label=(
+                    f"Ouvrir Recommendations ({recommendation_id[:8]}...)"
+                    if payload.get("recommendation_id")
+                    else "Ouvrir Recommendations"
+                ),
             )
         else:
             st.caption("Lien Recommendations disponible quand la page 08 est installée.")

@@ -6,6 +6,7 @@ Utilise une base SQLite temporaire par test via monkeypatch.
 from __future__ import annotations
 
 import os
+import sqlite3
 import sys
 from datetime import datetime, timedelta
 
@@ -14,7 +15,10 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+import config
+import core.alerts.alert_manager as alert_module
 import core.campaigns.campaign_manager as cm
+import core.campaigns.impact_calculator as ic_module
 from core.campaigns.campaign_manager import (
     create_campaign,
     delete_campaign,
@@ -39,6 +43,10 @@ def use_test_db(tmp_path, monkeypatch):
     """Redirige SQLITE_DB_PATH vers une base SQLite temporaire pour chaque test."""
     db = tmp_path / "test_campaigns.db"
     monkeypatch.setattr(cm, "SQLITE_DB_PATH", db)
+    monkeypatch.setattr(config, "SQLITE_DB_PATH", db)
+    monkeypatch.setattr(alert_module.config, "SQLITE_DB_PATH", db)
+    if hasattr(ic_module, "config"):
+        monkeypatch.setattr(ic_module.config, "SQLITE_DB_PATH", db)
     return db
 
 
@@ -291,6 +299,31 @@ def test_filter_signals_df_vide():
     assert result.empty
 
 
+def test_filter_signals_inclut_toute_la_journee_de_fin():
+    """La date de fin au format YYYY-MM-DD doit inclure les signaux de toute la journee."""
+    df = pd.DataFrame(
+        [
+            {
+                "text": "ramy signal fin de campagne",
+                "text_original": "ramy signal fin de campagne",
+                "sentiment_label": "positif",
+                "confidence": 0.9,
+                "channel": "instagram",
+                "aspect": "goût",
+                "wilaya": "oran",
+                "timestamp": "2026-02-15T12:30:00",
+                "source_url": "",
+            }
+        ]
+    )
+    df["timestamp"] = pd.to_datetime(df["timestamp"])
+    campaign = {"platform": "instagram", "target_aspects": [], "target_regions": [], "keywords": ["ramy"]}
+
+    filtered = filter_signals_for_campaign(df, campaign, "2026-02-01", "2026-02-15")
+
+    assert len(filtered) == 1
+
+
 # ---------------------------------------------------------------------------
 # Tests compute_attribution_score
 # ---------------------------------------------------------------------------
@@ -405,3 +438,230 @@ def test_compute_campaign_impact_is_reliable_faux_si_volume_insuffisant(sample_c
     result = compute_campaign_impact(cid, df)
     assert result["is_reliable"] is False
     assert result["reliability_note"] != ""
+
+
+def test_compute_campaign_impact_respecte_les_bornes_pre_active_post(sample_campaign):
+    """Les bornes PRD doivent garder le jour de debut en active et le lendemain de fin en post."""
+    cid = create_campaign(sample_campaign)
+    df = pd.DataFrame(
+        [
+            {
+                "text": "pre",
+                "text_original": "pre",
+                "sentiment_label": "positif",
+                "confidence": 0.9,
+                "channel": "instagram",
+                "aspect": "emballage",
+                "wilaya": "oran",
+                "timestamp": "2026-01-31T12:00:00",
+                "source_url": "",
+            },
+            {
+                "text": "active start",
+                "text_original": "active start",
+                "sentiment_label": "positif",
+                "confidence": 0.9,
+                "channel": "instagram",
+                "aspect": "emballage",
+                "wilaya": "oran",
+                "timestamp": "2026-02-01T12:00:00",
+                "source_url": "",
+            },
+            {
+                "text": "active end noon",
+                "text_original": "active end noon",
+                "sentiment_label": "négatif",
+                "confidence": 0.9,
+                "channel": "instagram",
+                "aspect": "emballage",
+                "wilaya": "oran",
+                "timestamp": "2026-02-15T12:00:00",
+                "source_url": "",
+            },
+            {
+                "text": "post",
+                "text_original": "post",
+                "sentiment_label": "positif",
+                "confidence": 0.9,
+                "channel": "instagram",
+                "aspect": "emballage",
+                "wilaya": "oran",
+                "timestamp": "2026-02-16T12:00:00",
+                "source_url": "",
+            },
+        ]
+    )
+    df["timestamp"] = pd.to_datetime(df["timestamp"])
+
+    result = compute_campaign_impact(cid, df)
+
+    assert result["phases"]["pre"]["volume"] == 1
+    assert result["phases"]["active"]["volume"] == 2
+    assert result["phases"]["post"]["volume"] == 1
+
+
+def test_compute_campaign_impact_persiste_snapshots_et_liens_signaux(sample_campaign):
+    """Le calcul doit persister les snapshots de phase et les liens de signaux attribues."""
+    cid = create_campaign(sample_campaign)
+    df = pd.DataFrame(
+        [
+            {
+                "text": "pre",
+                "text_original": "pre",
+                "sentiment_label": "positif",
+                "confidence": 0.9,
+                "channel": "instagram",
+                "aspect": "emballage",
+                "wilaya": "oran",
+                "timestamp": "2026-01-31T12:00:00",
+                "source_url": "https://example.test/pre",
+            },
+            {
+                "text": "active",
+                "text_original": "active",
+                "sentiment_label": "positif",
+                "confidence": 0.9,
+                "channel": "instagram",
+                "aspect": "emballage",
+                "wilaya": "oran",
+                "timestamp": "2026-02-10T12:00:00",
+                "source_url": "https://example.test/active",
+            },
+            {
+                "text": "post",
+                "text_original": "post",
+                "sentiment_label": "positif",
+                "confidence": 0.9,
+                "channel": "instagram",
+                "aspect": "emballage",
+                "wilaya": "oran",
+                "timestamp": "2026-02-16T12:00:00",
+                "source_url": "https://example.test/post",
+            },
+        ]
+    )
+    df["timestamp"] = pd.to_datetime(df["timestamp"])
+
+    compute_campaign_impact(cid, df)
+
+    with sqlite3.connect(config.SQLITE_DB_PATH) as connection:
+        snapshots = connection.execute(
+            "SELECT phase FROM campaign_metrics_snapshots WHERE campaign_id = ? ORDER BY phase",
+            (cid,),
+        ).fetchall()
+        links = connection.execute(
+            "SELECT phase, signal_id FROM campaign_signal_links WHERE campaign_id = ? ORDER BY phase, signal_id",
+            (cid,),
+        ).fetchall()
+
+    assert [row[0] for row in snapshots] == ["active", "post", "pre"]
+    assert len(links) == 3
+    assert {row[0] for row in links} == {"pre", "active", "post"}
+
+
+def test_compute_campaign_impact_cree_alerte_campaign_impact_positive(sample_campaign):
+    """Un uplift NSS positif suffisant doit creer une alerte campagne dediee."""
+    cid = create_campaign(sample_campaign)
+    df = pd.DataFrame(
+        [
+            {
+                "text": f"pre {index}",
+                "text_original": f"pre {index}",
+                "sentiment_label": "négatif",
+                "confidence": 0.9,
+                "channel": "instagram",
+                "aspect": "emballage",
+                "wilaya": "oran",
+                "timestamp": f"2026-01-{25 + index:02d}T12:00:00",
+                "source_url": f"https://example.test/pre-{index}",
+            }
+            for index in range(6)
+        ]
+        + [
+            {
+                "text": f"post {index}",
+                "text_original": f"post {index}",
+                "sentiment_label": "positif",
+                "confidence": 0.9,
+                "channel": "instagram",
+                "aspect": "emballage",
+                "wilaya": "oran",
+                "timestamp": f"2026-02-{16 + index:02d}T12:00:00",
+                "source_url": f"https://example.test/post-{index}",
+            }
+            for index in range(6)
+        ]
+    )
+    df["timestamp"] = pd.to_datetime(df["timestamp"])
+
+    compute_campaign_impact(cid, df)
+
+    alerts = alert_module.list_alerts(limit=50)
+
+    positive_alerts = [
+        alert for alert in alerts if alert["alert_rule_id"] == "campaign_impact_positive"
+    ]
+    assert len(positive_alerts) == 1
+    assert positive_alerts[0]["alert_payload"]["campaign_id"] == cid
+
+
+def test_compute_campaign_impact_cree_alerte_campaign_underperformance() -> None:
+    """Une campagne active depuis plus de 7 jours sans uplift doit creer une alerte dediee."""
+    cid = create_campaign(
+        {
+            "campaign_name": "Campagne en sous-performance",
+            "campaign_type": "promotion",
+            "platform": "instagram",
+            "target_aspects": ["emballage"],
+            "target_regions": ["oran"],
+            "keywords": ["ramy"],
+            "start_date": "2026-03-01",
+            "end_date": "2026-03-20",
+            "status": "active",
+        }
+    )
+    df = pd.DataFrame(
+        [
+            {
+                "text": f"pre {index} ramy",
+                "text_original": f"pre {index} ramy",
+                "sentiment_label": "positif",
+                "confidence": 0.9,
+                "channel": "instagram",
+                "aspect": "emballage",
+                "wilaya": "oran",
+                "timestamp": (
+                    pd.Timestamp("2026-01-30T12:00:00") + pd.Timedelta(days=index)
+                ).isoformat(),
+                "source_url": f"https://example.test/preu-{index}",
+            }
+            for index in range(30)
+        ]
+        + [
+            {
+                "text": f"active {index} ramy",
+                "text_original": f"active {index} ramy",
+                "sentiment_label": "négatif",
+                "confidence": 0.9,
+                "channel": "instagram",
+                "aspect": "emballage",
+                "wilaya": "oran",
+                "timestamp": (
+                    pd.Timestamp("2026-03-10T12:00:00") + pd.Timedelta(hours=index * 4)
+                ).isoformat(),
+                "source_url": f"https://example.test/activeu-{index}",
+            }
+            for index in range(60)
+        ]
+    )
+    df["timestamp"] = pd.to_datetime(df["timestamp"])
+
+    compute_campaign_impact(cid, df)
+
+    alerts = alert_module.list_alerts(limit=50)
+    underperformance_alerts = [
+        alert for alert in alerts if alert["alert_rule_id"] == "campaign_underperformance"
+    ]
+
+    assert len(underperformance_alerts) == 1
+    assert underperformance_alerts[0]["alert_payload"]["campaign_id"] == cid

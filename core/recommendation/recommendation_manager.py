@@ -9,13 +9,30 @@ import logging
 import sqlite3
 import uuid
 from datetime import datetime
-from pathlib import Path
 
+import config
 from config import DEFAULT_CLIENT_ID, SQLITE_DB_PATH
 
 logger = logging.getLogger(__name__)
 
 _VALID_STATUSES = ("active", "archived", "dismissed")
+_VALID_AUTO_TRIGGER_SEVERITIES = ("low", "medium", "high", "critical")
+
+_DDL_CLIENT_AGENT_CONFIG = """
+CREATE TABLE IF NOT EXISTS client_agent_config (
+    config_id               TEXT PRIMARY KEY,
+    client_id               TEXT NOT NULL UNIQUE DEFAULT 'ramy_client_001',
+    provider                TEXT NOT NULL DEFAULT 'ollama_local',
+    model                   TEXT,
+    api_key_encrypted       TEXT,
+    auto_trigger_on_alert   INTEGER NOT NULL DEFAULT 0,
+    auto_trigger_severity   TEXT DEFAULT 'critical',
+    weekly_report_enabled   INTEGER NOT NULL DEFAULT 0,
+    weekly_report_day       INTEGER DEFAULT 1,
+    created_at              TEXT NOT NULL,
+    updated_at              TEXT NOT NULL
+)
+"""
 
 
 # ---------------------------------------------------------------------------
@@ -31,7 +48,7 @@ def _get_connection(db_path=None) -> sqlite3.Connection:
     Returns:
         Connexion SQLite avec sqlite3.Row factory.
     """
-    resolved = str(db_path) if db_path else str(SQLITE_DB_PATH)
+    resolved = str(db_path) if db_path else str(getattr(config, "SQLITE_DB_PATH", SQLITE_DB_PATH))
     conn = sqlite3.connect(resolved)
     conn.row_factory = sqlite3.Row
     return conn
@@ -75,6 +92,65 @@ def _row_to_dict(row: sqlite3.Row) -> dict:
     d["recommendations"] = _deserialize_list(d.get("recommendations"))
     d["watchlist_priorities"] = _deserialize_list(d.get("watchlist_priorities"))
     return d
+
+
+def _ensure_client_agent_config_table(conn: sqlite3.Connection) -> None:
+    """Garantit la presence de la table de configuration agent."""
+    conn.execute(_DDL_CLIENT_AGENT_CONFIG)
+    conn.commit()
+
+
+def _default_agent_config_payload(client_id: str) -> tuple:
+    """Construit la ligne de configuration par defaut pour un client."""
+    now = _now()
+    return (
+        f"cfg-{client_id}",
+        client_id,
+        getattr(config, "DEFAULT_AGENT_PROVIDER", "ollama_local"),
+        getattr(config, "DEFAULT_AGENT_MODEL", "qwen2.5:14b"),
+        None,
+        0,
+        "critical",
+        0,
+        1,
+        now,
+        now,
+    )
+
+
+def _ensure_client_agent_config_row(conn: sqlite3.Connection, client_id: str) -> None:
+    """Insere une configuration par defaut si le client n'en a pas encore."""
+    _ensure_client_agent_config_table(conn)
+    conn.execute(
+        """
+        INSERT OR IGNORE INTO client_agent_config (
+            config_id,
+            client_id,
+            provider,
+            model,
+            api_key_encrypted,
+            auto_trigger_on_alert,
+            auto_trigger_severity,
+            weekly_report_enabled,
+            weekly_report_day,
+            created_at,
+            updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        _default_agent_config_payload(client_id),
+    )
+    conn.commit()
+
+
+def _row_to_agent_config(row: sqlite3.Row | None) -> dict | None:
+    """Convertit une ligne SQLite en configuration agent exploitable."""
+    if row is None:
+        return None
+    payload = dict(row)
+    payload["auto_trigger_on_alert"] = bool(payload.get("auto_trigger_on_alert", 0))
+    payload["weekly_report_enabled"] = bool(payload.get("weekly_report_enabled", 0))
+    payload["weekly_report_day"] = int(payload.get("weekly_report_day") or 1)
+    return payload
 
 
 # ---------------------------------------------------------------------------
@@ -122,7 +198,7 @@ def save_recommendation(
         result.get("data_quality_note", ""),
         result.get("provider_used", ""),
         result.get("model_used", ""),
-        result.get("context_tokens"),
+        result.get("context_tokens") or result.get("estimated_tokens"),
         result.get("generation_ms"),
         "active",
         _now(),
@@ -138,6 +214,85 @@ def save_recommendation(
     finally:
         conn.close()
     return rec_id
+
+
+def get_client_agent_config(
+    client_id: str = DEFAULT_CLIENT_ID,
+    db_path=None,
+) -> dict:
+    """Retourne la configuration persistée de l'agent pour un client."""
+    conn = _get_connection(db_path)
+    try:
+        _ensure_client_agent_config_row(conn, client_id)
+        row = conn.execute(
+            "SELECT * FROM client_agent_config WHERE client_id = ?",
+            (client_id,),
+        ).fetchone()
+        payload = _row_to_agent_config(row)
+        if payload is None:
+            raise RuntimeError(f"Configuration agent introuvable pour {client_id}")
+        return payload
+    finally:
+        conn.close()
+
+
+def update_client_agent_config(
+    updates: dict,
+    client_id: str = DEFAULT_CLIENT_ID,
+    db_path=None,
+) -> dict:
+    """Met a jour la configuration agent client et retourne la version persistée."""
+    allowed = {
+        "provider",
+        "model",
+        "api_key_encrypted",
+        "auto_trigger_on_alert",
+        "auto_trigger_severity",
+        "weekly_report_enabled",
+        "weekly_report_day",
+    }
+    payload = {key: value for key, value in dict(updates or {}).items() if key in allowed}
+
+    if "auto_trigger_severity" in payload:
+        severity = str(payload["auto_trigger_severity"]).strip().lower()
+        if severity not in _VALID_AUTO_TRIGGER_SEVERITIES:
+            raise ValueError(f"Severite auto_trigger invalide : {severity}")
+        payload["auto_trigger_severity"] = severity
+
+    if "auto_trigger_on_alert" in payload:
+        payload["auto_trigger_on_alert"] = 1 if bool(payload["auto_trigger_on_alert"]) else 0
+
+    if "weekly_report_enabled" in payload:
+        payload["weekly_report_enabled"] = 1 if bool(payload["weekly_report_enabled"]) else 0
+
+    if "weekly_report_day" in payload:
+        payload["weekly_report_day"] = max(1, min(7, int(payload["weekly_report_day"])))
+
+    if "provider" in payload:
+        payload["provider"] = str(payload["provider"]).strip() or getattr(
+            config,
+            "DEFAULT_AGENT_PROVIDER",
+            "ollama_local",
+        )
+
+    if "model" in payload and payload["model"] is not None:
+        payload["model"] = str(payload["model"]).strip() or None
+
+    conn = _get_connection(db_path)
+    try:
+        _ensure_client_agent_config_row(conn, client_id)
+        if payload:
+            payload["updated_at"] = _now()
+            assignments = ", ".join(f"{column} = ?" for column in payload)
+            params = list(payload.values()) + [client_id]
+            conn.execute(
+                f"UPDATE client_agent_config SET {assignments} WHERE client_id = ?",
+                params,
+            )
+            conn.commit()
+        return get_client_agent_config(client_id=client_id, db_path=db_path)
+    finally:
+        conn.close()
 
 
 def list_recommendations(
