@@ -72,92 +72,76 @@ _SCHEMA_STATEMENTS = {
     """,
     "watchlists": """
         CREATE TABLE IF NOT EXISTS watchlists (
-            watchlist_id TEXT PRIMARY KEY,
-            name TEXT NOT NULL,
-            description TEXT,
-            scope_type TEXT NOT NULL,
-            products TEXT,
-            competitors TEXT,
-            wilayas TEXT,
-            channels TEXT,
-            aspects TEXT,
-            keywords TEXT,
-            source_registry_ids TEXT,
-            metric_type TEXT NOT NULL,
-            baseline_window INTEGER DEFAULT 30,
-            alert_threshold REAL,
-            alert_direction TEXT,
-            owner TEXT,
-            is_active BOOLEAN DEFAULT TRUE,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME
+            watchlist_id      TEXT PRIMARY KEY,
+            client_id         TEXT NOT NULL DEFAULT 'ramy_client_001',
+            watchlist_name    TEXT NOT NULL,
+            description       TEXT,
+            scope_type        TEXT,
+            filters           TEXT,
+            is_active         INTEGER DEFAULT 1,
+            created_at        TEXT,
+            updated_at        TEXT
         )
     """,
     "campaigns": """
         CREATE TABLE IF NOT EXISTS campaigns (
-            campaign_id TEXT PRIMARY KEY,
-            name TEXT NOT NULL,
-            event_type TEXT NOT NULL,
-            brand TEXT NOT NULL,
-            products TEXT,
-            wilayas TEXT,
-            channels TEXT,
-            start_at DATETIME NOT NULL,
-            end_at DATETIME,
-            goal TEXT,
-            budget REAL,
-            hashtags TEXT,
-            keywords TEXT,
-            tracked_accounts TEXT,
-            tracked_posts TEXT,
-            tracked_urls TEXT,
-            creator_profiles TEXT,
-            before_window INTEGER DEFAULT 30,
-            after_window INTEGER DEFAULT 14,
-            status TEXT DEFAULT 'draft',
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME
+            campaign_id       TEXT PRIMARY KEY,
+            client_id         TEXT NOT NULL DEFAULT 'ramy_client_001',
+            campaign_name     TEXT NOT NULL,
+            campaign_type     TEXT,
+            platform          TEXT,
+            description       TEXT,
+            influencer_handle TEXT,
+            influencer_tier   TEXT,
+            target_segment    TEXT,
+            target_aspects    TEXT,
+            target_regions    TEXT,
+            keywords          TEXT,
+            budget_dza        INTEGER,
+            start_date        TEXT,
+            end_date          TEXT,
+            pre_window_days   INTEGER DEFAULT 14,
+            post_window_days  INTEGER DEFAULT 14,
+            status            TEXT DEFAULT 'planned',
+            created_at        TEXT,
+            updated_at        TEXT
         )
     """,
     "alerts": """
         CREATE TABLE IF NOT EXISTS alerts (
-            alert_id TEXT PRIMARY KEY,
-            watchlist_id TEXT NOT NULL,
-            alert_type TEXT NOT NULL,
-            severity TEXT NOT NULL,
-            title TEXT NOT NULL,
-            description TEXT,
-            metric_name TEXT,
-            metric_value REAL,
-            baseline_value REAL,
-            delta REAL,
-            evidence TEXT,
-            is_acknowledged BOOLEAN DEFAULT FALSE,
-            acknowledged_by TEXT,
-            acknowledged_at DATETIME,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (watchlist_id) REFERENCES watchlists(watchlist_id)
+            alert_id          TEXT PRIMARY KEY,
+            client_id         TEXT NOT NULL DEFAULT 'ramy_client_001',
+            watchlist_id      TEXT,
+            alert_rule_id     TEXT,
+            title             TEXT NOT NULL,
+            description       TEXT,
+            severity          TEXT,
+            status            TEXT DEFAULT 'new',
+            detected_at       TEXT,
+            resolved_at       TEXT,
+            alert_payload     TEXT,
+            dedup_key         TEXT,
+            navigation_url    TEXT
         )
     """,
     "recommendations": """
         CREATE TABLE IF NOT EXISTS recommendations (
             recommendation_id TEXT PRIMARY KEY,
-            alert_id TEXT,
-            signal_type TEXT NOT NULL,
-            problem TEXT NOT NULL,
-            evidence_summary TEXT,
-            urgency TEXT NOT NULL,
-            actions TEXT NOT NULL,
-            assumptions TEXT,
-            risks TEXT,
-            confidence TEXT NOT NULL,
-            generation_mode TEXT NOT NULL,
-            requires_human_validation BOOLEAN DEFAULT TRUE,
-            is_validated BOOLEAN DEFAULT FALSE,
-            validated_by TEXT,
-            validated_at DATETIME,
-            feedback TEXT,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            client_id         TEXT NOT NULL DEFAULT 'ramy_client_001',
+            trigger_type      TEXT,
+            trigger_id        TEXT,
+            alert_id          TEXT,
+            analysis_summary  TEXT,
+            recommendations   TEXT,
+            watchlist_priorities TEXT,
+            confidence_score  REAL,
+            data_quality_note TEXT,
+            provider_used     TEXT,
+            model_used        TEXT,
+            context_tokens    INTEGER,
+            generation_ms     INTEGER,
+            status            TEXT DEFAULT 'active',
+            created_at        TEXT
         )
     """,
     "creator_profiles": """
@@ -176,17 +160,16 @@ _SCHEMA_STATEMENTS = {
     """,
     "notifications": """
         CREATE TABLE IF NOT EXISTS notifications (
-            notification_id TEXT PRIMARY KEY,
-            alert_id TEXT,
-            recommendation_id TEXT,
-            channel TEXT NOT NULL,
-            recipient TEXT,
-            title TEXT NOT NULL,
-            body TEXT,
-            is_read BOOLEAN DEFAULT FALSE,
-            delivered_at DATETIME,
-            read_at DATETIME,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            notification_id   TEXT PRIMARY KEY,
+            client_id         TEXT NOT NULL DEFAULT 'ramy_client_001',
+            notification_type TEXT,
+            reference_id      TEXT,
+            title             TEXT NOT NULL,
+            message           TEXT,
+            channel           TEXT,
+            status            TEXT DEFAULT 'unread',
+            created_at        TEXT,
+            read_at           TEXT
         )
     """,
     "audit_log": """
@@ -374,6 +357,22 @@ def _migrate_competitors_if_needed(connection: sqlite3.Connection) -> None:
     connection.execute("DROP TABLE competitors_legacy")
 
 
+def _migrate_recommendations_if_needed(connection: sqlite3.Connection) -> None:
+    """Migre la table recommendations du schema Phase 1 vers le schema Wave 5.
+
+    Si la table n'existe pas, la fonction n'intervient pas.
+    Si la table possede deja trigger_type (schema Wave 5), aucune action.
+    Sinon, renomme la table legacy et cree la nouvelle via CREATE TABLE IF NOT EXISTS.
+    """
+    if not _table_exists(connection, "recommendations"):
+        return
+    columns = _column_definitions(connection, "recommendations")
+    if "trigger_type" in columns:
+        return
+    logger.info("Migration SQLite : realignement de la table recommendations vers schema Wave 5")
+    connection.execute("ALTER TABLE recommendations RENAME TO recommendations_legacy")
+
+
 class DatabaseManager:
     """Gestionnaire de connexion SQLite pour RamyPulse."""
 
@@ -428,6 +427,7 @@ class DatabaseManager:
             _migrate_products_if_needed(connection)
             _migrate_wilayas_if_needed(connection)
             _migrate_competitors_if_needed(connection)
+            _migrate_recommendations_if_needed(connection)
 
             for statement in _SCHEMA_STATEMENTS.values():
                 connection.execute(statement)

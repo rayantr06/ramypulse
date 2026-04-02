@@ -91,6 +91,7 @@ CHANNELS: list[str] = [
     "google_maps",
     "audio",
     "youtube",
+    "instagram",
 ]
 """Canaux de collecte supportés."""
 
@@ -168,6 +169,55 @@ NSS_FORMULA: str = (
 Calcul: (très_positif + positif - négatif - très_négatif) / total × 100
 Plage: [-100, +100]. Neutre exclue du calcul (pas de contribution).
 """
+
+# ---------------------------------------------------------------------------
+# Chemins parquet et index
+# ---------------------------------------------------------------------------
+
+INDEX_DIR: Path = BASE_DIR / "index"
+CLEAN_PARQUET_PATH: Path = PROCESSED_DATA_DIR / "clean.parquet"
+ANNOTATED_PARQUET_PATH: Path = PROCESSED_DATA_DIR / "annotated.parquet"
+BM25_METADATA_PATH: Path = INDEX_DIR / "bm25_metadata.json"
+
+# ---------------------------------------------------------------------------
+# Client par défaut (PoC mono-client)
+# ---------------------------------------------------------------------------
+
+DEFAULT_CLIENT_ID: str = "ramy_client_001"
+"""Identifiant client unique pour le PoC mono-tenant."""
+
+# ---------------------------------------------------------------------------
+# Recommendation Agent
+# ---------------------------------------------------------------------------
+
+ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
+OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
+DEFAULT_AGENT_PROVIDER: str = os.getenv("AGENT_PROVIDER", "ollama_local")
+DEFAULT_AGENT_MODEL: str = os.getenv("AGENT_MODEL", "qwen2.5:14b")
+RECOMMENDATION_AGENT_PROMPT_VERSION: str = "1.0"
+
+# ---------------------------------------------------------------------------
+# Campaign Intelligence
+# ---------------------------------------------------------------------------
+
+DEFAULT_PRE_WINDOW_DAYS: int = 14
+"""Fenêtre d'analyse pré-campagne en jours (défaut)."""
+
+DEFAULT_POST_WINDOW_DAYS: int = 14
+"""Fenêtre d'analyse post-campagne en jours (défaut)."""
+
+MIN_SIGNALS_FOR_ATTRIBUTION: int = 20
+"""Volume minimum de signaux pour qu'une attribution de campagne soit fiable."""
+
+# ---------------------------------------------------------------------------
+# Alertes
+# ---------------------------------------------------------------------------
+
+SOURCE_HEALTH_THRESHOLD: int = 60
+"""Score en dessous duquel une alerte source_health est créée."""
+
+ALERT_DETECTION_INTERVAL_MINUTES: int = 30
+"""Intervalle entre deux cycles de détection d'alertes (minutes)."""
 
 # ---------------------------------------------------------------------------
 # Clés API externes (optionnelles)
