@@ -19,6 +19,7 @@ from core.database import DatabaseManager
 from core.normalization.normalizer_pipeline import run_normalization_job
 
 logger = logging.getLogger(__name__)
+SUPPORTED_PLATFORMS = frozenset({"facebook", "google_maps", "youtube", "instagram", "import"})
 
 
 def _now() -> str:
@@ -79,6 +80,8 @@ class IngestionOrchestrator:
             raise ValueError("source_name est requis")
         if not source["platform"] or not source["source_type"] or not source["owner_type"]:
             raise ValueError("platform, source_type et owner_type sont requis")
+        if source["platform"] not in SUPPORTED_PLATFORMS:
+            raise ValueError(f"Plateforme non supportee: {source['platform']}")
 
         with self._get_connection() as connection:
             connection.execute(

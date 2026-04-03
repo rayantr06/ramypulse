@@ -22,6 +22,70 @@ def platform_db(tmp_path, monkeypatch):
     return db_path
 
 
+@pytest.mark.parametrize(
+    ("platform", "source_type", "config_json"),
+    [
+        ("facebook", "facebook_feed", {"page_url": "https://facebook.com/ramy", "fetch_mode": "snapshot"}),
+        ("google_maps", "public_reviews", {"place_url": "https://maps.google.com/?cid=1", "fetch_mode": "snapshot"}),
+        ("youtube", "youtube_channel", {"channel_id": "UC123", "fetch_mode": "snapshot"}),
+        ("instagram", "instagram_profile", {"profile_url": "https://instagram.com/ramy", "fetch_mode": "snapshot"}),
+        ("import", "batch_import", {"fetch_mode": "snapshot"}),
+    ],
+)
+def test_create_source_accepte_les_cinq_plateformes_du_socle(
+    platform_db,
+    tmp_path: Path,
+    platform: str,
+    source_type: str,
+    config_json: dict[str, str],
+) -> None:
+    """L'orchestrateur doit accepter exactement les cinq plateformes du socle initial."""
+    from core.ingestion.orchestrator import IngestionOrchestrator
+
+    effective_config = dict(config_json)
+    if platform == "import":
+        csv_path = tmp_path / "five-sources-import.csv"
+        pd.DataFrame(
+            [{"text": "ramy dispo", "channel": "import", "timestamp": "2026-04-03T11:00:00"}]
+        ).to_csv(csv_path, index=False)
+        effective_config["snapshot_path"] = str(csv_path)
+
+    orchestrator = IngestionOrchestrator(db_path=str(platform_db))
+    source = orchestrator.create_source(
+        {
+            "client_id": "client-five",
+            "source_name": f"{platform} source",
+            "platform": platform,
+            "source_type": source_type,
+            "owner_type": "owned",
+            "auth_mode": "public",
+            "config_json": effective_config,
+        }
+    )
+
+    assert source["platform"] == platform
+    assert source["source_type"] == source_type
+
+
+def test_create_source_rejette_une_plateforme_hors_socle(platform_db) -> None:
+    """Le socle ingestion ne doit pas accepter des plateformes non supportees."""
+    from core.ingestion.orchestrator import IngestionOrchestrator
+
+    orchestrator = IngestionOrchestrator(db_path=str(platform_db))
+
+    with pytest.raises(ValueError, match="Plateforme non supportee"):
+        orchestrator.create_source(
+            {
+                "client_id": "client-five",
+                "source_name": "TikTok Ramy",
+                "platform": "tiktok",
+                "source_type": "tiktok_feed",
+                "owner_type": "owned",
+                "auth_mode": "public",
+            }
+        )
+
+
 def test_database_cree_les_tables_plateforme_wave5(platform_db) -> None:
     """create_tables() doit provisionner les tables PRD plateforme de base."""
     from core.database import DatabaseManager
