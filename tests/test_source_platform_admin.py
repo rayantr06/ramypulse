@@ -210,6 +210,62 @@ def test_platform_connector_respecte_fetch_mode_collector(
     assert documents[0]["raw_metadata"]["source_url"].endswith("/collector")
 
 
+def test_facebook_connector_utilise_le_collecteur_en_mode_collector(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    """Facebook doit passer par le collecteur quand le mode collector est demande."""
+    from core.connectors.facebook_connector import FacebookConnector
+
+    snapshot = tmp_path / "facebook_snapshot.parquet"
+    pd.DataFrame(
+        [
+            {
+                "text": "facebook snapshot",
+                "channel": "facebook",
+                "timestamp": "2026-03-20T10:00:00",
+                "source_url": "https://example.test/facebook/snapshot",
+            }
+        ]
+    ).to_parquet(snapshot, index=False)
+
+    connector = FacebookConnector()
+    scraper_module_name = connector.scraper_modules[0]
+    fake_module = types.ModuleType(scraper_module_name)
+    fake_module.collect = lambda source=None, credentials=None: pd.DataFrame(
+        [
+            {
+                "text": "facebook collector",
+                "channel": "facebook",
+                "timestamp": "2026-03-20T11:00:00",
+                "source_url": "https://example.test/facebook/collector",
+            }
+        ]
+    )
+    monkeypatch.setitem(sys.modules, scraper_module_name, fake_module)
+
+    documents = connector.fetch_documents(
+        {
+            "source_id": "src-facebook-collector",
+            "client_id": "client-a",
+            "source_name": "Facebook Ramy",
+            "platform": "facebook",
+            "source_type": "facebook_feed",
+            "owner_type": "owned",
+            "auth_mode": "file_snapshot",
+            "config_json": {
+                "fetch_mode": "collector",
+                "page_url": "https://facebook.com/ramy",
+                "snapshot_path": str(snapshot),
+            },
+        }
+    )
+
+    assert len(documents) == 1
+    assert documents[0]["raw_text"] == "facebook collector"
+    assert documents[0]["raw_metadata"]["source_url"].endswith("/collector")
+
+
 def test_orchestrator_selecte_instagram_connector(tmp_path: Path) -> None:
     """L'orchestrateur doit router Instagram vers le connecteur dedie."""
     from core.ingestion.orchestrator import IngestionOrchestrator
