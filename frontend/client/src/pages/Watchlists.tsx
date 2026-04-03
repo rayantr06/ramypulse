@@ -1,93 +1,72 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
 import { apiRequest } from "@/lib/queryClient";
-import type { Watchlist, WatchlistMetrics } from "@shared/schema";
-
-const MOCK_WATCHLISTS: Watchlist[] = [
-  {
-    id: "1",
-    name: "Ramy Citron (Tout Alger)",
-    description: "Analyse comparative des parts de marché et du sentiment consommateur sur la gamme Citron dans la zone urbaine d'Alger.",
-    scope: "RÉGION",
-    is_active: true,
-    owners: ["R", "A"],
-  },
-  {
-    id: "2",
-    name: "Disponibilité Oran",
-    description: "Monitoring de la présence en rayon et des ruptures de stock critiques dans les hypermarchés d'Oran.",
-    scope: "CANAL",
-    is_active: true,
-    owners: ["M"],
-  },
-  {
-    id: "3",
-    name: "Ramy Fraise 250ml",
-    description: "Suivi du lancement produit et premiers retours consommateurs sur le format pocket 250ml Fraise.",
-    scope: "PRODUIT",
-    is_active: false,
-    owners: ["S"],
-  },
-];
-
-const MOCK_METRICS: WatchlistMetrics = {
-  nss_score: 45,
-  nss_delta: 5,
-  volume: 1200,
-  volume_delta: 300,
-  aspects: [
-    { name: "Goût", score: 85 },
-    { name: "Prix", score: 62 },
-    { name: "Disponibilité", score: 34, is_negative: true },
-    { name: "Emballage", score: 78 },
-    { name: "Fraîcheur", score: 91 },
-  ],
-  quick_insight: "Le sentiment positif sur le Goût est en hausse de 12% suite à la nouvelle campagne d'affichage dans le centre d'Alger. Attention aux retours sur la Disponibilité dans le quartier d'Hydra.",
-  last_updated: "il y a 10m",
-};
+import { mapWatchlist, mapWatchlistMetrics } from "@/lib/apiMappings";
 
 type TabFilter = "Toutes" | "Actives" | "Inactives";
 
-// Map API watchlist to Watchlist schema
-function mapWatchlistFromApi(w: Record<string, unknown>): Watchlist {
+interface WatchlistView {
+  id: string;
+  name: string;
+  description: string;
+  scope: string;
+  is_active: boolean;
+  owners: string[];
+}
+
+interface AspectView {
+  name: string;
+  score: number;
+  is_negative?: boolean;
+}
+
+interface WatchlistMetricsView {
+  nss_score: number;
+  nss_delta: number;
+  volume: number;
+  volume_delta: number;
+  aspects: AspectView[];
+  quick_insight: string;
+  last_updated: string;
+}
+
+function buildOwners(filters: Record<string, unknown>): string[] {
+  const candidates = Object.keys(filters)
+    .slice(0, 3)
+    .map((key) => key.charAt(0).toUpperCase());
+  return candidates.length ? candidates : ["R"];
+}
+
+function mapWatchlistView(value: unknown): WatchlistView {
+  const watchlist = mapWatchlist(value);
   return {
-    id: String(w.id ?? w.watchlist_id ?? ""),
-    name: String(w.name ?? ""),
-    description: String(w.description ?? ""),
-    scope: (w.scope as Watchlist["scope"]) ?? "PRODUIT",
-    is_active: Boolean(w.is_active ?? true),
-    owners: (w.owners as string[]) ?? [],
+    id: watchlist.watchlist_id,
+    name: watchlist.watchlist_name,
+    description: watchlist.description || "Aucune description disponible.",
+    scope: (watchlist.scope_type || "global").replaceAll("_", " ").toUpperCase(),
+    is_active: Boolean(watchlist.is_active),
+    owners: buildOwners(watchlist.filters),
   };
 }
 
-// Map API metrics response to WatchlistMetrics schema
-// API returns: { nss_current, nss_previous, delta_nss, volume_current, volume_previous, aspect_breakdown }
-function mapMetricsFromApi(apiData: Record<string, unknown>): WatchlistMetrics {
-  // Handle both API format and direct format
-  const nssScore = Number(apiData.nss_current ?? apiData.nss_score ?? MOCK_METRICS.nss_score);
-  const nssPrev = Number(apiData.nss_previous ?? 0);
-  const nssDelta = Number(apiData.delta_nss ?? apiData.nss_delta ?? (nssScore - nssPrev));
-  const volumeCurrent = Number(apiData.volume_current ?? apiData.volume ?? MOCK_METRICS.volume);
-  const volumePrev = Number(apiData.volume_previous ?? 0);
-  const volumeDelta = Number(apiData.volume_delta ?? (volumeCurrent - volumePrev));
-
-  // aspect_breakdown can be array of { aspect, score, is_negative } or similar
-  const rawAspects = (apiData.aspect_breakdown ?? apiData.aspects) as Array<Record<string, unknown>> | undefined;
-  const aspects: WatchlistMetrics["aspects"] = rawAspects?.map((a) => ({
-    name: String(a.name ?? a.aspect ?? ""),
-    score: Number(a.score ?? a.pct ?? 0),
-    is_negative: Boolean(a.is_negative ?? false),
-  })) ?? MOCK_METRICS.aspects;
-
+function mapWatchlistMetricsView(value: unknown): WatchlistMetricsView {
+  const metrics = mapWatchlistMetrics(value);
+  const aspects = Object.entries(metrics.aspect_breakdown || {}).map(([name, score]) => ({
+    name,
+    score: Math.min(Math.abs(Number(score)), 100),
+    is_negative: Number(score) < 0,
+  }));
   return {
-    nss_score: nssScore,
-    nss_delta: nssDelta,
-    volume: volumeCurrent,
-    volume_delta: volumeDelta,
-    aspects: aspects.length > 0 ? aspects : MOCK_METRICS.aspects,
-    quick_insight: String(apiData.quick_insight ?? apiData.insight ?? MOCK_METRICS.quick_insight),
-    last_updated: String(apiData.last_updated ?? MOCK_METRICS.last_updated),
+    nss_score: Number(metrics.nss_current ?? 0),
+    nss_delta: Number(metrics.delta_nss ?? 0),
+    volume: Number(metrics.volume_total ?? metrics.volume_current ?? 0),
+    volume_delta: Number(metrics.volume_delta ?? 0),
+    aspects,
+    quick_insight:
+      metrics.quick_insight ||
+      "Aucun quick insight n'est encore disponible pour cette watchlist.",
+    last_updated: metrics.computed_at || "Non calculé",
   };
 }
 
@@ -101,47 +80,53 @@ function ScopeBadge({ scope }: { scope: string }) {
 
 export default function Watchlists() {
   const [tab, setTab] = useState<TabFilter>("Toutes");
-  const [selectedId, setSelectedId] = useState<string | null>("1");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const { data: watchlists, isLoading: watchlistsLoading } = useQuery<Watchlist[]>({
+  const watchlistsQuery = useQuery({
     queryKey: ["/api/watchlists"],
     queryFn: async () => {
-      try {
-        const res = await apiRequest("GET", "/api/watchlists?is_active=true");
-        const apiData = await res.json();
-        const list = Array.isArray(apiData) ? apiData : (apiData.watchlists ?? apiData.results ?? []);
-        const mapped = (list as Array<Record<string, unknown>>).map(mapWatchlistFromApi);
-        return mapped.length > 0 ? mapped : MOCK_WATCHLISTS;
-      } catch {
-        return MOCK_WATCHLISTS;
-      }
+      const activeRes = await apiRequest("GET", "/api/watchlists?is_active=true");
+      const inactiveRes = await apiRequest("GET", "/api/watchlists?is_active=false");
+      const active = ((await activeRes.json()) as unknown[]).map(mapWatchlistView);
+      const all = ((await inactiveRes.json()) as unknown[]).map(mapWatchlistView);
+      const merged = new Map<string, WatchlistView>();
+      [...all, ...active].forEach((item) => {
+        merged.set(item.id, item);
+      });
+      return Array.from(merged.values());
     },
   });
 
-  const { data: metrics, isLoading: metricsLoading } = useQuery<WatchlistMetrics>({
-    queryKey: ["/api/watchlists", selectedId, "metrics"],
+  const allWatchlists = watchlistsQuery.data ?? [];
+
+  const filtered = useMemo(() => {
+    return allWatchlists.filter((watchlist) => {
+      if (tab === "Actives") return watchlist.is_active;
+      if (tab === "Inactives") return !watchlist.is_active;
+      return true;
+    });
+  }, [allWatchlists, tab]);
+
+  const selectedWatchlist =
+    filtered.find((watchlist) => watchlist.id === selectedId) ||
+    allWatchlists.find((watchlist) => watchlist.id === selectedId) ||
+    filtered[0] ||
+    allWatchlists[0] ||
+    null;
+
+  const metricsQuery = useQuery({
+    queryKey: ["/api/watchlists", selectedWatchlist?.id, "metrics"],
     queryFn: async () => {
-      if (!selectedId) return MOCK_METRICS;
-      try {
-        const res = await apiRequest("GET", `/api/watchlists/${selectedId}/metrics`);
-        const apiData = await res.json();
-        return mapMetricsFromApi(apiData);
-      } catch {
-        return MOCK_METRICS;
-      }
+      const res = await apiRequest(
+        "GET",
+        `/api/watchlists/${selectedWatchlist?.id}/metrics`,
+      );
+      return mapWatchlistMetricsView(await res.json());
     },
-    enabled: !!selectedId,
+    enabled: !!selectedWatchlist?.id,
   });
 
-  const allWatchlists = watchlists ?? MOCK_WATCHLISTS;
-  const filtered = allWatchlists.filter((w) => {
-    if (tab === "Actives") return w.is_active;
-    if (tab === "Inactives") return !w.is_active;
-    return true;
-  });
-
-  const metricsData = metrics ?? MOCK_METRICS;
-  const selectedWatchlist = allWatchlists.find((w) => w.id === selectedId);
+  const metricsData = metricsQuery.data;
 
   return (
     <AppShell
@@ -149,7 +134,6 @@ export default function Watchlists() {
       onSearch={() => {}}
     >
       <div className="p-8 flex gap-8">
-        {/* Left: Grid */}
         <div className="flex-1 min-w-0">
           <div className="flex justify-between items-end mb-8">
             <div>
@@ -159,27 +143,31 @@ export default function Watchlists() {
               <h1 className="font-headline text-3xl font-black tracking-tight">Watchlists</h1>
             </div>
             <div className="bg-surface-container-high p-1 rounded-lg flex gap-1">
-              {(["Toutes", "Actives", "Inactives"] as TabFilter[]).map((t) => (
+              {(["Toutes", "Actives", "Inactives"] as TabFilter[]).map((filterValue) => (
                 <button
-                  key={t}
-                  onClick={() => setTab(t)}
+                  key={filterValue}
+                  onClick={() => setTab(filterValue)}
                   className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-colors ${
-                    tab === t ? "bg-surface-bright text-white shadow-sm" : "text-on-surface-variant hover:text-white"
+                    tab === filterValue
+                      ? "bg-surface-bright text-white shadow-sm"
+                      : "text-on-surface-variant hover:text-white"
                   }`}
-                  data-testid={`filter-tab-${t.toLowerCase()}`}
                 >
-                  {t}
+                  {filterValue}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Card grid */}
-          {watchlistsLoading ? (
+          {watchlistsQuery.isLoading ? (
             <div className="grid grid-cols-2 gap-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-48 bg-surface-container rounded-xl animate-pulse"></div>
+              {[1, 2, 3].map((item) => (
+                <div key={item} className="h-48 bg-surface-container rounded-xl animate-pulse"></div>
               ))}
+            </div>
+          ) : watchlistsQuery.isError ? (
+            <div className="bg-surface-container rounded-xl p-6 text-sm text-on-surface-variant">
+              Impossible de charger les watchlists.
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-4">
@@ -188,11 +176,11 @@ export default function Watchlists() {
                   key={watchlist.id}
                   onClick={() => setSelectedId(watchlist.id === selectedId ? null : watchlist.id)}
                   className={`group bg-surface-container hover:bg-surface-container-high transition-all duration-300 p-5 rounded-xl cursor-pointer relative overflow-hidden border ${
-                    selectedId === watchlist.id ? "border-primary/20 bg-surface-container-high" : "border-transparent hover:border-white/5"
+                    selectedWatchlist?.id === watchlist.id
+                      ? "border-primary/20 bg-surface-container-high"
+                      : "border-transparent hover:border-white/5"
                   }`}
-                  data-testid={`watchlist-card-${watchlist.id}`}
                 >
-                  {/* Active/Inactive indicator */}
                   <div className="absolute top-0 right-0 p-4">
                     <div className="flex items-center gap-2">
                       {watchlist.is_active ? (
@@ -234,20 +222,18 @@ export default function Watchlists() {
                 </div>
               ))}
 
-              {/* Add new card */}
-              <div className="group border-2 border-dashed border-white/5 hover:border-primary/20 hover:bg-primary/5 transition-all duration-300 p-5 rounded-xl flex flex-col items-center justify-center gap-3 cursor-pointer">
+              <div className="group border-2 border-dashed border-white/5 hover:border-primary/20 hover:bg-primary/5 transition-all duration-300 p-5 rounded-xl flex flex-col items-center justify-center gap-3 cursor-default">
                 <div className="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center group-hover:scale-110 transition-transform">
                   <span className="material-symbols-outlined text-primary">add</span>
                 </div>
                 <span className="text-xs font-semibold text-on-surface-variant group-hover:text-primary transition-colors">
-                  Créer une watchlist
+                  Création via back-office
                 </span>
               </div>
             </div>
           )}
         </div>
 
-        {/* Right: Detail panel */}
         {selectedWatchlist && (
           <aside className="w-[380px] flex flex-col gap-4 shrink-0">
             <div className="glass-panel rounded-xl p-6 border border-white/5 shadow-2xl">
@@ -263,87 +249,111 @@ export default function Watchlists() {
                 </button>
               </div>
 
-              {/* Metrics Grid */}
-              {metricsLoading ? (
+              {metricsQuery.isLoading ? (
                 <div className="grid grid-cols-2 gap-4 mb-8">
-                  {[1, 2].map((i) => (
-                    <div key={i} className="h-20 bg-surface-container-low rounded-lg animate-pulse"></div>
+                  {[1, 2].map((item) => (
+                    <div key={item} className="h-20 bg-surface-container-low rounded-lg animate-pulse"></div>
                   ))}
+                </div>
+              ) : metricsQuery.isError || !metricsData ? (
+                <div className="bg-surface-container-low p-4 rounded-lg mb-8 text-sm text-on-surface-variant">
+                  Aucun snapshot métrique disponible pour cette watchlist.
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-4 mb-8">
-                  <div className="bg-surface-container-low p-4 rounded-lg">
-                    <span className="text-[10px] font-bold text-on-surface-variant/60 uppercase mb-2 block">Score NSS</span>
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-3xl font-bold text-white tracking-tighter">{metricsData.nss_score}</span>
-                      <div className="flex items-center text-[10px] font-bold text-tertiary">
-                        <span className="material-symbols-outlined text-sm">arrow_upward</span>
-                        {metricsData.nss_delta}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-surface-container-low p-4 rounded-lg">
-                    <span className="text-[10px] font-bold text-on-surface-variant/60 uppercase mb-2 block">Volume Feedback</span>
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-3xl font-bold text-white tracking-tighter">
-                        {metricsData.volume >= 1000 ? `${(metricsData.volume / 1000).toFixed(1)}k` : metricsData.volume}
+                <>
+                  <div className="grid grid-cols-2 gap-4 mb-8">
+                    <div className="bg-surface-container-low p-4 rounded-lg">
+                      <span className="text-[10px] font-bold text-on-surface-variant/60 uppercase mb-2 block">
+                        Score NSS
                       </span>
-                      <div className="flex items-center text-[10px] font-bold text-tertiary">
-                        <span className="material-symbols-outlined text-sm">arrow_upward</span>
-                        {metricsData.volume_delta}
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-3xl font-bold text-white tracking-tighter">
+                          {metricsData.nss_score}
+                        </span>
+                        <div className="flex items-center text-[10px] font-bold text-tertiary">
+                          <span className="material-symbols-outlined text-sm">
+                            {metricsData.nss_delta >= 0 ? "arrow_upward" : "arrow_downward"}
+                          </span>
+                          {Math.abs(metricsData.nss_delta)}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="bg-surface-container-low p-4 rounded-lg">
+                      <span className="text-[10px] font-bold text-on-surface-variant/60 uppercase mb-2 block">
+                        Volume Feedback
+                      </span>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-3xl font-bold text-white tracking-tighter">
+                          {metricsData.volume >= 1000
+                            ? `${(metricsData.volume / 1000).toFixed(1)}k`
+                            : metricsData.volume}
+                        </span>
+                        <div className="flex items-center text-[10px] font-bold text-tertiary">
+                          <span className="material-symbols-outlined text-sm">
+                            {metricsData.volume_delta >= 0
+                              ? "arrow_upward"
+                              : "arrow_downward"}
+                          </span>
+                          {Math.abs(metricsData.volume_delta)}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
 
-              {/* Aspect Breakdown */}
-              <div className="space-y-4 mb-8">
-                <div className="flex justify-between items-center">
-                  <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
-                    Répartition par Aspect
-                  </span>
-                  <span className="text-[10px] text-on-surface-variant/40 italic">
-                    Mise à jour {metricsData.last_updated}
-                  </span>
-                </div>
-                <div className="space-y-3">
-                  {metricsData.aspects.map((aspect) => (
-                    <div key={aspect.name}>
-                      <div className="flex justify-between text-xs mb-1.5">
-                        <span className="text-on-surface/80">{aspect.name}</span>
-                        <span className={`font-bold ${aspect.is_negative ? "text-error" : "text-primary"}`}>
-                          {aspect.score}%
-                        </span>
-                      </div>
-                      <div className="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all duration-700 ${
-                            aspect.is_negative
-                              ? "bg-error"
-                              : "bg-gradient-to-r from-primary to-primary-container"
-                          }`}
-                          style={{ width: `${aspect.score}%` }}
-                        ></div>
-                      </div>
+                  <div className="space-y-4 mb-8">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
+                        Répartition par aspect
+                      </span>
+                      <span className="text-[10px] text-on-surface-variant/40 italic">
+                        Mise à jour {metricsData.last_updated}
+                      </span>
                     </div>
-                  ))}
-                </div>
-              </div>
+                    <div className="space-y-3">
+                      {(metricsData.aspects.length ? metricsData.aspects : [{ name: "Aucun aspect", score: 0 }]).map(
+                        (aspect) => (
+                          <div key={aspect.name}>
+                            <div className="flex justify-between text-xs mb-1.5">
+                              <span className="text-on-surface/80">{aspect.name}</span>
+                              <span
+                                className={`font-bold ${
+                                  aspect.is_negative ? "text-error" : "text-primary"
+                                }`}
+                              >
+                                {aspect.score}%
+                              </span>
+                            </div>
+                            <div className="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all duration-700 ${
+                                  aspect.is_negative
+                                    ? "bg-error"
+                                    : "bg-gradient-to-r from-primary to-primary-container"
+                                }`}
+                                style={{ width: `${aspect.score}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        ),
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
 
               <button className="w-full py-3 bg-surface-container-highest hover:bg-surface-bright transition-colors rounded-lg text-xs font-bold uppercase tracking-widest text-on-surface">
                 Voir les détails analytiques
               </button>
             </div>
 
-            {/* Quick Insights */}
             <div className="bg-surface-container p-6 rounded-xl border border-white/5">
               <h4 className="text-xs font-bold text-on-surface mb-4 flex items-center gap-2">
                 <span className="material-symbols-outlined text-tertiary text-sm">insights</span>
                 Quick Insights
               </h4>
               <p className="text-[11px] text-on-surface-variant leading-relaxed">
-                {metricsData.quick_insight}
+                {metricsData?.quick_insight ||
+                  "Aucun quick insight n'est encore disponible pour cette watchlist."}
               </p>
             </div>
           </aside>

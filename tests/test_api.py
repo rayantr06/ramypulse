@@ -133,6 +133,32 @@ class TestDashboard:
         assert r.status_code == 200
         assert isinstance(r.json()["health_score"], int)
 
+    def test_summary_exposes_stitch_fields_when_annotated_available(self):
+        mock_df = pd.DataFrame(
+            {
+                "timestamp": [
+                    "2026-03-01T10:00:00",
+                    "2026-03-02T11:00:00",
+                    "2026-03-03T12:00:00",
+                    "2026-03-04T13:00:00",
+                ],
+                "wilaya": ["Alger", "Oran", "Alger", "Bejaia"],
+                "product": ["Ramy Citron", "Ramy Citron", "Ramy Orange", "Ramy Fraise"],
+                "sentiment_label": ["positif", "negatif", "positif", "positif"],
+            }
+        )
+
+        with patch("api.routers.dashboard.load_annotated", return_value=mock_df):
+            r = client.get("/api/dashboard/summary")
+
+        assert r.status_code == 200
+        data = r.json()
+        assert data["total_mentions"] == 4
+        assert isinstance(data["regional_distribution"], list)
+        assert data["regional_distribution"][0]["wilaya"] == "Alger"
+        assert isinstance(data["product_performance"], list)
+        assert data["product_performance"][0]["product"]
+
     def test_critical_alerts_structure(self):
         r = client.get("/api/dashboard/alerts-critical")
         assert r.status_code == 200
@@ -146,6 +172,9 @@ class TestDashboard:
         data = r.json()
         assert "top_actions" in data
         assert isinstance(data["top_actions"], list)
+        if data["top_actions"]:
+            assert "description" in data["top_actions"][0]
+            assert "confidence_score" in data["top_actions"][0]
 
 
 # ===========================================================================
@@ -200,6 +229,43 @@ class TestCampaigns:
         # Verify it's actually gone
         r2 = client.get(f"/api/campaigns/{cid}")
         assert r2.status_code == 404
+
+    def test_get_campaign_impact(self):
+        cid = _seed_campaign("Impact Test")
+        with _get_connection() as conn:
+            conn.execute(
+                """
+                UPDATE campaigns
+                SET start_date = ?, end_date = ?
+                WHERE campaign_id = ?
+                """,
+                ("2026-01-10", "2026-01-15", cid),
+            )
+            conn.commit()
+
+        mock_df = pd.DataFrame(
+            {
+                "text": ["bon produit", "produit moyen", "super gout"],
+                "sentiment_label": ["positif", "neutre", "positif"],
+                "channel": ["instagram", "instagram", "instagram"],
+                "aspect": ["goût", "goût", "goût"],
+                "timestamp": ["2026-01-11", "2026-01-12", "2026-01-18"],
+                "source_url": ["", "", ""],
+                "confidence": [0.9, 0.7, 0.95],
+            }
+        )
+
+        impact_client = TestClient(app, raise_server_exceptions=False)
+        with patch("api.routers.campaigns.load_annotated", return_value=mock_df):
+            r = impact_client.get(f"/api/campaigns/{cid}/impact")
+
+        assert r.status_code == 200
+        data = r.json()
+        assert data["campaign_id"] == cid
+        assert "phases" in data
+        assert "pre" in data["phases"]
+        assert "active" in data["phases"]
+        assert "post" in data["phases"]
 
 
 # ===========================================================================

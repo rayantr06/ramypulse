@@ -1,11 +1,10 @@
 import logging
 from fastapi import APIRouter, HTTPException
-from typing import List, Dict, Any
-from api.schemas import CampaignCreate, CampaignResponse, CampaignImpact, CampaignStatusUpdate
+from typing import Dict, Any
+from api.schemas import CampaignCreate, CampaignStatusUpdate
 from core.campaigns import campaign_manager
+from core.campaigns.impact_calculator import compute_campaign_impact
 from api.data_loader import load_annotated
-import sqlite3
-import config
 
 logger = logging.getLogger(__name__)
 
@@ -73,8 +72,6 @@ def update_campaign(campaign_id: str, update: CampaignStatusUpdate):
 @router.get("/{campaign_id}/impact")
 def get_campaign_impact(campaign_id: str):
     """Calcule l'impact NSS de la campagne (Pre/Active/Post) à la volée depuis le Parquet."""
-    from core.campaigns.impact_calculator import CampaignImpactCalculator
-    
     try:
         campaign = campaign_manager.get_campaign(campaign_id)
         if not campaign:
@@ -83,10 +80,8 @@ def get_campaign_impact(campaign_id: str):
         df = load_annotated()
         if df.empty:
             raise HTTPException(status_code=400, detail="Data source unavailable or empty")
-            
-        calculator = CampaignImpactCalculator(config.SQLITE_DB_PATH)
-        impact = calculator.evaluate_campaign_impact(campaign_id, df)
-        return impact
+
+        return compute_campaign_impact(campaign_id, df)
     except HTTPException:
         raise
     except Exception as e:
