@@ -144,7 +144,7 @@ class SnapshotPlatformConnector(BaseConnector):
         column_mapping: dict[str, str] | None = None,
         **kwargs,
     ) -> list[dict]:
-        source_config = parse_source_config(source)
+        source_config = self.validate_source_config(source, require_platform_fields=False)
         fetch_mode = str(source_config.get("fetch_mode") or "snapshot").strip().lower() or "snapshot"
         resolved_mapping = column_mapping or source_config.get("column_mapping")
         mapping = resolved_mapping if isinstance(resolved_mapping, dict) else None

@@ -164,6 +164,43 @@ def test_platform_connector_respecte_fetch_mode_collector(
     assert documents[0]["raw_metadata"]["source_url"].endswith("/collector")
 
 
+def test_platform_connector_rejette_fetch_mode_invalide(tmp_path: Path) -> None:
+    """Un fetch_mode invalide doit etre rejete via le chemin runtime du connecteur."""
+    from core.connectors.facebook_connector import FacebookConnector
+
+    snapshot = tmp_path / "facebook.parquet"
+    pd.DataFrame(
+        [
+            {
+                "text": "facebook snapshot",
+                "channel": "facebook",
+                "timestamp": "2026-03-20T10:00:00",
+                "source_url": "https://example.test/facebook/snapshot",
+            }
+        ]
+    ).to_parquet(snapshot, index=False)
+
+    connector = FacebookConnector()
+
+    with pytest.raises(ValueError, match="fetch_mode"):
+        connector.fetch_documents(
+            {
+                "source_id": "src-facebook-invalid-mode",
+                "client_id": "client-a",
+                "source_name": "facebook source",
+                "platform": "facebook",
+                "source_type": "facebook_feed",
+                "owner_type": "owned",
+                "auth_mode": "file_snapshot",
+                "config_json": {
+                    "fetch_mode": "stream",
+                    "page_url": "https://facebook.com/ramy",
+                    "snapshot_path": str(snapshot),
+                },
+            }
+        )
+
+
 def test_source_admin_service_filtre_sources_et_runs_par_client(
     platform_db: Path,
     tmp_path: Path,

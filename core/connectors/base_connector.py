@@ -13,9 +13,14 @@ from core.connectors.source_config import (
 class BaseConnector(ABC):
     """Interface minimale des connecteurs plateforme."""
 
-    def validate_source_config(self, source: dict) -> dict:
+    def validate_source_config(
+        self,
+        source: dict,
+        *,
+        require_platform_fields: bool = True,
+    ) -> dict:
         """Valide et normalise la configuration de la source."""
-        return validate_source_config(source)
+        return validate_source_config(source, require_platform_fields=require_platform_fields)
 
     def resolve_runtime_inputs(
         self,
