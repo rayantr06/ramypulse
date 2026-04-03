@@ -1,4 +1,4 @@
-# Five-Source Ingestion Implementation Plan
+﻿# Five-Source Ingestion Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -9,6 +9,8 @@
 **Tech Stack:** Python 3.11, SQLite, pandas, Streamlit, pytest, logging, local secret manager
 
 ---
+
+**Explicit non-goal for this plan:** no `api/routers/admin_sources.py` in this lot. The FastAPI admin surface is a separate frontend/API integration slice and should only be added once the ingestion/admin backend contract is stable and a concrete consumer is confirmed.
 
 ## File Map
 
@@ -154,6 +156,7 @@ git commit -m "feat(ingestion): add shared source config validation"
 - Modify: `g:/ramypulse-s0-verify/core/connectors/base_connector.py`
 - Modify: `g:/ramypulse-s0-verify/core/connectors/platform_snapshot_connector.py`
 - Modify: `g:/ramypulse-s0-verify/core/connectors/batch_import_connector.py`
+- Modify: `g:/ramypulse-s0-verify/core/ingestion/orchestrator.py`
 - Test: `g:/ramypulse-s0-verify/tests/test_source_platform_admin.py`
 
 - [ ] **Step 1: Write the failing test**
@@ -163,8 +166,9 @@ from pathlib import Path
 
 import pandas as pd
 
-from core.connectors.instagram_connector import InstagramConnector
 from core.connectors.facebook_connector import FacebookConnector
+from core.connectors.instagram_connector import InstagramConnector
+from core.ingestion.orchestrator import IngestionOrchestrator
 
 
 def test_instagram_connector_charge_un_snapshot(tmp_path: Path) -> None:
@@ -233,6 +237,18 @@ def test_facebook_connector_utilise_le_mode_collector(monkeypatch) -> None:
 
     assert len(documents) == 1
     assert documents[0]["external_document_id"] == "fb-1"
+
+
+def test_orchestrator_selecte_instagram_connector(tmp_path: Path) -> None:
+    orchestrator = IngestionOrchestrator(db_path=str(tmp_path / "instagram.db"))
+    source = {
+        "platform": "instagram",
+        "source_type": "instagram_profile",
+    }
+
+    connector = orchestrator._select_connector(source)
+
+    assert connector.__class__.__name__ == "InstagramConnector"
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -269,6 +285,19 @@ class BaseConnector(ABC):
         return {"platform": source.get("platform"), "last_run_status": (last_run or {}).get("status")}
 ```
 
+```python
+from core.connectors.instagram_connector import InstagramConnector
+
+
+self._connectors = {
+    "import": BatchImportConnector(),
+    "facebook": FacebookConnector(),
+    "google_maps": GoogleMapsConnector(),
+    "youtube": YouTubeConnector(),
+    "instagram": InstagramConnector(),
+}
+```
+
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `cd g:/ramypulse-s0-verify; python -m pytest tests/test_source_platform_admin.py -k \"instagram or collector\" -v`
@@ -277,7 +306,7 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add core/connectors/base_connector.py core/connectors/platform_snapshot_connector.py core/connectors/batch_import_connector.py core/connectors/instagram_connector.py tests/test_source_platform_admin.py
+git add core/connectors/base_connector.py core/connectors/platform_snapshot_connector.py core/connectors/batch_import_connector.py core/connectors/instagram_connector.py core/ingestion/orchestrator.py tests/test_source_platform_admin.py
 git commit -m "feat(ingestion): add instagram connector and explicit connector contract"
 ```
 
@@ -451,10 +480,12 @@ git commit -m "fix(ingestion): preserve raw documents and explicit downstream fa
 - Modify: `g:/ramypulse-s0-verify/ui_helpers/source_admin_helpers.py`
 - Test: `g:/ramypulse-s0-verify/tests/test_admin_sources_page.py`
 
+**Note:** Cette tâche étend la page admin déjà branchée sur `IngestionOrchestrator` et `SourceAdminService`. Elle ne migre pas `SourceRegistry` vers `sources`, car ce branchage est déjà en place dans `pages/09_admin_sources.py`.
+
 - [ ] **Step 1: Write the failing test**
 
 ```python
-from ui_helpers.source_admin_helpers import build_sources_frame
+from ui_helpers.source_admin_helpers import build_source_config_json, build_sources_frame
 
 
 def test_build_sources_frame_affiche_fetch_mode_et_credential_ref() -> None:
@@ -479,6 +510,25 @@ def test_build_sources_frame_affiche_fetch_mode_et_credential_ref() -> None:
     assert "fetch_mode" in frame.columns
     assert "credential_ref" in frame.columns
     assert frame.iloc[0]["fetch_mode"] == "collector"
+
+
+def test_build_source_config_json_ajoute_fetch_mode_et_secret(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "ui_helpers.source_admin_helpers.materialize_secret_reference",
+        lambda config, **kwargs: {**config, "credential_ref": "secret://facebook-collector"},
+    )
+
+    config = build_source_config_json(
+        fetch_mode="collector",
+        snapshot_path="data/raw/facebook_raw.parquet",
+        mapping_raw='{"review": "text"}',
+        secret_value="super-secret-token",
+        secret_label="facebook-collector",
+    )
+
+    assert config["fetch_mode"] == "collector"
+    assert config["snapshot_path"] == "data/raw/facebook_raw.parquet"
+    assert config["credential_ref"] == "secret://facebook-collector"
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -487,6 +537,30 @@ Run: `cd g:/ramypulse-s0-verify; python -m pytest tests/test_admin_sources_page.
 Expected: FAIL because helper does not yet expose these columns
 
 - [ ] **Step 3: Write minimal implementation**
+
+```python
+def build_source_config_json(
+    *,
+    fetch_mode: str,
+    snapshot_path: str,
+    mapping_raw: str,
+    secret_value: str,
+    secret_label: str,
+) -> dict[str, object]:
+    config_json: dict[str, object] = {"fetch_mode": fetch_mode}
+    if snapshot_path.strip():
+        config_json["snapshot_path"] = snapshot_path.strip()
+    parsed_mapping = _parse_json_mapping(mapping_raw)
+    if parsed_mapping:
+        config_json["column_mapping"] = parsed_mapping
+    if secret_value.strip():
+        config_json = materialize_secret_reference(
+            config_json,
+            secret_value=secret_value.strip(),
+            label=secret_label,
+        )
+    return config_json
+```
 
 ```python
 def build_sources_frame(records: list[dict]) -> pd.DataFrame:
@@ -509,6 +583,20 @@ def build_sources_frame(records: list[dict]) -> pd.DataFrame:
             }
         )
     return pd.DataFrame(rows)
+```
+
+```python
+platform = st.selectbox("Plateforme", ["facebook", "google_maps", "youtube", "instagram", "import"])
+fetch_mode = st.selectbox("Fetch mode", ["snapshot", "collector", "api"], index=0)
+secret_value = st.text_input("Secret brut optionnel", type="password")
+
+config_json = build_source_config_json(
+    fetch_mode=fetch_mode,
+    snapshot_path=snapshot_path,
+    mapping_raw=mapping_raw,
+    secret_value=secret_value,
+    secret_label=f"{platform}-{source_name or 'source'}",
+)
 ```
 
 - [ ] **Step 4: Run test to verify it passes**
@@ -576,16 +664,6 @@ Run: `cd g:/ramypulse-s0-verify; python -m pytest tests/test_source_platform_adm
 Expected: FAIL until `instagram` and validation paths are fully wired
 
 - [ ] **Step 3: Write minimal implementation**
-
-```python
-self._connectors = {
-    "import": BatchImportConnector(),
-    "facebook": FacebookConnector(),
-    "google_maps": GoogleMapsConnector(),
-    "youtube": YouTubeConnector(),
-    "instagram": InstagramConnector(),
-}
-```
 
 ```python
 supported_platforms = {"facebook", "google_maps", "youtube", "instagram", "import"}
