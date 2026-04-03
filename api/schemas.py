@@ -206,3 +206,44 @@ class SearchResponse(BaseModel):
     query: str
     results: list[SearchResult]
     total: int
+
+
+# ---------------------------------------------------------------------------
+# Admin (Ingestion & Sources)
+# ---------------------------------------------------------------------------
+
+class SourceCreate(BaseModel):
+    source_id: str | None = None
+    client_id: str | None = None
+    source_name: str
+    platform: str
+    source_type: str
+    owner_type: str
+    auth_mode: str | None = None
+    config_json: dict = Field(default_factory=dict)
+    is_active: bool = True
+    sync_frequency_minutes: int = 60
+    freshness_sla_hours: int = 24
+
+
+class SourceUpdate(BaseModel):
+    client_id: str | None = None
+    source_name: str | None = None
+    is_active: bool | None = None
+    config_json: dict | None = None
+    sync_frequency_minutes: int | None = None
+    freshness_sla_hours: int | None = None
+
+
+class SourceSyncTrigger(BaseModel):
+    client_id: str | None = None
+    run_mode: str = "manual"
+    manual_file_path: str | None = None
+    credentials: dict | None = None
+    column_mapping: dict[str, str] | None = None
+
+
+class NormalizationTrigger(BaseModel):
+    client_id: str | None = None
+    batch_size: int = 200
+

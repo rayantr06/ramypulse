@@ -96,7 +96,8 @@ def list_verbatims(
         end_idx = start_idx + page_size
         df_page = df.iloc[start_idx:end_idx]
 
-        results = df_page.to_dict("records")
+        import json
+        results = json.loads(df_page.to_json(orient="records", date_format="iso"))
 
         return {
             "results": results,
