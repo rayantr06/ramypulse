@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="fr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>RamyPulse - Campagnes</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-fixed": "#351000",
+                        "error-container": "#93000a",
+                        "tertiary": "#4cd6ff",
+                        "surface-dim": "#121315",
+                        "surface": "#121315",
+                        "inverse-primary": "#a04100",
+                        "secondary": "#c6c6c9",
+                        "tertiary-fixed-dim": "#4cd6ff",
+                        "on-tertiary": "#003543",
+                        "on-tertiary-fixed-variant": "#004e60",
+                        "on-surface": "#e3e2e5",
+                        "surface-container-lowest": "#0d0e10",
+                        "surface-container-low": "#1b1c1e",
+                        "inverse-on-surface": "#303033",
+                        "secondary-fixed": "#e2e2e5",
+                        "on-secondary": "#2f3133",
+                        "on-primary": "#561f00",
+                        "surface-container-highest": "#343537",
+                        "outline-variant": "#5b4137",
+                        "on-tertiary-container": "#00303c",
+                        "inverse-surface": "#e3e2e5",
+                        "background": "#121315",
+                        "on-error": "#690005",
+                        "primary": "#ffb693",
+                        "primary-container": "#f56600",
+                        "on-secondary-fixed-variant": "#454749",
+                        "secondary-container": "#454749",
+                        "on-error-container": "#ffdad6",
+                        "surface-bright": "#38393b",
+                        "on-surface-variant": "#e4beb1",
+                        "on-primary-fixed-variant": "#7a3000",
+                        "surface-variant": "#343537",
+                        "primary-fixed-dim": "#ffb693",
+                        "secondary-fixed-dim": "#c6c6c9",
+                        "primary-fixed": "#ffdbcc",
+                        "tertiary-container": "#009fc3",
+                        "on-secondary-container": "#b4b5b7",
+                        "surface-tint": "#ffb693",
+                        "outline": "#ab897d",
+                        "on-background": "#e3e2e5",
+                        "on-primary-container": "#4e1c00",
+                        "surface-container": "#1f2022",
+                        "error": "#ffb4ab",
+                        "tertiary-fixed": "#b7eaff",
+                        "on-tertiary-fixed": "#001f28",
+                        "surface-container-high": "#292a2c",
+                        "on-secondary-fixed": "#1a1c1e"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "fontFamily": {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #121315; }
+        ::-webkit-scrollbar-thumb { background: #343537; border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-surface-dim text-on-surface font-body selection:bg-primary/30">
+<!-- SideNavBar (Shared Component) -->
+<aside class="h-screen w-64 fixed left-0 top-0 bg-[#121315] flex flex-col py-6 px-4 z-50 font-headline text-sm tracking-tight">
+<div class="mb-10 px-2">
+<h1 class="text-xl font-black text-[#ffb693] tracking-tighter">RamyPulse</h1>
+<p class="text-[10px] text-on-surface-variant/60 uppercase tracking-widest mt-1">Marketing Intelligence</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-gray-500 hover:text-gray-300 hover:bg-[#1b1d20] transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform">dashboard</span>
+<span>Tableau de bord</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-gray-500 hover:text-gray-300 hover:bg-[#1b1d20] transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform">explore</span>
+<span>Explorateur</span>
+</a>
+<!-- Active Tab: Campagnes -->
+<a class="flex items-center gap-3 px-3 py-2 text-[#ffb693] font-bold border-r-2 border-[#ffb693] bg-[#1b1d20] transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">campaign</span>
+<span>Campagnes</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-gray-500 hover:text-gray-300 hover:bg-[#1b1d20] transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform">visibility</span>
+<span>Watchlists</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-gray-500 hover:text-gray-300 hover:bg-[#1b1d20] transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform">notifications_active</span>
+<span>Alertes</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-gray-500 hover:text-gray-300 hover:bg-[#1b1d20] transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform">auto_awesome</span>
+<span>Recommandations</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-gray-500 hover:text-gray-300 hover:bg-[#1b1d20] transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform">settings_input_component</span>
+<span>Admin Sources</span>
+</a>
+</nav>
+<div class="mt-auto pt-6 border-t border-surface-container-highest px-2">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Professional portrait of a marketing manager in business attire with neutral background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAn2VaZfUiWu-tPfpYA60ZE12dnHHPmHWsbxhwlCy1TF-YjEYBC5xVWOX7MBrnxiSSQwgv5IwihMRK6q3y2bLg5JKtohyqN-sr5dJVvQwhpxfjzRBYdxs_2ZydXM0bOKpDSI_PZhWE-UyOEttFgRGtsihKxtUXEV7kWjkiD351yhlLZjelrhoV3nFUqBCJ7xg9F6hTXP9q8pUS1LtPTqduU2y3m1qVY02lbkzF3y0_tYvQUZqn1L_P36wVM3ctJ8b1sASkbziRkw-ND"/>
+</div>
+<div>
+<p class="text-xs font-bold text-on-surface">Ammar, Brand Manager</p>
+<p class="text-[10px] text-on-surface-variant">Ramy Pulse Pro</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="ml-64 min-h-screen">
+<!-- TopNavBar (Shared Component Style) -->
+<header class="sticky top-0 z-40 bg-[#121315]/80 backdrop-blur-xl h-16 flex items-center justify-between pl-8 pr-8 shadow-[0px_24px_24px_0px_rgba(255,255,255,0.06)]">
+<div class="flex items-center gap-6 flex-1">
+<div class="relative w-96">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-lg">search</span>
+<input class="w-full bg-surface-container-highest border-none text-sm pl-10 pr-4 py-2 rounded-sm focus:ring-1 focus:ring-primary/40 placeholder:text-gray-500" placeholder="Rechercher une campagne..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-on-surface-variant hover:bg-[#1b1d20] transition-colors rounded-sm">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:bg-[#1b1d20] transition-colors rounded-sm">
+<span class="material-symbols-outlined">sensors</span>
+</button>
+</div>
+</header>
+<div class="p-8 max-w-7xl mx-auto space-y-8">
+<!-- Page Header -->
+<div class="flex items-end justify-between">
+<div>
+<span class="text-[10px] font-bold tracking-[0.2em] text-primary uppercase">Gestion Opérationnelle</span>
+<h2 class="text-3xl font-headline font-extrabold tracking-tighter mt-1">Campagnes Marketing</h2>
+</div>
+<div class="flex gap-3">
+<button class="px-4 py-2 bg-surface-container-high hover:bg-surface-bright text-on-surface text-xs font-bold transition-all">
+                        EXPORTER DATA
+                    </button>
+<button class="px-6 py-2 bg-gradient-to-r from-primary to-primary-container text-on-primary-fixed text-xs font-bold transition-transform active:scale-95 shadow-lg shadow-primary/10">
+                        CRÉER UNE CAMPAGNE
+                    </button>
+</div>
+</div>
+<!-- Bento Grid Section -->
+<div class="grid grid-cols-12 gap-6">
+<!-- 1. Collapsible creation form (Simplified as a persistent drawer-like card for UI richness) -->
+<section class="col-span-12 lg:col-span-4 space-y-6">
+<div class="bg-surface-container-low rounded-lg p-6 flex flex-col gap-6">
+<div class="flex items-center justify-between border-b border-surface-container-highest pb-4">
+<h3 class="font-headline font-bold text-lg">Nouvelle Campagne</h3>
+<span class="material-symbols-outlined text-primary cursor-pointer">expand_less</span>
+</div>
+<form class="space-y-4">
+<div class="space-y-1.5">
+<label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Nom de la Campagne</label>
+<input class="w-full bg-surface-container-highest border-none rounded-sm text-sm focus:ring-primary/40" placeholder="ex: Ramy Citron Été 2024" type="text"/>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="space-y-1.5">
+<label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Type</label>
+<select class="w-full bg-surface-container-highest border-none rounded-sm text-sm focus:ring-primary/40">
+<option>Influenceur</option>
+<option>Sponsoring</option>
+<option>Social Media</option>
+</select>
+</div>
+<div class="space-y-1.5">
+<label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Plateforme</label>
+<select class="w-full bg-surface-container-highest border-none rounded-sm text-sm focus:ring-primary/40">
+<option>Instagram</option>
+<option>TikTok</option>
+<option>YouTube</option>
+<option>Facebook</option>
+</select>
+</div>
+</div>
+<div class="space-y-1.5">
+<label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Influenceur Algerien</label>
+<input class="w-full bg-surface-container-highest border-none rounded-sm text-sm focus:ring-primary/40" placeholder="@numidialz_official" type="text"/>
+</div>
+<div class="space-y-1.5">
+<label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Budget (DZA)</label>
+<div class="relative">
+<input class="w-full bg-surface-container-highest border-none rounded-sm text-sm focus:ring-primary/40 pr-12" placeholder="500,000" type="number"/>
+<span class="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-on-surface-variant/50">DA</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="space-y-1.5">
+<label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Début</label>
+<input class="w-full bg-surface-container-highest border-none rounded-sm text-sm focus:ring-primary/40" type="date"/>
+</div>
+<div class="space-y-1.5">
+<label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Fin</label>
+<input class="w-full bg-surface-container-highest border-none rounded-sm text-sm focus:ring-primary/40" type="date"/>
+</div>
+</div>
+<div class="space-y-1.5 pb-2">
+<label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Mots-clés</label>
+<div class="flex flex-wrap gap-2 mt-1">
+<span class="px-2 py-1 bg-primary/10 border border-primary/20 text-[10px] text-primary">#RamyCitron</span>
+<span class="px-2 py-1 bg-primary/10 border border-primary/20 text-[10px] text-primary">#Ete2024</span>
+<span class="px-2 py-1 bg-surface-container-highest text-[10px] text-on-surface-variant">+ Ajouter</span>
+</div>
+</div>
+<button class="w-full py-3 bg-primary text-on-primary-fixed font-bold text-xs uppercase tracking-widest hover:brightness-110 transition-all">Lancer la Campagne</button>
+</form>
+</div>
+<!-- 3. Impact Analysis Panel (Top) -->
+<div class="bg-surface-container-low rounded-lg p-6 space-y-6">
+<div>
+<p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Analyse d'Impact</p>
+<h3 class="font-headline font-bold text-lg mt-1">NSS Evolution</h3>
+</div>
+<div class="space-y-5">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-2 h-8 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-1/2 bg-on-surface-variant w-full"></div>
+</div>
+<div>
+<p class="text-[10px] text-on-surface-variant uppercase">Pré-campagne</p>
+<p class="font-headline font-bold text-sm">42.5 NSS</p>
+</div>
+</div>
+<span class="text-[10px] text-on-surface-variant/40">— Base</span>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-2 h-8 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-3/4 bg-primary w-full"></div>
+</div>
+<div>
+<p class="text-[10px] text-primary uppercase">Pendant</p>
+<p class="font-headline font-bold text-sm">58.2 NSS</p>
+</div>
+</div>
+<div class="flex items-center text-tertiary">
+<span class="material-symbols-outlined text-sm">arrow_drop_up</span>
+<span class="text-[10px] font-bold">+15.7%</span>
+</div>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-2 h-8 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-[65%] bg-tertiary w-full"></div>
+</div>
+<div>
+<p class="text-[10px] text-tertiary uppercase">Post-campagne</p>
+<p class="font-headline font-bold text-sm">51.8 NSS</p>
+</div>
+</div>
+<div class="flex items-center text-error">
+<span class="material-symbols-outlined text-sm">arrow_drop_down</span>
+<span class="text-[10px] font-bold">-6.4%</span>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-high p-4 rounded-sm">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-tertiary text-sm">auto_awesome</span>
+<span class="text-[10px] font-bold uppercase text-tertiary tracking-wider">Insight IA</span>
+</div>
+<p class="text-xs text-on-surface-variant leading-relaxed">
+                                L'Uplift majeur est corrélé aux segments <span class="text-on-surface font-semibold">18-24 ans</span> suite au live de Numidia. La rétention post-campagne reste 22% supérieure à la moyenne trimestrielle.
+                            </p>
+</div>
+</div>
+</section>
+<!-- 2. List/Table of existing campaigns -->
+<section class="col-span-12 lg:col-span-8 space-y-6">
+<div class="bg-surface-container-low rounded-lg overflow-hidden">
+<div class="p-6 flex items-center justify-between border-b border-surface-container-highest">
+<div>
+<h3 class="font-headline font-bold text-lg">Suivi des Campagnes</h3>
+<p class="text-xs text-on-surface-variant">8 campagnes actives sur le marché algérien</p>
+</div>
+<div class="flex items-center gap-2 bg-surface-container-highest p-1 rounded-sm">
+<button class="px-3 py-1 bg-surface-bright text-[10px] font-bold text-on-surface">TOUTES</button>
+<button class="px-3 py-1 text-[10px] font-bold text-on-surface-variant hover:text-on-surface">ACTIVES</button>
+<button class="px-3 py-1 text-[10px] font-bold text-on-surface-variant hover:text-on-surface">ARCHIVES</button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-lowest/50">
+<tr>
+<th class="px-6 py-4 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Campagne / Influenceur</th>
+<th class="px-6 py-4 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest text-center">Plateforme</th>
+<th class="px-6 py-4 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest text-center">Statut</th>
+<th class="px-6 py-4 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest text-right">Budget (DZA)</th>
+<th class="px-6 py-4 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest text-right">Impact NSS</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container-highest/30">
+<!-- Row 1: Active -->
+<tr class="hover:bg-surface-container-high/40 transition-colors group">
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-surface-container-high rounded flex items-center justify-center overflow-hidden border border-surface-container-highest">
+<img class="w-full h-full object-cover" data-alt="Portrait of a trendy young Algerian influencer in an urban setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAe-qHYLr1lBNJS2zW04-OeHhIs6Wi51BhptWX8z5YE72TYHQwxKDQDrHAAaU6tNYs4tE14HJpPKa-GjTEGy2fD_Bflkxz_ZIYGlHvFu7fr5As5IJ8_V9fsuM5PzTgmgq46CmsW1UmDTSs5MoaA5hF0oeKg72_o8zGp1mnMUB5b3IlPzNGtiYzmYvx_bRQhWyEgKNavdL-AhhbFRIuCgbdcG_NS7cgJlrIFIn8OdwQHEIvhsxHl78Fc8T3qJhSnmCAQi0nsrorqgzIb"/>
+</div>
+<div>
+<p class="text-sm font-bold group-hover:text-primary transition-colors">Ramy Citron Summer</p>
+<p class="text-[10px] text-on-surface-variant">@rifka.bjm • 12 Jours restants</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-5">
+<div class="flex justify-center">
+<div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center">
+<img class="w-4 h-4 grayscale opacity-60" data-alt="Instagram logo icon" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDUDUCBMLfYEFc5K7ORw-d2EC3eSsOQmxwUpSvXWbY39J89JjcdLyEorfN8jH2FpON5ArO4-GA2wpejl0f6G4j6ClzGTSoFzmms6_np5GfQSuFxwO5h9VVsTHTaV2IQWnI99OjToOHVuLPHCSZYkY_cm8IsJkE4X6IoSnz5GHxeTPSXMcZhNXxtEK4FMf2aLmJ3tLfAUKwq_73yZ_znIRmzvpZEI9pvGdTkGg0aOfSBtvRJLK-_BNpKSz-_07gmFzutSvhbFeo_IoBt"/>
+</div>
+</div>
+</td>
+<td class="px-6 py-5">
+<div class="flex justify-center">
+<span class="px-2 py-1 rounded-sm bg-tertiary/10 text-tertiary text-[10px] font-bold uppercase tracking-widest">Active</span>
+</div>
+</td>
+<td class="px-6 py-5 text-right">
+<p class="text-sm font-headline font-bold">1,250,000</p>
+<p class="text-[10px] text-on-surface-variant">Total: 2M DA</p>
+</td>
+<td class="px-6 py-5 text-right">
+<div class="flex items-center justify-end gap-1 text-tertiary">
+<span class="material-symbols-outlined text-sm">trending_up</span>
+<span class="text-sm font-bold">+12.4</span>
+</div>
+</td>
+</tr>
+<!-- Row 2: Planifiée -->
+<tr class="hover:bg-surface-container-high/40 transition-colors group">
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-surface-container-high rounded flex items-center justify-center overflow-hidden border border-surface-container-highest">
+<img class="w-full h-full object-cover" data-alt="Close up of a female influencer with a professional lighting setup" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCohVkqL6sywZosVDw1uvnbJcW6yvRyreNc9MsFDE52JQIwm683p7H05E8pp6PDN4FrOGVp_LPf3Mz8vs1tpbQGN_4_F_e-jV0H8AeJ3QgWRcVG3_SHYpJMn18XxqGVguSX4HG969i-tTBIYSVko6V3rrU7CBZPf_4u-_YYSGRp9_swBjxU-BPyThIv6rNTTvZtQBpYrA3myVSnpRkRdbjke4Ld-yGT-SHiFLwcuL3AYz-00ah3j9M7dUIqHEF3PldkbM4TtZoyiezH"/>
+</div>
+<div>
+<p class="text-sm font-bold group-hover:text-primary transition-colors">Lancement Ramy Orange</p>
+<p class="text-[10px] text-on-surface-variant">@meriem.halim • Démarre le 01/08</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-5">
+<div class="flex justify-center">
+<div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center">
+<img class="w-5 h-5" data-alt="YouTube logo icon" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB24SDONEWt2EJ_Xo5W5wuM0juWMaPiKFdjy9NJPjoMvZVhWbbH3uWCfoMAtZpxtIkCUKyh4n2vXadtU3bD78eHrPtjTQ2_G74iTWb5gdEF8ZlwlOfn2NlNefEZmk2_s752OtGFIQCWmquyPoZzfTF0cJeUx9wWMml1U4SBk1AxCGQFF1mpMBwCUZ-2gNny6YO0uQxCGN9nLbL0OJfzKsInc0uOmDh2Er1NmteOF51eQiwb2qFGVnkoNBqA4Bf1Qk2ZWRCCSe_gqnv_"/>
+</div>
+</div>
+</td>
+<td class="px-6 py-5">
+<div class="flex justify-center">
+<span class="px-2 py-1 rounded-sm bg-secondary-container text-on-secondary-container text-[10px] font-bold uppercase tracking-widest">Planifiée</span>
+</div>
+</td>
+<td class="px-6 py-5 text-right">
+<p class="text-sm font-headline font-bold">850,000</p>
+<p class="text-[10px] text-on-surface-variant">Engagement prévu</p>
+</td>
+<td class="px-6 py-5 text-right">
+<span class="text-[10px] font-bold text-on-surface-variant">—</span>
+</td>
+</tr>
+<!-- Row 3: Terminée -->
+<tr class="hover:bg-surface-container-high/40 transition-colors group">
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-surface-container-high rounded flex items-center justify-center overflow-hidden border border-surface-container-highest">
+<img class="w-full h-full object-cover" data-alt="Portrait of a male creator in a tech-focused studio" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCIdDfm2qBDICiHPJBx5Pnebx6vFO_aqoL32jzyEgrWyqnxYiMJhBW5J8jv8MXzhmUfj_yrQDGvw-sRS85hbAw5Dcn5VSSpqSMSH9aJSG59yzALTJE_fVPOwT2NWtZvWIddO_k_uDgY5qb4T-bgZKowU-A0ShQKenKoXm6z9ugemufP-a3j_V32B6swTwx39SHWunxQ3UkDrbup44hiFST1DCBC8gpsgZxYxWuc9asZ0scZyOJ0uGpHXKI9ArZ2rOabXrkqNH_aIz0G"/>
+</div>
+<div>
+<p class="text-sm font-bold group-hover:text-primary transition-colors">Bac 2024 Celebration</p>
+<p class="text-[10px] text-on-surface-variant">@cheb.mohamet • Terminée hier</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-5">
+<div class="flex justify-center">
+<div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center">
+<img class="w-4 h-4 grayscale opacity-60" data-alt="Facebook logo icon" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCw1mz7XrLrX9bg5g5QIL66d44Wjpa6HewmD8YpHlpNEc75xogUaejHtLfGLQIJjYLMgcZ2nfjJ2F7M-HiZNJNPELtVW3U-_V0S8VrhGPK6DtcNmnEBudyXVYDB1XhToGJz3_oURO8_F2WmfvvgFj6ecZdh9oRNHdKXRdWF1PPXUwZ5QlSW5eALIOvAoMnqSLzFVnDV2dfWjQoHpuQ0hYCLp-nSGLi4T7lchS9t-HqReQbc9N6QdG7SDLkJgCbMseKBxJfEXkdaA9hl"/>
+</div>
+</div>
+</td>
+<td class="px-6 py-5">
+<div class="flex justify-center">
+<span class="px-2 py-1 rounded-sm bg-surface-container-highest text-on-surface-variant text-[10px] font-bold uppercase tracking-widest">Terminée</span>
+</div>
+</td>
+<td class="px-6 py-5 text-right">
+<p class="text-sm font-headline font-bold">450,000</p>
+<p class="text-[10px] text-on-surface-variant">Consommé</p>
+</td>
+<td class="px-6 py-5 text-right">
+<div class="flex items-center justify-end gap-1 text-tertiary">
+<span class="material-symbols-outlined text-sm">trending_up</span>
+<span class="text-sm font-bold">+5.2</span>
+</div>
+</td>
+</tr>
+<!-- Row 4: Annulée -->
+<tr class="hover:bg-surface-container-high/40 transition-colors group">
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-surface-container-high rounded flex items-center justify-center overflow-hidden border border-surface-container-highest grayscale opacity-50">
+<img class="w-full h-full object-cover" data-alt="Portrait of a young influencer in stylish attire" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAKOS9oMsA1t7QfbZF0fVNW8W4XoMinVLWZoYhLDT2fVlVGjdNvHbeOyVk61ThnnAFZdk10hzE-OtFP8GuaUr0Dsj2pExS5aQMbxI3HY4fKC2gD_W850m1WeRhHSr9Y9Ca3Uj6gvMKsk6OlsW8K1UaX22U7gBMXKUJohmQWZMWfodDSwPhfCO0rnteceKoqechbptW4Sc3V_5r2pbiiivaV1r7DGKtzB3KNbwf50rqYBlF4FiZQqPLAoksGt2GH_YoIfP2BGQdxiaJw"/>
+</div>
+<div>
+<p class="text-sm font-bold text-on-surface-variant group-hover:text-error transition-colors">Test Flash Promo</p>
+<p class="text-[10px] text-on-surface-variant/40">Archive Interne</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-5">
+<div class="flex justify-center">
+<div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center opacity-30">
+<img class="w-4 h-4 grayscale" data-alt="Instagram logo icon" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCaMfL_FRw91DqnKQWX9KnCcDTTjBQMaq-YcPunpvyyKLC4ACchPZ7ASIcKbdlCw-wx-EeFzSJPrrCGLVaVSLJrOfeXLl8zOfnii6LDbS_zZ-iDOVjtUTkJoSojhBPGUD-d_SPTGS1OvB-LhjC-lFsAiaSjVYKgHvhCfvE0Z4lNNtVCY590VMErPlZ4sr-18V759TcRsDEMJHV4Q_eGgjicLuxvj68FZ0TVUPqvb3LUrwtvI3v152oGI4EMBuTnnNZJgYx4FgDxRgBZ"/>
+</div>
+</div>
+</td>
+<td class="px-6 py-5">
+<div class="flex justify-center">
+<span class="px-2 py-1 rounded-sm bg-error/10 text-error text-[10px] font-bold uppercase tracking-widest">Annulée</span>
+</div>
+</td>
+<td class="px-6 py-5 text-right">
+<p class="text-sm font-headline font-bold text-on-surface-variant/50">0</p>
+</td>
+<td class="px-6 py-5 text-right">
+<span class="text-[10px] font-bold text-on-surface-variant">—</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-4 bg-surface-container-lowest/30 flex items-center justify-between">
+<p class="text-[10px] text-on-surface-variant uppercase font-bold tracking-widest">Page 1 de 4</p>
+<div class="flex gap-2">
+<button class="w-8 h-8 flex items-center justify-center bg-surface-container-high text-on-surface-variant hover:text-on-surface rounded-sm">
+<span class="material-symbols-outlined text-sm">chevron_left</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center bg-surface-container-high text-on-surface rounded-sm">
+<span class="material-symbols-outlined text-sm text-primary">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Performance Quick View Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="bg-surface-container-low rounded-lg p-6 relative overflow-hidden group">
+<div class="absolute right-[-10%] top-[-20%] w-32 h-32 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-all"></div>
+<p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Top Performeur (Mois)</p>
+<div class="mt-4 flex items-center gap-4">
+<div class="w-12 h-12 rounded-full border-2 border-primary/20 p-1">
+<img class="w-full h-full rounded-full object-cover" data-alt="Small circular avatar of the top performing influencer" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCIzPFiI1I621n9zcK0kxo-q6Msxqqls35FxSRtfx-19ykBbB_8c3CXueUs9nGtgZOJ-OZic6T92CKFD3HNo721iojRJYb7CF6GIVF7AtGgC_miiV8noUEYFqHUxH40pGulzFbyy82XRSUanacopAv5Iv5E7sq43dWFFVfLOLjSmF8VFpBtrBtzUvihifOZoVNITsBRDV4Sd36Y6NRWNiuRRXfjwRtjWfKinFsBYPkGSy2vthpdMoihyr-EF-_GjTXo8ctMwQ_HtVWN"/>
+</div>
+<div>
+<h4 class="font-headline font-bold text-lg">@rifka.bjm</h4>
+<div class="flex items-center gap-2">
+<span class="text-xs text-on-surface-variant">ROI 4.2x</span>
+<span class="w-1 h-1 bg-on-surface-variant rounded-full"></span>
+<span class="text-xs text-tertiary">+18% Engagement</span>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-low rounded-lg p-6 relative overflow-hidden group">
+<div class="absolute right-[-10%] top-[-20%] w-32 h-32 bg-tertiary/5 rounded-full blur-3xl group-hover:bg-tertiary/10 transition-all"></div>
+<p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Budget Total Engagé</p>
+<div class="mt-4">
+<h4 class="font-headline font-black text-2xl tracking-tight">4,550,000 <span class="text-sm font-normal text-on-surface-variant">DZA</span></h4>
+<div class="w-full h-1 bg-surface-container-highest mt-3 rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[72%]"></div>
+</div>
+<p class="text-[10px] text-on-surface-variant mt-2 uppercase font-bold">72% de l'allocation trimestrielle</p>
+</div>
+</div>
+</div>
+</section>
+</div>
+</div>
+</main>
+<!-- FAB for quick action (Conditional display based on page intent) -->
+<div class="fixed bottom-8 right-8 z-50">
+<button class="w-14 h-14 bg-primary text-on-primary-fixed rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all group">
+<span class="material-symbols-outlined text-3xl transition-transform group-hover:rotate-90">add</span>
+</button>
+</div>
+</body></html>

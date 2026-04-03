@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="fr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>RamyPulse - Alertes</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-secondary-fixed-variant": "#454749",
+                    "on-primary-fixed": "#351000",
+                    "outline": "#ab897d",
+                    "surface-container": "#1f2022",
+                    "outline-variant": "#5b4137",
+                    "on-primary": "#561f00",
+                    "error-container": "#93000a",
+                    "surface-tint": "#ffb693",
+                    "surface-container-low": "#1b1c1e",
+                    "on-surface": "#e3e2e5",
+                    "on-background": "#e3e2e5",
+                    "secondary": "#c6c6c9",
+                    "on-error-container": "#ffdad6",
+                    "on-error": "#690005",
+                    "inverse-surface": "#e3e2e5",
+                    "tertiary-container": "#009fc3",
+                    "secondary-fixed-dim": "#c6c6c9",
+                    "on-primary-container": "#4e1c00",
+                    "background": "#121315",
+                    "on-secondary-fixed": "#1a1c1e",
+                    "surface-container-high": "#292a2c",
+                    "on-secondary-container": "#b4b5b7",
+                    "tertiary-fixed": "#b7eaff",
+                    "secondary-fixed": "#e2e2e5",
+                    "on-tertiary-fixed": "#001f28",
+                    "surface-container-lowest": "#0d0e10",
+                    "primary-fixed": "#ffdbcc",
+                    "tertiary": "#4cd6ff",
+                    "surface": "#121315",
+                    "primary": "#ffb693",
+                    "on-tertiary": "#003543",
+                    "primary-container": "#f56600",
+                    "tertiary-fixed-dim": "#4cd6ff",
+                    "inverse-primary": "#a04100",
+                    "on-surface-variant": "#e4beb1",
+                    "on-secondary": "#2f3133",
+                    "surface-container-highest": "#343537",
+                    "inverse-on-surface": "#303033",
+                    "error": "#ffb4ab",
+                    "secondary-container": "#454749",
+                    "surface-dim": "#121315",
+                    "on-tertiary-fixed-variant": "#004e60",
+                    "surface-variant": "#343537",
+                    "on-tertiary-container": "#00303c",
+                    "primary-fixed-dim": "#ffb693",
+                    "surface-bright": "#38393b",
+                    "on-primary-fixed-variant": "#7a3000"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "fontFamily": {
+                    "headline": ["Manrope"],
+                    "body": ["Inter"],
+                    "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .bg-glass {
+            background: rgba(18, 19, 21, 0.8);
+            backdrop-filter: blur(20px);
+        }
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3 { font-family: 'Manrope', sans-serif; }
+    </style>
+</head>
+<body class="bg-surface-container-lowest text-on-surface">
+<!-- SideNavBar Component -->
+<aside class="h-screen w-64 fixed left-0 top-0 flex flex-col bg-[#121315] border-r border-[#ffffff]/[0.05] py-6 px-4 gap-2 z-50">
+<div class="flex items-center gap-3 px-2 mb-8">
+<div class="w-8 h-8 bg-primary rounded flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary-fixed text-lg" data-weight="fill" style="font-variation-settings: 'FILL' 1;">pulse_alert</span>
+</div>
+<div>
+<div class="text-xl font-bold tracking-tighter text-[#ffb693]">RamyPulse</div>
+<div class="text-[10px] uppercase tracking-widest text-[#ffffff]/[0.45] font-semibold">Intelligence Marketing</div>
+</div>
+</div>
+<button class="bg-gradient-to-r from-primary to-primary-container text-on-primary-fixed font-bold py-2 px-4 rounded-sm mb-6 flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
+<span class="material-symbols-outlined text-sm">add</span>
+<span>Nouveau Rapport</span>
+</button>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-[#ffffff]/[0.45] font-['Manrope'] font-semibold tracking-tight text-sm hover:bg-[#ffffff]/[0.08] hover:text-[#ffffff] transition-all duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]">dashboard</span>
+                Tableau de bord
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#ffffff]/[0.45] font-['Manrope'] font-semibold tracking-tight text-sm hover:bg-[#ffffff]/[0.08] hover:text-[#ffffff] transition-all duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]">explore</span>
+                Explorateur
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#ffffff]/[0.45] font-['Manrope'] font-semibold tracking-tight text-sm hover:bg-[#ffffff]/[0.08] hover:text-[#ffffff] transition-all duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]">campaign</span>
+                Campagnes
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#ffffff]/[0.45] font-['Manrope'] font-semibold tracking-tight text-sm hover:bg-[#ffffff]/[0.08] hover:text-[#ffffff] transition-all duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]">visibility</span>
+                Watchlists
+            </a>
+<a class="text-[#ffb693] bg-[#ffffff]/[0.05] rounded-sm flex items-center gap-3 px-3 py-2 font-['Manrope'] font-semibold tracking-tight text-sm transition-all duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">notifications_active</span>
+                Alertes
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#ffffff]/[0.45] font-['Manrope'] font-semibold tracking-tight text-sm hover:bg-[#ffffff]/[0.08] hover:text-[#ffffff] transition-all duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]">auto_awesome</span>
+                Recommandations
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#ffffff]/[0.45] font-['Manrope'] font-semibold tracking-tight text-sm hover:bg-[#ffffff]/[0.08] hover:text-[#ffffff] transition-all duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]">settings_input_component</span>
+                Admin Sources
+            </a>
+</nav>
+<div class="mt-auto space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-[#ffffff]/[0.45] font-['Manrope'] font-semibold tracking-tight text-sm hover:bg-[#ffffff]/[0.08] hover:text-[#ffffff] transition-all duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]">help</span>
+                Aide
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#ffffff]/[0.45] font-['Manrope'] font-semibold tracking-tight text-sm hover:bg-[#ffffff]/[0.08] hover:text-[#ffffff] transition-all duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+                Paramètres
+            </a>
+</div>
+</aside>
+<!-- TopNavBar Component -->
+<header class="fixed top-0 right-0 w-[calc(100%-16rem)] h-16 z-40 bg-[#121315]/80 backdrop-blur-xl border-b border-[#ffffff]/[0.05] flex justify-between items-center px-8">
+<div class="flex items-center gap-6">
+<div class="relative w-64">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-lg">search</span>
+<input class="w-full bg-surface-container-highest border-none rounded-sm pl-10 text-xs font-body focus:ring-1 focus:ring-primary/40 transition-all" placeholder="Rechercher une alerte..." type="text"/>
+</div>
+<nav class="flex gap-8">
+<a class="text-[#ffffff]/[0.45] pb-5 font-['Inter'] text-xs font-medium uppercase tracking-widest hover:text-[#ffb693] transition-colors" href="#">Vue d'ensemble</a>
+<a class="text-[#ffb693] border-b border-[#ffb693] pb-5 font-['Inter'] text-xs font-medium uppercase tracking-widest" href="#">Analyses</a>
+<a class="text-[#ffffff]/[0.45] pb-5 font-['Inter'] text-xs font-medium uppercase tracking-widest hover:text-[#ffb693] transition-colors" href="#">Exports</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">history</span>
+</button>
+<div class="h-8 w-8 rounded-full overflow-hidden border border-primary/20">
+<img alt="Profil Utilisateur" data-alt="Portrait of a professional marketing director in a business setting, sharp focus, professional studio lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAlYrddAac4tTNLQLn2xPRcjQsYV9pn7--vaJIVtQ_dF6ywwca92SEBm-jzCT4jPehK9-qlLigbruAtyXabzl7IwSj0apQg3atKb58K4f53YovkBy6pr_U7oMHGg9LFUJrm2L91AiT0ntNffZ6Gixq5moNdUdyjBa53VUBSO1pxzkWXyX2ZTorTknf2Rvcm-50q1AN88VzSujhs266aH-XwqwCNUyaRv-YqdN6b__9OzIFladCy9RVMyuDC0OATcRMxj5YWvOcBQzyW"/>
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="ml-64 pt-24 px-8 pb-12 min-h-screen bg-surface-container-lowest">
+<!-- Header Section -->
+<div class="flex justify-between items-end mb-8">
+<div>
+<span class="text-on-surface-variant font-label text-[10px] uppercase tracking-[0.2em] mb-2 block">Surveillance Active</span>
+<h1 class="text-3xl font-headline font-extrabold tracking-tight text-on-surface">Console d'Alertes</h1>
+</div>
+<div class="flex items-center gap-2 text-xs font-body text-on-surface-variant">
+<span class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>
+                Système en ligne : 14 alertes actives
+            </div>
+</div>
+<!-- Filter Bar -->
+<section class="bg-surface-container rounded-sm p-4 mb-8 flex flex-wrap items-center gap-8 border-l-2 border-primary">
+<div class="flex items-center gap-4">
+<span class="text-[10px] font-bold uppercase text-on-surface-variant tracking-wider">Statut</span>
+<div class="flex gap-2">
+<button class="px-3 py-1.5 rounded-sm bg-surface-container-highest text-primary text-xs font-medium border border-primary/20">Nouveau</button>
+<button class="px-3 py-1.5 rounded-sm bg-surface-container-low text-on-surface-variant text-xs font-medium hover:bg-surface-container-high transition-colors">Reconnu</button>
+<button class="px-3 py-1.5 rounded-sm bg-surface-container-low text-on-surface-variant text-xs font-medium hover:bg-surface-container-high transition-colors">En cours</button>
+<button class="px-3 py-1.5 rounded-sm bg-surface-container-low text-on-surface-variant text-xs font-medium hover:bg-surface-container-high transition-colors">Résolu</button>
+</div>
+</div>
+<div class="w-px h-6 bg-outline-variant/30"></div>
+<div class="flex items-center gap-4">
+<span class="text-[10px] font-bold uppercase text-on-surface-variant tracking-wider">Sévérité</span>
+<div class="flex gap-2">
+<button class="px-3 py-1.5 rounded-sm bg-surface-container-low text-on-surface-variant text-xs font-medium hover:bg-surface-container-high transition-colors flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-error"></span> Critique
+                    </button>
+<button class="px-3 py-1.5 rounded-sm bg-surface-container-low text-on-surface-variant text-xs font-medium hover:bg-surface-container-high transition-colors flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary-container"></span> Haute
+                    </button>
+<button class="px-3 py-1.5 rounded-sm bg-surface-container-low text-on-surface-variant text-xs font-medium hover:bg-surface-container-high transition-colors flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-yellow-400"></span> Moyenne
+                    </button>
+<button class="px-3 py-1.5 rounded-sm bg-surface-container-low text-on-surface-variant text-xs font-medium hover:bg-surface-container-high transition-colors flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-tertiary"></span> Basse
+                    </button>
+</div>
+</div>
+</section>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+<!-- Alerts List (Left Column) -->
+<div class="lg:col-span-5 space-y-4">
+<!-- Expanded Card -->
+<article class="bg-surface-container-high border-l-4 border-error p-5 rounded-sm ring-1 ring-white/10 relative">
+<div class="flex justify-between items-start mb-3">
+<div class="flex items-center gap-3">
+<span class="w-3 h-3 rounded-full bg-error shadow-[0_0_8px_rgba(255,180,171,0.5)]"></span>
+<h3 class="font-headline font-bold text-base leading-tight">Chute de sentiment - Ramy Fraise (Alger)</h3>
+</div>
+<span class="bg-blue-500/10 text-blue-400 text-[10px] font-bold px-2 py-1 rounded flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse"></span> NOUVEAU
+                        </span>
+</div>
+<p class="text-on-surface-variant text-sm mb-4 leading-relaxed">
+                        Volume inhabituel de mentions négatives détecté sur Facebook et Twitter. Les utilisateurs se plaignent d'un goût différent dans le lot #FR2024-03...
+                    </p>
+<div class="flex items-center justify-between">
+<span class="text-[10px] text-on-surface-variant font-medium uppercase tracking-wider">détecté il y a 5 min</span>
+<span class="material-symbols-outlined text-primary text-sm">keyboard_arrow_right</span>
+</div>
+</article>
+<!-- Normal Cards -->
+<article class="bg-surface-container-low p-5 rounded-sm hover:bg-surface-container transition-colors group cursor-pointer">
+<div class="flex justify-between items-start mb-3">
+<div class="flex items-center gap-3">
+<span class="w-3 h-3 rounded-full bg-primary-container"></span>
+<h3 class="font-headline font-bold text-base leading-tight">Rupture de Stock - Oran Ouest</h3>
+</div>
+<span class="bg-yellow-500/10 text-yellow-400 text-[10px] font-bold px-2 py-1 rounded">
+                            RECONNU
+                        </span>
+</div>
+<p class="text-on-surface-variant/70 text-sm mb-4 line-clamp-1">
+                        Le distributeur SARL El-Bahia signale une rupture de stock critique sur la gamme Ramy Orange 1L.
+                    </p>
+<div class="flex items-center justify-between">
+<span class="text-[10px] text-on-surface-variant/50 font-medium uppercase tracking-wider">détecté il y a 24 min</span>
+</div>
+</article>
+<article class="bg-surface-container-low p-5 rounded-sm hover:bg-surface-container transition-colors group cursor-pointer">
+<div class="flex justify-between items-start mb-3">
+<div class="flex items-center gap-3">
+<span class="w-3 h-3 rounded-full bg-yellow-400"></span>
+<h3 class="font-headline font-bold text-base leading-tight">Pic de Mentions - Constantine</h3>
+</div>
+<span class="bg-purple-500/10 text-purple-400 text-[10px] font-bold px-2 py-1 rounded">
+                            EN COURS
+                        </span>
+</div>
+<p class="text-on-surface-variant/70 text-sm mb-4 line-clamp-1">
+                        Hausse de 40% des requêtes Google Trends sur "Promotion Ramy Ramadan" dans la région Est.
+                    </p>
+<div class="flex items-center justify-between">
+<span class="text-[10px] text-on-surface-variant/50 font-medium uppercase tracking-wider">détecté il y a 2 heures</span>
+</div>
+</article>
+<article class="bg-surface-container-low p-5 rounded-sm hover:bg-surface-container transition-colors group cursor-pointer opacity-60">
+<div class="flex justify-between items-start mb-3">
+<div class="flex items-center gap-3">
+<span class="w-3 h-3 rounded-full bg-tertiary"></span>
+<h3 class="font-headline font-bold text-base leading-tight">Mention Presse - El Watan</h3>
+</div>
+<span class="bg-green-500/10 text-green-400 text-[10px] font-bold px-2 py-1 rounded flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">check</span> RÉSOLU
+                        </span>
+</div>
+<p class="text-on-surface-variant/70 text-sm mb-4 line-clamp-1">
+                        Article positif sur l'engagement environnemental de Ramy publié ce matin.
+                    </p>
+<div class="flex items-center justify-between">
+<span class="text-[10px] text-on-surface-variant/50 font-medium uppercase tracking-wider">résolu il y a 4 heures</span>
+</div>
+</article>
+</div>
+<!-- Detail Panel (Right Column) -->
+<div class="lg:col-span-7">
+<section class="bg-surface-container-low rounded-sm sticky top-24 overflow-hidden">
+<div class="h-1 bg-gradient-to-r from-error to-error-container"></div>
+<div class="p-8">
+<div class="flex items-center gap-4 mb-6">
+<div class="w-12 h-12 rounded-sm bg-error/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-error text-2xl">warning</span>
+</div>
+<div>
+<h2 class="text-2xl font-headline font-extrabold tracking-tight">Détails de l'Alerte</h2>
+<p class="text-on-surface-variant text-xs">ID: AL-8342-DZ | Catégorie: Sentiment de Marque</p>
+</div>
+</div>
+<div class="space-y-8">
+<!-- Full Description -->
+<div>
+<h4 class="text-[10px] font-bold uppercase tracking-widest text-primary mb-3">Analyse Complète</h4>
+<p class="text-on-surface leading-relaxed text-sm">
+                                    Une chute brutale de l'indice de sentiment a été identifiée à Alger centre. Le volume de messages à connotation négative a bondi de 320% en moins de 3 heures. L'analyse sémantique pointe majoritairement vers un défaut de saveur sur le produit "Ramy Fraise" 250ml. Des rapports similaires commencent à apparaître à Blida.
+                                </p>
+</div>
+<!-- Context Snippet -->
+<div class="bg-surface-container-lowest p-5 rounded-sm border border-outline-variant/10">
+<h4 class="text-[10px] font-bold uppercase tracking-widest text-tertiary mb-4">Extraits Sociaux (Temps Réel)</h4>
+<div class="space-y-4">
+<div class="flex gap-3">
+<div class="h-6 w-6 rounded-full bg-surface-container-highest"></div>
+<div>
+<span class="text-xs font-bold block mb-1">Amine B. <span class="text-on-surface-variant font-normal">@Facebook</span></span>
+<p class="text-xs italic text-on-surface-variant">"Le goût du Ramy Fraise aujourd'hui est bizarre, comme un arrière-goût métallique. Quelqu'un d'autre a remarqué ?"</p>
+</div>
+</div>
+<div class="flex gap-3">
+<div class="h-6 w-6 rounded-full bg-surface-container-highest"></div>
+<div>
+<span class="text-xs font-bold block mb-1">Sara Oran <span class="text-on-surface-variant font-normal">@Twitter</span></span>
+<p class="text-xs italic text-on-surface-variant">"Immangeable le dernier lot de jus, déçue par @RamyAlgerie..."</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Map Context -->
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-surface-container p-4 rounded-sm">
+<span class="text-[10px] text-on-surface-variant uppercase block mb-1">Localisation</span>
+<span class="text-sm font-bold flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">location_on</span> Alger (District 16)
+                                    </span>
+</div>
+<div class="bg-surface-container p-4 rounded-sm">
+<span class="text-[10px] text-on-surface-variant uppercase block mb-1">Impact Estimé</span>
+<span class="text-sm font-bold text-error flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">trending_down</span> -12% Engagement
+                                    </span>
+</div>
+</div>
+<!-- Action Buttons -->
+<div class="flex gap-3 pt-6 border-t border-outline-variant/20">
+<button class="flex-1 bg-surface-container-high hover:bg-surface-bright text-on-surface font-bold py-3 px-4 rounded-sm text-xs transition-colors border border-outline-variant/30 uppercase tracking-widest">
+                                    Reconnaître
+                                </button>
+<button class="flex-1 bg-surface-container-high hover:bg-surface-bright text-primary font-bold py-3 px-4 rounded-sm text-xs transition-colors border border-primary/20 uppercase tracking-widest">
+                                    Investiguer
+                                </button>
+<button class="flex-1 bg-gradient-to-r from-primary to-primary-container text-on-primary-fixed font-bold py-3 px-4 rounded-sm text-xs hover:opacity-90 transition-opacity uppercase tracking-widest">
+                                    Résoudre
+                                </button>
+</div>
+</div>
+</div>
+</section>
+</div>
+</div>
+</main>
+</body></html>

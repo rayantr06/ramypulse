@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="fr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>RamyPulse Admin | Sources Command Center</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "outline-variant": "#5b4137",
+                        "surface-container-low": "#1b1c1e",
+                        "surface-container-high": "#292a2c",
+                        "on-primary-container": "#4e1c00",
+                        "inverse-primary": "#a04100",
+                        "on-secondary-fixed": "#1a1c1e",
+                        "on-error-container": "#ffdad6",
+                        "tertiary-fixed-dim": "#4cd6ff",
+                        "on-primary-fixed-variant": "#7a3000",
+                        "on-secondary-container": "#b4b5b7",
+                        "error": "#ffb4ab",
+                        "tertiary-fixed": "#b7eaff",
+                        "surface-container": "#1f2022",
+                        "on-background": "#e3e2e5",
+                        "surface-container-highest": "#343537",
+                        "primary-container": "#f56600",
+                        "on-tertiary-fixed": "#001f28",
+                        "on-primary-fixed": "#351000",
+                        "primary-fixed": "#ffdbcc",
+                        "inverse-on-surface": "#303033",
+                        "on-secondary": "#2f3133",
+                        "surface-container-lowest": "#0d0e10",
+                        "primary": "#ffb693",
+                        "on-tertiary-container": "#00303c",
+                        "on-tertiary-fixed-variant": "#004e60",
+                        "on-error": "#690005",
+                        "on-primary": "#561f00",
+                        "on-secondary-fixed-variant": "#454749",
+                        "background": "#121315",
+                        "outline": "#ab897d",
+                        "on-surface-variant": "#e4beb1",
+                        "error-container": "#93000a",
+                        "tertiary-container": "#009fc3",
+                        "surface-tint": "#ffb693",
+                        "secondary-fixed": "#e2e2e5",
+                        "tertiary": "#4cd6ff",
+                        "surface-bright": "#38393b",
+                        "surface": "#121315",
+                        "secondary": "#c6c6c9",
+                        "on-surface": "#e3e2e5",
+                        "surface-dim": "#121315",
+                        "inverse-surface": "#e3e2e5",
+                        "primary-fixed-dim": "#ffb693",
+                        "secondary-fixed-dim": "#c6c6c9",
+                        "secondary-container": "#454749",
+                        "on-tertiary": "#003543",
+                        "surface-variant": "#343537"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "fontFamily": {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #121315; }
+        ::-webkit-scrollbar-thumb { background: #292a2c; border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body selection:bg-primary-container selection:text-on-primary-container">
+<!-- Top Navigation Shell -->
+<nav class="bg-[#121315] text-[#ffb693] font-['Manrope'] tracking-tight font-bold text-lg flex justify-between items-center w-full px-6 py-3 h-16 fixed top-0 z-50">
+<div class="text-xl font-black text-[#ffb693] tracking-tighter">RamyPulse Admin</div>
+<div class="hidden md:flex items-center gap-8">
+<a class="text-gray-400 font-medium hover:text-white transition-colors duration-200 active:scale-95" href="#">Dashboard</a>
+<a class="text-[#ffb693] border-b-2 border-[#ffb693] pb-1 hover:text-white transition-colors duration-200 active:scale-95" href="#">Ingestion</a>
+<a class="text-gray-400 font-medium hover:text-white transition-colors duration-200 active:scale-95" href="#">Pipelines</a>
+<a class="text-gray-400 font-medium hover:text-white transition-colors duration-200 active:scale-95" href="#">Logs</a>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined hover:text-white transition-colors cursor-pointer" data-icon="notifications">notifications</span>
+<span class="material-symbols-outlined hover:text-white transition-colors cursor-pointer" data-icon="settings">settings</span>
+<img alt="Administrator profile" class="w-8 h-8 rounded-full border-2 border-primary/20" data-alt="Close-up professional headshot of a middle-aged male administrator in a modern office setting with soft bokeh background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDYjekNYsJPISJP_ApqgVYwWlY6jmjIWwMsNcVYjsiW_28pC-k18dLVevSEVax_5nH33RbYu6F7VSa3RjhIKA7JFwYWuExsE0eI-F5nguXeSkPtuV9FLgz5uIRRW3CGxiRZYZ2F6BcDRJPYybt2Pv6tzYMIajxl0_TXeeRaWbfW1foLsk8LUKO8cCOdDtgkBSgQXwiA4fFNMk5oeK_1DwwY4cChE67ilh3M7jPJvNJv8kim9FShvwr18C2TJEAfJw6OPLaN6SrnlGwk"/>
+</div>
+</nav>
+<div class="flex h-screen pt-16">
+<!-- Sidebar Navigation -->
+<aside class="bg-[#121315] font-['Inter'] text-sm font-semibold tracking-wide flex flex-col h-full border-r border-white/5 p-4 gap-2 w-64 shrink-0">
+<div class="mb-6 px-2">
+<p class="text-xs text-on-surface-variant/50 uppercase tracking-widest font-bold mb-1">COMMAND CENTER</p>
+<h2 class="text-on-surface text-base">Ramy Juice Intelligence</h2>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-[#ffb693] bg-[#1c1e21] rounded-sm transition-all duration-200 ease-out" href="#">
+<span class="material-symbols-outlined" data-icon="database">database</span>
+<span>Sources</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-gray-500 hover:bg-[#1c1e21] hover:text-white transition-all duration-200 ease-out" href="#">
+<span class="material-symbols-outlined" data-icon="alt_route">alt_route</span>
+<span>Connectors</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-gray-500 hover:bg-[#1c1e21] hover:text-white transition-all duration-200 ease-out" href="#">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+<span>Health</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-gray-500 hover:bg-[#1c1e21] hover:text-white transition-all duration-200 ease-out" href="#">
+<span class="material-symbols-outlined" data-icon="fact_check">fact_check</span>
+<span>Validation</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-gray-500 hover:bg-[#1c1e21] hover:text-white transition-all duration-200 ease-out" href="#">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+<span>Archive</span>
+</a>
+</nav>
+<button class="mt-4 bg-gradient-to-r from-primary to-primary-container text-on-primary-fixed px-4 py-3 rounded-lg flex items-center justify-center gap-2 font-bold shadow-lg hover:brightness-110 active:scale-95 transition-all">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+                New Pipeline
+            </button>
+<div class="mt-auto pt-4 space-y-1 border-t border-white/5">
+<a class="flex items-center gap-3 px-3 py-2 text-gray-500 hover:text-white transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+<span>Support</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-gray-500 hover:text-white transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="description">description</span>
+<span>Documentation</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="flex-1 overflow-y-auto bg-surface-container-lowest p-8 grid grid-cols-12 gap-8 items-start">
+<!-- Section 1: Sources Table (Bento Primary) -->
+<div class="col-span-12 lg:col-span-8 space-y-6">
+<div class="flex items-end justify-between">
+<div>
+<p class="text-label-sm text-on-surface-variant font-bold tracking-[0.15em] mb-1 uppercase">SOURCES DE DONNÉES</p>
+<h1 class="text-3xl font-headline font-extrabold tracking-tight">Ramy Intelligence Dashboard</h1>
+</div>
+<div class="flex gap-3">
+<button class="bg-surface-container-high text-on-surface px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-surface-bright transition-all">
+<span class="material-symbols-outlined text-lg" data-icon="sync">sync</span>
+                            Sync maintenant
+                        </button>
+<button class="bg-primary-container text-on-primary-fixed px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:brightness-110 shadow-lg transition-all">
+<span class="material-symbols-outlined text-lg" data-icon="add_circle">add_circle</span>
+                            Nouvelle source
+                        </button>
+</div>
+</div>
+<!-- Table Surface -->
+<div class="bg-surface-container rounded-xl overflow-hidden border border-white/5">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-high">
+<th class="px-6 py-4 text-xs font-bold text-on-surface-variant/70 uppercase tracking-widest">Nom</th>
+<th class="px-6 py-4 text-xs font-bold text-on-surface-variant/70 uppercase tracking-widest">Plateforme</th>
+<th class="px-6 py-4 text-xs font-bold text-on-surface-variant/70 uppercase tracking-widest">Owner</th>
+<th class="px-6 py-4 text-xs font-bold text-on-surface-variant/70 uppercase tracking-widest">Santé</th>
+<th class="px-6 py-4 text-xs font-bold text-on-surface-variant/70 uppercase tracking-widest text-center">Actif</th>
+<th class="px-6 py-4 text-xs font-bold text-on-surface-variant/70 uppercase tracking-widest">Dernier Sync</th>
+<th class="px-6 py-4 text-xs font-bold text-on-surface-variant/70 uppercase tracking-widest text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-white/[0.03]">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container-high/50 transition-colors group">
+<td class="px-6 py-4 font-semibold text-on-surface">Facebook Ramy Officiel</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-blue-400" data-icon="public">public</span>
+<span class="text-sm">Facebook</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-bold rounded uppercase">Owned</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-12 h-1 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-tertiary w-[98%] shadow-[0_0_8px_rgba(76,214,255,0.4)]"></div>
+</div>
+<span class="text-xs font-bold text-tertiary">98%</span>
+</div>
+</td>
+<td class="px-6 py-4 text-center">
+<div class="w-10 h-5 bg-primary/20 rounded-full relative p-0.5 ml-auto mr-auto cursor-pointer">
+<div class="w-4 h-4 bg-primary rounded-full absolute right-0.5"></div>
+</div>
+</td>
+<td class="px-6 py-4 text-sm text-on-surface-variant">Il y a 12 min</td>
+<td class="px-6 py-4 text-right">
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-xl" data-icon="edit">edit</span>
+</button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-container-high/50 transition-colors group">
+<td class="px-6 py-4 font-semibold text-on-surface">Google Maps - Alger</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-green-400" data-icon="location_on">location_on</span>
+<span class="text-sm">G-Maps</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 bg-tertiary/10 text-tertiary text-[10px] font-bold rounded uppercase">Market</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-12 h-1 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-tertiary w-[82%]"></div>
+</div>
+<span class="text-xs font-bold text-tertiary">82%</span>
+</div>
+</td>
+<td class="px-6 py-4 text-center">
+<div class="w-10 h-5 bg-primary/20 rounded-full relative p-0.5 ml-auto mr-auto">
+<div class="w-4 h-4 bg-primary rounded-full absolute right-0.5"></div>
+</div>
+</td>
+<td class="px-6 py-4 text-sm text-on-surface-variant">Il y a 4h</td>
+<td class="px-6 py-4 text-right">
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-xl" data-icon="edit">edit</span>
+</button>
+</td>
+</tr>
+<!-- Row 3 (Failing) -->
+<tr class="hover:bg-surface-container-high/50 transition-colors group">
+<td class="px-6 py-4 font-semibold text-on-surface">YouTube - Reviews</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-red-500" data-icon="smart_display">smart_display</span>
+<span class="text-sm">YouTube</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 bg-on-surface-variant/10 text-on-surface-variant text-[10px] font-bold rounded uppercase">Competitor</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-12 h-1 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-error w-[45%] shadow-[0_0_8px_rgba(255,180,171,0.4)]"></div>
+</div>
+<span class="text-xs font-bold text-error">45%</span>
+</div>
+</td>
+<td class="px-6 py-4 text-center">
+<div class="w-10 h-5 bg-surface-container-highest rounded-full relative p-0.5 ml-auto mr-auto">
+<div class="w-4 h-4 bg-on-secondary-container rounded-full absolute left-0.5"></div>
+</div>
+</td>
+<td class="px-6 py-4 text-sm text-error font-medium">Échec hier</td>
+<td class="px-6 py-4 text-right">
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-xl" data-icon="edit">edit</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Section 5: Visual Pipeline Trace (Flow) -->
+<div class="bg-surface-container p-6 rounded-xl border border-white/5">
+<p class="text-xs font-bold text-on-surface-variant tracking-widest uppercase mb-6">PIPELINE TRACE &amp; DÉBIT</p>
+<div class="flex items-center justify-between gap-4">
+<div class="flex-1 bg-surface-container-high p-4 rounded-lg flex flex-col items-center gap-2 text-center border-l-2 border-primary">
+<span class="material-symbols-outlined text-primary" data-icon="input">input</span>
+<span class="text-xl font-headline font-bold">12.4k</span>
+<span class="text-[10px] font-bold uppercase tracking-tighter opacity-60">Source Data</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant/30" data-icon="arrow_forward">arrow_forward</span>
+<div class="flex-1 bg-surface-container-high p-4 rounded-lg flex flex-col items-center gap-2 text-center border-l-2 border-tertiary">
+<span class="material-symbols-outlined text-tertiary" data-icon="description">description</span>
+<span class="text-xl font-headline font-bold">11.8k</span>
+<span class="text-[10px] font-bold uppercase tracking-tighter opacity-60">Raw Docs</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant/30" data-icon="arrow_forward">arrow_forward</span>
+<div class="flex-1 bg-surface-container-high p-4 rounded-lg flex flex-col items-center gap-2 text-center border-l-2 border-primary">
+<span class="material-symbols-outlined text-primary" data-icon="rule">rule</span>
+<span class="text-xl font-headline font-bold">11.2k</span>
+<span class="text-[10px] font-bold uppercase tracking-tighter opacity-60">Normalized</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant/30" data-icon="arrow_forward">arrow_forward</span>
+<div class="flex-1 bg-surface-container-high p-4 rounded-lg flex flex-col items-center gap-2 text-center border-l-2 border-tertiary">
+<span class="material-symbols-outlined text-tertiary" data-icon="auto_awesome">auto_awesome</span>
+<span class="text-xl font-headline font-bold">10.9k</span>
+<span class="text-[10px] font-bold uppercase tracking-tighter opacity-60">Enriched</span>
+</div>
+</div>
+</div>
+<!-- Section 3: History (Runs) -->
+<div class="bg-surface-container rounded-xl border border-white/5">
+<div class="p-6 border-b border-white/5 flex justify-between items-center">
+<h3 class="text-sm font-bold uppercase tracking-widest text-on-surface-variant">Historique Sync Runs</h3>
+<span class="text-xs text-primary font-medium cursor-pointer hover:underline">Voir tout l'historique</span>
+</div>
+<div class="overflow-hidden">
+<table class="w-full text-left text-sm">
+<thead class="bg-surface-container-high/30">
+<tr>
+<th class="px-6 py-3 font-bold opacity-70">Run ID</th>
+<th class="px-6 py-3 font-bold opacity-70">Mode</th>
+<th class="px-6 py-3 font-bold opacity-70">Status</th>
+<th class="px-6 py-3 font-bold opacity-70">Records (F/I/E)</th>
+<th class="px-6 py-3 font-bold opacity-70">Started at</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-white/[0.03]">
+<tr>
+<td class="px-6 py-4 font-mono text-xs">#RUN-8812</td>
+<td class="px-6 py-4">Incremental</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 text-tertiary font-bold">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary animate-pulse"></span>
+                                            Success
+                                        </span>
+</td>
+<td class="px-6 py-4 text-xs font-medium">842 / 840 / 0</td>
+<td class="px-6 py-4 text-on-surface-variant">12:05:33</td>
+</tr>
+<tr>
+<td class="px-6 py-4 font-mono text-xs">#RUN-8811</td>
+<td class="px-6 py-4">Full Reset</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 text-error font-bold">
+<span class="w-1.5 h-1.5 rounded-full bg-error"></span>
+                                            Failure
+                                        </span>
+</td>
+<td class="px-6 py-4 text-xs font-medium">120 / 0 / 120</td>
+<td class="px-6 py-4 text-on-surface-variant">08:12:10</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<!-- Side Panel & Health (Section 2 & 4) -->
+<div class="col-span-12 lg:col-span-4 space-y-8 sticky top-0">
+<!-- Section 2: Form -->
+<div class="bg-surface-container p-6 rounded-xl border border-white/5">
+<p class="text-xs font-bold text-on-surface-variant tracking-widest uppercase mb-6">ÉDITION DE SOURCE</p>
+<form class="space-y-4">
+<div>
+<label class="block text-xs font-bold text-on-surface-variant mb-1 ml-1">Nom de la source</label>
+<input class="w-full bg-surface-container-highest border-none rounded-lg text-sm focus:ring-1 focus:ring-primary/40 transition-all" type="text" value="Facebook Ramy Officiel"/>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div>
+<label class="block text-xs font-bold text-on-surface-variant mb-1 ml-1">Plateforme</label>
+<select class="w-full bg-surface-container-highest border-none rounded-lg text-sm focus:ring-1 focus:ring-primary/40 appearance-none">
+<option>Facebook</option>
+<option>Instagram</option>
+<option>Google Maps</option>
+</select>
+</div>
+<div>
+<label class="block text-xs font-bold text-on-surface-variant mb-1 ml-1">Owner Type</label>
+<select class="w-full bg-surface-container-highest border-none rounded-lg text-sm focus:ring-1 focus:ring-primary/40">
+<option>Owned</option>
+<option>Competitor</option>
+</select>
+</div>
+</div>
+<div>
+<label class="block text-xs font-bold text-on-surface-variant mb-1 ml-1">Config JSON (Advanced)</label>
+<div class="bg-[#0d0e10] p-3 rounded-lg font-mono text-[11px] text-primary/80 h-32 overflow-y-auto border border-white/5">
+<pre>{
+  "api_version": "v14.0",
+  "fields": ["insights", "comments"],
+  "auth": "OAuth2",
+  "rate_limit": 1000
+}</pre>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div>
+<label class="block text-xs font-bold text-on-surface-variant mb-1 ml-1">Fréquence (min)</label>
+<input class="w-full bg-surface-container-highest border-none rounded-lg text-sm" type="number" value="15"/>
+</div>
+<div>
+<label class="block text-xs font-bold text-on-surface-variant mb-1 ml-1">SLA Fresh (h)</label>
+<input class="w-full bg-surface-container-highest border-none rounded-lg text-sm" type="number" value="1"/>
+</div>
+</div>
+<button class="w-full py-3 bg-primary text-on-primary font-bold rounded-lg mt-4 shadow-xl shadow-primary/10 hover:brightness-110 active:scale-[0.98] transition-all" type="submit">
+                            Enregistrer les modifications
+                        </button>
+</form>
+</div>
+<!-- Section 4: Health Snapshots -->
+<div class="bg-surface-container p-6 rounded-xl border border-white/5">
+<div class="flex justify-between items-center mb-6">
+<p class="text-xs font-bold text-on-surface-variant tracking-widest uppercase">Health Snapshots</p>
+<span class="material-symbols-outlined text-tertiary cursor-pointer" data-icon="refresh">refresh</span>
+</div>
+<div class="space-y-6 relative before:content-[''] before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[1px] before:bg-white/10">
+<!-- Snapshot Item -->
+<div class="relative pl-8">
+<div class="absolute left-0 top-1.5 w-[22px] h-[22px] bg-tertiary/20 rounded-full flex items-center justify-center">
+<div class="w-2 h-2 bg-tertiary rounded-full"></div>
+</div>
+<div class="flex justify-between items-start">
+<h4 class="text-sm font-bold">Excellent Health</h4>
+<span class="text-[10px] font-mono opacity-50">Maintenant</span>
+</div>
+<p class="text-xs text-on-surface-variant mt-1 leading-relaxed">Latency: 240ms. Validation schema passed for 1,200 entities.</p>
+</div>
+<!-- Snapshot Item -->
+<div class="relative pl-8">
+<div class="absolute left-0 top-1.5 w-[22px] h-[22px] bg-primary/20 rounded-full flex items-center justify-center">
+<div class="w-2 h-2 bg-primary rounded-full"></div>
+</div>
+<div class="flex justify-between items-start">
+<h4 class="text-sm font-bold">Minor Delay</h4>
+<span class="text-[10px] font-mono opacity-50">12:15 AM</span>
+</div>
+<p class="text-xs text-on-surface-variant mt-1 leading-relaxed">Facebook API returned 429 (Rate Limit). Retrying in 15min.</p>
+</div>
+<!-- Snapshot Item -->
+<div class="relative pl-8">
+<div class="absolute left-0 top-1.5 w-[22px] h-[22px] bg-error/20 rounded-full flex items-center justify-center">
+<div class="w-2 h-2 bg-error rounded-full"></div>
+</div>
+<div class="flex justify-between items-start">
+<h4 class="text-sm font-bold">Auth Expired</h4>
+<span class="text-[10px] font-mono opacity-50">Hier</span>
+</div>
+<p class="text-xs text-on-surface-variant mt-1 leading-relaxed">Token for 'YouTube Reviews' needs manual refresh in settings.</p>
+</div>
+</div>
+</div>
+<!-- Promotional Branding / Context -->
+<div class="relative h-32 rounded-xl overflow-hidden group">
+<img alt="Fresh orange juice splashing" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" data-alt="Close up of fresh orange juice with energetic water splashes and vibrant fruit in a high-end minimalist setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBSdSs4XGLn4SNa_zHikQLJ_o2ViMn00ZoyCb47leyCDQRGv5Ow44M9OC7JOGYrPJlD_Kt7Egx8ubplQrpfvUPNB2eKyo2t9kMTURSkdbMH5BS4NOaeXhcL3-IXU1ZyZ7ZEjEz83oCBdjnF3a_u67x2q8nKqKOEYoL5THw9mqsA71bSdItfF6XqlpO6WioXypIS_0IBRg_Xzc5njAfdKBlVzpvkmIlkb4PCrHiqm8-Sb4PBh40lCSCbFvR4up4BlEJ8bFla74a2gFBL"/>
+<div class="absolute inset-0 bg-gradient-to-t from-background to-transparent flex flex-col justify-end p-4">
+<span class="text-[10px] font-bold text-primary tracking-[0.2em] uppercase">Context Contextuel</span>
+<p class="text-sm font-medium text-white/90">Analyse de campagne : Ramy Orange Pulp - Été 2024</p>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- Background Elements -->
+<div class="fixed top-0 left-0 w-full h-full pointer-events-none z-[-1] opacity-20">
+<div class="absolute top-[10%] left-[20%] w-96 h-96 bg-primary/20 blur-[120px] rounded-full"></div>
+<div class="absolute bottom-[20%] right-[10%] w-[500px] h-[500px] bg-tertiary/10 blur-[160px] rounded-full"></div>
+</div>
+</body></html>
