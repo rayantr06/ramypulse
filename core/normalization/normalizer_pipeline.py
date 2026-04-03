@@ -56,18 +56,29 @@ def _resolve_entities(text: str, source_metadata: dict, db_path=None) -> dict:
     }
 
 
-def run_normalization_job(batch_size: int = 200, db_path=None, normalizer_version: str = DEFAULT_NORMALIZER_VERSION) -> dict:
+def run_normalization_job(
+    batch_size: int = 200,
+    db_path=None,
+    normalizer_version: str = DEFAULT_NORMALIZER_VERSION,
+    client_id: str | None = None,
+) -> dict:
     """Traite les raw_documents non normalisés et écrit les tables cibles."""
     with _get_connection(db_path) as connection:
+        params: list = []
+        where_clause = "WHERE is_normalized = 0"
+        if client_id:
+            where_clause += " AND client_id = ?"
+            params.append(client_id)
+        params.append(batch_size)
         rows = connection.execute(
-            """
+            f"""
             SELECT *
             FROM raw_documents
-            WHERE is_normalized = 0
+            {where_clause}
             ORDER BY collected_at ASC
             LIMIT ?
             """,
-            (batch_size,),
+            tuple(params),
         ).fetchall()
 
         processed_count = 0

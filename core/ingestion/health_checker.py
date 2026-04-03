@@ -19,13 +19,27 @@ def _get_connection(db_path=None) -> sqlite3.Connection:
     return connection
 
 
-def compute_source_health(source_id: str, *, db_path=None) -> dict:
+def compute_source_health(source_id: str, *, db_path=None, client_id: str | None = None) -> dict:
     """Calcule un score simple de santé et persiste un snapshot."""
     with _get_connection(db_path) as connection:
-        source = connection.execute(
-            "SELECT freshness_sla_hours, last_sync_at FROM sources WHERE source_id = ?",
-            (source_id,),
-        ).fetchone()
+        if client_id:
+            source = connection.execute(
+                """
+                SELECT client_id, freshness_sla_hours, last_sync_at
+                FROM sources
+                WHERE source_id = ? AND client_id = ?
+                """,
+                (source_id, client_id),
+            ).fetchone()
+        else:
+            source = connection.execute(
+                """
+                SELECT client_id, freshness_sla_hours, last_sync_at
+                FROM sources
+                WHERE source_id = ?
+                """,
+                (source_id,),
+            ).fetchone()
         if source is None:
             raise KeyError(source_id)
 
@@ -61,6 +75,7 @@ def compute_source_health(source_id: str, *, db_path=None) -> dict:
         snapshot = {
             "snapshot_id": f"health-{uuid.uuid4()}",
             "source_id": source_id,
+            "client_id": source["client_id"],
             "health_score": health_score,
             "success_rate_pct": success_rate_pct,
             "freshness_hours": freshness_hours,
@@ -74,7 +89,15 @@ def compute_source_health(source_id: str, *, db_path=None) -> dict:
                 freshness_hours, records_fetched_avg, computed_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
-            tuple(snapshot.values()),
+            (
+                snapshot["snapshot_id"],
+                snapshot["source_id"],
+                snapshot["health_score"],
+                snapshot["success_rate_pct"],
+                snapshot["freshness_hours"],
+                snapshot["records_fetched_avg"],
+                snapshot["computed_at"],
+            ),
         )
         connection.commit()
     return snapshot

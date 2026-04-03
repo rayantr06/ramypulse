@@ -82,14 +82,20 @@ class IngestionOrchestrator:
                 tuple(source.values()),
             )
             connection.commit()
-        return self.get_source(source["source_id"])
+        return self.get_source(source["source_id"], client_id=source["client_id"])
 
-    def get_source(self, source_id: str) -> dict | None:
+    def get_source(self, source_id: str, *, client_id: str | None = None) -> dict | None:
         with self._get_connection() as connection:
-            row = connection.execute(
-                "SELECT * FROM sources WHERE source_id = ?",
-                (source_id,),
-            ).fetchone()
+            if client_id:
+                row = connection.execute(
+                    "SELECT * FROM sources WHERE source_id = ? AND client_id = ?",
+                    (source_id, client_id),
+                ).fetchone()
+            else:
+                row = connection.execute(
+                    "SELECT * FROM sources WHERE source_id = ?",
+                    (source_id,),
+                ).fetchone()
         return dict(row) if row else None
 
     def _select_connector(self, source: dict):
@@ -145,9 +151,10 @@ class IngestionOrchestrator:
         column_mapping: dict[str, str] | None = None,
         run_mode: str = "manual",
         credentials: dict | None = None,
+        client_id: str | None = None,
     ) -> dict:
         """Exécute un run de synchronisation et insère les raw_documents."""
-        source = self.get_source(source_id)
+        source = self.get_source(source_id, client_id=client_id)
         if source is None:
             raise KeyError(source_id)
 
@@ -219,6 +226,15 @@ class IngestionOrchestrator:
             )
             raise
 
-    def run_normalization_cycle(self, batch_size: int = 200) -> dict:
+    def run_normalization_cycle(
+        self,
+        batch_size: int = 200,
+        *,
+        client_id: str | None = None,
+    ) -> dict:
         """Délègue au pipeline de normalisation Wave 5.2."""
-        return run_normalization_job(batch_size=batch_size, db_path=self.db_path)
+        return run_normalization_job(
+            batch_size=batch_size,
+            db_path=self.db_path,
+            client_id=client_id,
+        )

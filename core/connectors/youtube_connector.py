@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
-from core.connectors.base_connector import BaseConnector
+from core.connectors.platform_snapshot_connector import SnapshotPlatformConnector
 
 
-class YouTubeConnector(BaseConnector):
-    """Connecteur stub pour YouTube."""
+class YouTubeConnector(SnapshotPlatformConnector):
+    """Connecteur YouTube via snapshot local ou collecteur optionnel."""
 
-    def fetch_documents(self, source: dict, *, credentials: dict | None = None, **kwargs) -> list[dict]:
-        return []
+    def __init__(self) -> None:
+        super().__init__(
+            platform="youtube",
+            default_snapshot_names=("youtube_raw.parquet",),
+            scraper_modules=("core.ingestion.scraper_youtube",),
+        )

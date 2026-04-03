@@ -1,17 +1,16 @@
-"""Connecteur Facebook Pages Wave 5.1.
-
-Implémentation fondation: le contrat est présent, l'appel API officiel sera
-branché dans un slice ultérieur.
-"""
+"""Connecteur Facebook Pages Wave 5.1."""
 
 from __future__ import annotations
 
-from core.connectors.base_connector import BaseConnector
+from core.connectors.platform_snapshot_connector import SnapshotPlatformConnector
 
 
-class FacebookConnector(BaseConnector):
-    """Connecteur stub pour Facebook Pages."""
+class FacebookConnector(SnapshotPlatformConnector):
+    """Connecteur Facebook via snapshot local ou collecteur optionnel."""
 
-    def fetch_documents(self, source: dict, *, credentials: dict | None = None, **kwargs) -> list[dict]:
-        return []
-
+    def __init__(self) -> None:
+        super().__init__(
+            platform="facebook",
+            default_snapshot_names=("facebook_raw.parquet",),
+            scraper_modules=("core.ingestion.scraper_facebook",),
+        )
