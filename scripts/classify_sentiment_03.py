@@ -28,6 +28,7 @@ from core.analysis.absa_engine import run_absa_pipeline
 from core.business_catalog import WilayaCatalog
 from core.database import DatabaseManager
 from core.entity_resolver import EntityResolver
+from core.runtime.diagnostics import collect_runtime_diagnostics
 
 logging.basicConfig(
     level=logging.INFO,
@@ -161,6 +162,13 @@ def classify_sentiment(
     """
     input_path = Path(input_path) if input_path is not None else config.PROCESSED_DATA_DIR / "clean.parquet"
     output_path = Path(output_path) if output_path is not None else config.PROCESSED_DATA_DIR / "annotated.parquet"
+
+    diagnostics = collect_runtime_diagnostics()
+    logger.info(
+        "Annotation backend actif: %s | mode=%s",
+        diagnostics["annotation"]["backend_label"],
+        diagnostics["mode"],
+    )
 
     logger.info("Chargement de %s", input_path)
     dataframe = pd.read_parquet(input_path)

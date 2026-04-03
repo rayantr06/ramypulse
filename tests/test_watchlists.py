@@ -7,6 +7,7 @@ import sqlite3
 import sys
 from pathlib import Path
 
+import pandas as pd
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -178,3 +179,64 @@ def test_deactivate_watchlist_met_is_active_a_zero(
     assert result is True
     assert watchlist is not None
     assert watchlist["is_active"] == 0
+
+
+def test_suggest_watchlists_retourne_des_candidates_priorises() -> None:
+    """Le moteur doit proposer des watchlists auto a partir des segments les plus faibles."""
+    manager = _import_or_fail("core.watchlists.watchlist_manager")
+
+    dataframe = pd.DataFrame(
+        [
+            {
+                "text": "rupture oran",
+                "sentiment_label": "négatif",
+                "channel": "facebook",
+                "aspect": "disponibilité",
+                "wilaya": "oran",
+                "product": "ramy_citron",
+                "timestamp": "2026-03-18T10:00:00",
+                "source_url": "https://example.test/1",
+            },
+            {
+                "text": "toujours absent oran",
+                "sentiment_label": "très_négatif",
+                "channel": "facebook",
+                "aspect": "disponibilité",
+                "wilaya": "oran",
+                "product": "ramy_citron",
+                "timestamp": "2026-03-19T10:00:00",
+                "source_url": "https://example.test/2",
+            },
+            {
+                "text": "pas trouvé oran",
+                "sentiment_label": "négatif",
+                "channel": "facebook",
+                "aspect": "disponibilité",
+                "wilaya": "oran",
+                "product": "ramy_citron",
+                "timestamp": "2026-03-20T10:00:00",
+                "source_url": "https://example.test/3",
+            },
+            {
+                "text": "produit bon alger",
+                "sentiment_label": "positif",
+                "channel": "facebook",
+                "aspect": "goût",
+                "wilaya": "alger",
+                "product": "ramy_citron",
+                "timestamp": "2026-03-20T11:00:00",
+                "source_url": "https://example.test/4",
+            },
+        ]
+    )
+    dataframe["timestamp"] = pd.to_datetime(dataframe["timestamp"])
+
+    suggestions = manager.suggest_watchlists(dataframe, limit=3)
+
+    assert suggestions
+    top = suggestions[0]
+    assert top["scope_type"] == "cross_dimension"
+    assert top["filters"]["aspect"] == "disponibilité"
+    assert top["filters"]["wilaya"] == "oran"
+    assert "NSS" in top["reason"]
+    assert top["metrics"]["volume"] == 3

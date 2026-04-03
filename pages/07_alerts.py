@@ -12,7 +12,9 @@ import streamlit as st
 from config import ANNOTATED_PARQUET_PATH, DEFAULT_CLIENT_ID
 from core.alerts.alert_detector import run_alert_detection
 from core.alerts.alert_manager import list_alerts, update_alert_status
+from core.runtime.diagnostics import collect_runtime_diagnostics
 from ui_helpers.annotated_data import load_annotated_parquet
+from ui_helpers.runtime_panel import render_runtime_panel
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +25,12 @@ st.set_page_config(page_title="Alertes - RamyPulse", layout="wide")
 def load_data() -> pd.DataFrame:
     """Charge les donnees annotees ou retourne un DataFrame vide."""
     return load_annotated_parquet(ANNOTATED_PARQUET_PATH)
+
+
+@st.cache_data(ttl=60, show_spinner=False)
+def load_runtime_diagnostics() -> dict:
+    """Charge le diagnostic runtime partage."""
+    return collect_runtime_diagnostics()
 
 
 def _status_options() -> list[str]:
@@ -65,6 +73,7 @@ df = load_data()
 
 st.title("Centre d'alertes")
 st.caption(f"Cycle de vie des alertes pour le client {DEFAULT_CLIENT_ID}.")
+render_runtime_panel(load_runtime_diagnostics(), title="Diagnostic runtime")
 
 if df.empty:
     st.warning("Donnees non disponibles. Lancez d'abord scripts/run_demo_05.py")

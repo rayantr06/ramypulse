@@ -186,6 +186,12 @@ def _severity(rule_id: str, *, value: float | None = None, ratio: float | None =
         return "critical" if value is not None and value < 0 else "high"
     if rule_id == "negative_volume_surge":
         return "critical" if ratio is not None and ratio >= 80 else "high"
+    if rule_id == "volume_anomaly":
+        return "critical" if ratio is not None and ratio >= 3.0 else "high"
+    if rule_id == "nss_temporal_drift":
+        return "high" if value is not None and value <= -20 else "medium"
+    if rule_id.startswith("segment_divergence_"):
+        return "critical" if value is not None and value >= 50 else "high"
     if rule_id == "no_recent_signals":
         return "high"
     if rule_id.startswith("aspect_critical_"):
@@ -216,7 +222,11 @@ def _now() -> str:
 
 def _rule_key(rule_id: str) -> str:
     """Ramène un identifiant de règle dérivé vers sa règle de base."""
-    return "aspect_critical" if rule_id.startswith("aspect_critical_") else rule_id
+    if rule_id.startswith("aspect_critical_"):
+        return "aspect_critical"
+    if rule_id.startswith("segment_divergence_"):
+        return "segment_divergence"
+    return rule_id
 
 
 def _load_rule_settings(connection: sqlite3.Connection) -> dict[str, dict]:
@@ -297,6 +307,61 @@ def _persist_watchlist_snapshot(connection: sqlite3.Connection, metrics: dict) -
             metrics.get("computed_at") or _now(),
         ),
     )
+
+
+def _load_recent_watchlist_snapshots(
+    connection: sqlite3.Connection,
+    watchlist_id: str,
+    limit: int,
+) -> list[dict]:
+    """Charge les snapshots precedents d'une watchlist pour les regles historiques."""
+    rows = connection.execute(
+        """
+        SELECT watchlist_id, nss_current, volume_current, computed_at
+        FROM watchlist_metric_snapshots
+        WHERE watchlist_id = ?
+        ORDER BY computed_at DESC
+        LIMIT ?
+        """,
+        (watchlist_id, limit),
+    ).fetchall()
+    history: list[dict] = []
+    for row in rows:
+        payload = dict(row)
+        payload["computed_at"] = pd.to_datetime(payload.get("computed_at"), errors="coerce")
+        history.append(payload)
+    return list(reversed(history))
+
+
+def _z_score(current_value: float, history_values: list[float]) -> float | None:
+    """Calcule un z-score simple contre un historique numerique."""
+    if len(history_values) < 2:
+        return None
+    series = pd.Series(history_values, dtype="float64")
+    std = float(series.std(ddof=0))
+    if std <= 0:
+        return None
+    return (current_value - float(series.mean())) / std
+
+
+def _series_is_strictly_decreasing(values: list[float]) -> bool:
+    """Indique si une serie baisse strictement a chaque periode."""
+    if len(values) < 2:
+        return False
+    return all(values[index] < values[index - 1] for index in range(1, len(values)))
+
+
+def _segment_nss_map(current: pd.DataFrame, column: str) -> dict[str, float]:
+    """Calcule le NSS par segment pour la fenetre courante."""
+    if column not in current.columns:
+        return {}
+    mapping: dict[str, float] = {}
+    for segment_value, group in current.groupby(column):
+        if segment_value in (None, ""):
+            continue
+        metrics = calculate_nss(group)
+        mapping[str(segment_value)] = float(metrics["nss_global"])
+    return mapping
 
 
 def _meets_min_volume(watchlist: dict, metrics: dict, *, include_previous: bool = False) -> bool:
@@ -538,6 +603,11 @@ def run_alert_detection(df_annotated: pd.DataFrame) -> list[str]:
         scoped = _filter_scope(watchlist, dataframe)
         metrics = compute_watchlist_metrics(watchlist, dataframe)
         with _get_connection() as connection:
+            history_snapshots = _load_recent_watchlist_snapshots(
+                connection,
+                watchlist["watchlist_id"],
+                limit=12,
+            )
             _persist_watchlist_snapshot(connection, metrics)
             connection.commit()
 
@@ -553,6 +623,9 @@ def run_alert_detection(df_annotated: pd.DataFrame) -> list[str]:
         no_recent_days = _rule_lookback_days(rule_settings, "no_recent_signals", 7)
         aspect_threshold = _rule_threshold(rule_settings, "aspect_critical", -10.0)
         volume_drop_threshold = _rule_threshold(rule_settings, "volume_drop", 50.0)
+        anomaly_threshold = _rule_threshold(rule_settings, "volume_anomaly", 2.0)
+        drift_periods = _rule_lookback_days(rule_settings, "nss_temporal_drift", 3)
+        divergence_threshold = _rule_threshold(rule_settings, "segment_divergence", 25.0)
 
         if min_volume_ready and current_nss is not None and current_nss < nss_threshold:
             alert_id = _create_detection_alert(
@@ -588,6 +661,37 @@ def run_alert_detection(df_annotated: pd.DataFrame) -> list[str]:
             )
             if alert_id:
                 created_alert_ids.append(alert_id)
+
+        if min_volume_ready:
+            historical_volumes = [
+                float(item["volume_current"])
+                for item in history_snapshots
+                if item.get("volume_current") is not None
+            ]
+            volume_z_score = _z_score(float(metrics["volume_current"]), historical_volumes)
+            if volume_z_score is not None and abs(volume_z_score) > anomaly_threshold:
+                historical_mean = float(pd.Series(historical_volumes, dtype="float64").mean())
+                historical_std = float(pd.Series(historical_volumes, dtype="float64").std(ddof=0))
+                alert_id = _create_detection_alert(
+                    watchlist,
+                    "volume_anomaly",
+                    title=f"Anomalie de volume sur {watchlist['watchlist_name']}",
+                    description=(
+                        f"Le volume courant ({metrics['volume_current']}) s'ecarte fortement de la moyenne "
+                        f"historique ({historical_mean:.1f}) sur {watchlist['watchlist_name']}."
+                    ),
+                    metrics=metrics,
+                    metric_current=metrics["volume_current"],
+                    metric_previous=historical_mean,
+                    extra={
+                        "z_score": round(volume_z_score, 2),
+                        "historical_mean": round(historical_mean, 2),
+                        "historical_std": round(historical_std, 2),
+                    },
+                    severity_ratio=abs(volume_z_score),
+                )
+                if alert_id:
+                    created_alert_ids.append(alert_id)
 
         last_signal_at = scoped["timestamp"].dropna().max() if not scoped.empty else pd.NaT
         if pd.isna(last_signal_at) or last_signal_at <= reference_time - pd.Timedelta(days=no_recent_days):
@@ -629,6 +733,69 @@ def run_alert_detection(df_annotated: pd.DataFrame) -> list[str]:
                     metric_previous=metrics["nss_previous"],
                     extra={"aspect": aspect_name},
                     severity_value=aspect_nss,
+                )
+                if alert_id:
+                    created_alert_ids.append(alert_id)
+
+            historical_nss = [
+                float(item["nss_current"])
+                for item in history_snapshots
+                if item.get("nss_current") is not None
+            ]
+            drift_series = historical_nss[-drift_periods:] + ([float(current_nss)] if current_nss is not None else [])
+            if len(drift_series) >= drift_periods + 1 and _series_is_strictly_decreasing(drift_series):
+                alert_id = _create_detection_alert(
+                    watchlist,
+                    "nss_temporal_drift",
+                    title=f"Derive NSS sur {watchlist['watchlist_name']}",
+                    description=(
+                        f"Le NSS baisse de facon continue depuis {len(drift_series)} periodes "
+                        f"sur {watchlist['watchlist_name']}."
+                    ),
+                    metrics=metrics,
+                    metric_current=current_nss,
+                    metric_previous=drift_series[-2] if len(drift_series) >= 2 else None,
+                    extra={"nss_series": [round(value, 2) for value in drift_series]},
+                    severity_value=current_nss,
+                )
+                if alert_id:
+                    created_alert_ids.append(alert_id)
+
+            segment_candidates: list[tuple[str, dict[str, float]]] = []
+            filters = watchlist.get("filters", {})
+            if filters.get("wilaya") in (None, ""):
+                wilaya_scores = _segment_nss_map(current, "wilaya")
+                if len(wilaya_scores) >= 2:
+                    segment_candidates.append(("wilaya", wilaya_scores))
+            if filters.get("channel") in (None, ""):
+                channel_scores = _segment_nss_map(current, "channel")
+                if len(channel_scores) >= 2:
+                    segment_candidates.append(("channel", channel_scores))
+
+            for segment_name, segment_scores in segment_candidates:
+                max_segment = max(segment_scores.items(), key=lambda item: item[1])
+                min_segment = min(segment_scores.items(), key=lambda item: item[1])
+                gap = abs(max_segment[1] - min_segment[1])
+                if gap <= divergence_threshold:
+                    continue
+                alert_id = _create_detection_alert(
+                    watchlist,
+                    f"segment_divergence_{segment_name}",
+                    title=f"Divergence {segment_name} sur {watchlist['watchlist_name']}",
+                    description=(
+                        f"L'ecart NSS entre {segment_name} {max_segment[0]} et {min_segment[0]} "
+                        f"atteint {gap:.1f} points sur {watchlist['watchlist_name']}."
+                    ),
+                    metrics=metrics,
+                    metric_current=gap,
+                    metric_previous=None,
+                    extra={
+                        "segment": segment_name,
+                        "segment_scores": {key: round(value, 2) for key, value in segment_scores.items()},
+                        "max_segment": max_segment[0],
+                        "min_segment": min_segment[0],
+                    },
+                    severity_value=gap,
                 )
                 if alert_id:
                     created_alert_ids.append(alert_id)

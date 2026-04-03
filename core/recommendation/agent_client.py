@@ -167,6 +167,97 @@ def _build_user_prompt(context: dict) -> str:
     )
 
 
+def _default_data_basis(context: dict) -> str:
+    """Construit une base de donnees minimale quand le LLM oublie de la fournir."""
+    metrics = context.get("current_metrics", {})
+    volume_total = metrics.get("volume_total", 0)
+    nss_global = metrics.get("nss_global")
+    top_negative = metrics.get("top_negative_aspects", [])
+    top_negative_text = ", ".join(top_negative[:2]) if top_negative else "aucun aspect prioritaire"
+    nss_text = "indisponible" if nss_global is None else f"{float(nss_global):.1f}"
+    return (
+        f"Base RamyPulse: NSS global {nss_text}, volume {int(volume_total)} signaux, "
+        f"aspects prioritaires {top_negative_text}."
+    )
+
+
+def _default_data_quality_note(context: dict) -> str:
+    """Construit une note de qualite si le modele n'en donne pas."""
+    quality = context.get("data_quality", {})
+    volume_total = int(quality.get("volume_total") or context.get("current_metrics", {}).get("volume_total", 0) or 0)
+    channel_count = int(quality.get("channel_count") or 0)
+    rag_chunk_count = int(quality.get("rag_chunk_count") or len(context.get("rag_chunks", [])))
+    notes: list[str] = [f"{volume_total} signaux"]
+    if channel_count:
+        notes.append(f"{channel_count} canal(aux)")
+    notes.append(f"{rag_chunk_count} extrait(s) RAG")
+    if volume_total < 50:
+        notes.append("fiabilite limitee: volume faible")
+    if channel_count <= 1:
+        notes.append("couverture limitee: dataset mono-canal")
+    return ". ".join(notes) + "."
+
+
+def _normalize_recommendation_item(item: dict, context: dict, index: int) -> dict:
+    """Complete une recommandation partielle avec des champs defensifs."""
+    normalized = dict(item or {})
+    normalized.setdefault("id", f"rec_{index:03d}")
+    normalized.setdefault("priority", "medium")
+    normalized.setdefault("type", "content_organic")
+    normalized.setdefault("title", f"Recommendation {index}")
+    normalized.setdefault("rationale", "A confirmer a partir des donnees RamyPulse.")
+    normalized.setdefault("target_platform", "multi_platform")
+    normalized.setdefault("target_segment", "audience Ramy prioritaire")
+    normalized.setdefault("target_regions", [])
+    normalized.setdefault("target_aspects", context.get("current_metrics", {}).get("top_negative_aspects", [])[:2])
+    normalized.setdefault("timing", {"urgency": "within_week", "best_moment": "des que possible"})
+    normalized.setdefault(
+        "influencer_profile",
+        {"tier": "none", "niche": "", "tone": "", "engagement_focus": ""},
+    )
+    content = dict(normalized.get("content") or {})
+    hooks = [str(hook).strip() for hook in content.get("hooks", []) if str(hook).strip()]
+    if not hooks:
+        title = normalized.get("title", "Action Ramy")
+        hooks = [
+            f"{title} - version francaise claire",
+            f"{title} - formule darija simple pour reseaux sociaux",
+        ]
+    content["hooks"] = hooks
+    content.setdefault("script_outline", "")
+    content.setdefault("key_messages", [])
+    content.setdefault("visual_direction", "")
+    content.setdefault("call_to_action", "")
+    normalized["content"] = content
+    normalized["data_basis"] = str(normalized.get("data_basis") or "").strip() or _default_data_basis(context)
+    return normalized
+
+
+def _finalize_result_payload(result: dict, context: dict) -> dict:
+    """Normalise la reponse LLM et applique les garde-fous qualite produit."""
+    payload = dict(result)
+    recommendations = payload.get("recommendations", [])
+    if not isinstance(recommendations, list):
+        recommendations = []
+    payload["recommendations"] = [
+        _normalize_recommendation_item(item if isinstance(item, dict) else {}, context, index)
+        for index, item in enumerate(recommendations, start=1)
+    ]
+
+    try:
+        confidence = float(payload.get("confidence_score", 0.0) or 0.0)
+    except (TypeError, ValueError):
+        confidence = 0.0
+    confidence = max(0.0, min(1.0, confidence))
+    volume_total = int(context.get("current_metrics", {}).get("volume_total", 0) or 0)
+    if volume_total < 50:
+        confidence = min(confidence, 0.45)
+    payload["confidence_score"] = round(confidence, 2)
+    payload["data_quality_note"] = str(payload.get("data_quality_note") or "").strip() or _default_data_quality_note(context)
+    payload["analysis_summary"] = str(payload.get("analysis_summary") or "").strip()
+    return payload
+
+
 # ---------------------------------------------------------------------------
 # Appels providers
 # ---------------------------------------------------------------------------
@@ -367,6 +458,7 @@ def generate_recommendations(
 
     generation_ms = int((time.monotonic() - t_start) * 1000)
 
+    result = _finalize_result_payload(result, context)
     result["provider_used"] = provider
     result["model_used"] = resolved_model
     result["generation_ms"] = generation_ms

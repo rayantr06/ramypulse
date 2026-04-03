@@ -22,9 +22,11 @@ from config import (
     DEFAULT_CLIENT_ID,
     OLLAMA_BASE_URL,
 )
+from core.runtime.diagnostics import collect_runtime_diagnostics
 from core.recommendation.agent_client import MODEL_CATALOG
 from core.security.secret_manager import is_secret_reference, resolve_secret, store_secret
 from ui_helpers.annotated_data import load_annotated_parquet
+from ui_helpers.runtime_panel import render_runtime_panel
 
 logger = logging.getLogger(__name__)
 
@@ -54,12 +56,19 @@ def load_data() -> pd.DataFrame:
     return load_annotated_parquet(ANNOTATED_PARQUET_PATH)
 
 
+@st.cache_data(ttl=60, show_spinner=False)
+def load_runtime_diagnostics() -> dict:
+    """Charge le diagnostic runtime partage."""
+    return collect_runtime_diagnostics()
+
+
 df = load_data()
 
 # ─── Header ──────────────────────────────────────────────────────────────────
 
 st.title("Recommendation Center")
 st.caption("Genere des recommandations marketing actionnables a partir des donnees RamyPulse.")
+render_runtime_panel(load_runtime_diagnostics(), title="Diagnostic runtime")
 
 if df.empty:
     st.warning("Donnees non disponibles. Lancez d'abord scripts/run_demo_05.py")
@@ -165,6 +174,22 @@ if preview_btn:
             col_d1.metric("Alertes actives", len(ctx.get("active_alerts", [])))
             col_d2.metric("Watchlists actives", len(ctx.get("active_watchlists", [])))
             col_d3.metric("Campagnes récentes", len(ctx.get("recent_campaigns", [])))
+
+            trigger_focus = ctx.get("trigger_focus", {})
+            if trigger_focus.get("watchlist_id") or trigger_focus.get("campaign_ids"):
+                st.caption(
+                    "Focus déclencheur : "
+                    f"watchlist={str(trigger_focus.get('watchlist_id') or 'aucune')[:8]}... | "
+                    f"campagnes ciblées={len(trigger_focus.get('campaign_ids', []))}"
+                )
+
+            data_quality = ctx.get("data_quality", {})
+            if data_quality.get("sparse_dataset") or data_quality.get("mono_channel_dataset"):
+                st.warning(
+                    "Qualité de contexte limitée : "
+                    f"{data_quality.get('volume_total', 0)} signaux, "
+                    f"{data_quality.get('channel_count', 0)} canal(aux)."
+                )
 
             rag = ctx.get("rag_chunks", [])
             if rag:

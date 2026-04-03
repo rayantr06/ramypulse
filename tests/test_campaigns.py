@@ -31,6 +31,13 @@ from core.campaigns.impact_calculator import (
     compute_campaign_impact,
     filter_signals_for_campaign,
 )
+from ui_helpers.campaigns_helpers import (
+    build_campaign_comparison_frame,
+    build_campaign_daily_nss_frame,
+    build_campaign_signal_details_frame,
+    build_campaign_timeline_frame,
+    build_phase_absa_matrix,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -665,3 +672,272 @@ def test_compute_campaign_impact_cree_alerte_campaign_underperformance() -> None
 
     assert len(underperformance_alerts) == 1
     assert underperformance_alerts[0]["alert_payload"]["campaign_id"] == cid
+
+
+# ---------------------------------------------------------------------------
+# Tests helpers de visualisation campagne
+# ---------------------------------------------------------------------------
+
+
+def test_build_campaign_timeline_frame_respecte_bornes_pre_active_post(sample_campaign):
+    """Les bornes de timeline doivent respecter les fenetres PRD avant/pendant/apres."""
+    campaign = {
+        **sample_campaign,
+        "pre_window_days": 3,
+        "post_window_days": 2,
+    }
+
+    frame = build_campaign_timeline_frame(campaign)
+
+    assert frame["phase"].tolist() == ["pre", "active", "post"]
+    assert frame.loc[frame["phase"] == "pre", "start"].iloc[0] == pd.Timestamp("2026-01-29")
+    assert frame.loc[frame["phase"] == "pre", "end"].iloc[0] == pd.Timestamp("2026-01-31 23:59:59.999999")
+    assert frame.loc[frame["phase"] == "active", "start"].iloc[0] == pd.Timestamp("2026-02-01")
+    assert frame.loc[frame["phase"] == "active", "end"].iloc[0] == pd.Timestamp("2026-02-15 23:59:59.999999")
+    assert frame.loc[frame["phase"] == "post", "start"].iloc[0] == pd.Timestamp("2026-02-16")
+    assert frame.loc[frame["phase"] == "post", "end"].iloc[0] == pd.Timestamp("2026-02-17 23:59:59.999999")
+
+
+def test_build_campaign_daily_nss_frame_respecte_toutes_les_dates_et_phases():
+    """La serie journaliere doit couvrir toute la fenetre et conserver les phases."""
+    campaign = {
+        "platform": "instagram",
+        "target_aspects": [],
+        "target_regions": [],
+        "keywords": ["ramy"],
+        "start_date": "2026-02-10",
+        "end_date": "2026-02-11",
+        "pre_window_days": 2,
+        "post_window_days": 2,
+    }
+    dataframe = pd.DataFrame(
+        [
+            {
+                "text": "ramy pre positif",
+                "sentiment_label": "positif",
+                "channel": "instagram",
+                "aspect": "goût",
+                "wilaya": "oran",
+                "timestamp": "2026-02-08T12:00:00",
+            },
+            {
+                "text": "ramy pre negatif",
+                "sentiment_label": "négatif",
+                "channel": "instagram",
+                "aspect": "goût",
+                "wilaya": "oran",
+                "timestamp": "2026-02-09T12:00:00",
+            },
+            {
+                "text": "ramy active positif",
+                "sentiment_label": "positif",
+                "channel": "instagram",
+                "aspect": "emballage",
+                "wilaya": "oran",
+                "timestamp": "2026-02-10T12:00:00",
+            },
+            {
+                "text": "ramy active positif 2",
+                "sentiment_label": "positif",
+                "channel": "instagram",
+                "aspect": "emballage",
+                "wilaya": "oran",
+                "timestamp": "2026-02-11T12:00:00",
+            },
+            {
+                "text": "ramy post negatif",
+                "sentiment_label": "négatif",
+                "channel": "instagram",
+                "aspect": "prix",
+                "wilaya": "oran",
+                "timestamp": "2026-02-12T12:00:00",
+            },
+        ]
+    )
+    dataframe["timestamp"] = pd.to_datetime(dataframe["timestamp"])
+
+    series = build_campaign_daily_nss_frame(dataframe, campaign)
+
+    assert series["date"].dt.strftime("%Y-%m-%d").tolist() == [
+        "2026-02-08",
+        "2026-02-09",
+        "2026-02-10",
+        "2026-02-11",
+        "2026-02-12",
+        "2026-02-13",
+    ]
+    assert series["phase"].tolist() == ["pre", "pre", "active", "active", "post", "post"]
+    assert series.loc[series["date"] == pd.Timestamp("2026-02-13"), "volume"].iloc[0] == 0
+    assert pd.isna(series.loc[series["date"] == pd.Timestamp("2026-02-13"), "nss"].iloc[0])
+
+
+def test_build_campaign_daily_nss_frame_repete_le_baseline_pre():
+    """La baseline de la courbe doit correspondre au NSS global de la fenetre pre."""
+    campaign = {
+        "platform": "instagram",
+        "target_aspects": [],
+        "target_regions": [],
+        "keywords": ["ramy"],
+        "start_date": "2026-02-10",
+        "end_date": "2026-02-10",
+        "pre_window_days": 2,
+        "post_window_days": 1,
+    }
+    dataframe = pd.DataFrame(
+        [
+            {
+                "text": "ramy positif",
+                "sentiment_label": "positif",
+                "channel": "instagram",
+                "aspect": "goût",
+                "wilaya": "oran",
+                "timestamp": "2026-02-08T12:00:00",
+            },
+            {
+                "text": "ramy negatif",
+                "sentiment_label": "négatif",
+                "channel": "instagram",
+                "aspect": "goût",
+                "wilaya": "oran",
+                "timestamp": "2026-02-09T12:00:00",
+            },
+            {
+                "text": "ramy actif",
+                "sentiment_label": "positif",
+                "channel": "instagram",
+                "aspect": "emballage",
+                "wilaya": "oran",
+                "timestamp": "2026-02-10T12:00:00",
+            },
+        ]
+    )
+    dataframe["timestamp"] = pd.to_datetime(dataframe["timestamp"])
+
+    series = build_campaign_daily_nss_frame(dataframe, campaign)
+
+    assert series["baseline_nss_pre"].nunique() == 1
+    assert series["baseline_nss_pre"].iloc[0] == pytest.approx(0.0)
+
+
+def test_build_phase_absa_matrix_force_grille_5x5():
+    """La matrice ABSA doit toujours retourner la grille fixe 5 aspects x 5 sentiments."""
+    dataframe = pd.DataFrame(
+        [
+            {"aspect": "goût", "sentiment_label": "positif"},
+            {"aspect": "goût", "sentiment_label": "positif"},
+            {"aspect": "prix", "sentiment_label": "négatif"},
+        ]
+    )
+
+    matrix = build_phase_absa_matrix(dataframe)
+
+    assert matrix.shape == (5, 5)
+    assert int(matrix.loc["goût", "positif"]) == 2
+    assert int(matrix.loc["prix", "négatif"]) == 1
+    assert int(matrix.loc["emballage", "neutre"]) == 0
+
+
+def test_build_campaign_signal_details_frame_joint_les_liens_aux_lignes_source():
+    """Les liens campagne-signal doivent retrouver les metadonnees de la ligne source."""
+    campaign = {
+        "platform": "instagram",
+        "target_aspects": [],
+        "target_regions": [],
+        "keywords": ["ramy"],
+        "start_date": "2026-02-10",
+        "end_date": "2026-02-10",
+        "pre_window_days": 1,
+        "post_window_days": 1,
+    }
+    source_df = pd.DataFrame(
+        [
+            {
+                "text": "ramy pre source",
+                "sentiment_label": "positif",
+                "channel": "instagram",
+                "aspect": "goût",
+                "wilaya": "oran",
+                "timestamp": "2026-02-09T09:30:00",
+                "source_url": "",
+            },
+            {
+                "text": "ramy actif source",
+                "sentiment_label": "négatif",
+                "channel": "instagram",
+                "aspect": "emballage",
+                "wilaya": "oran",
+                "timestamp": "2026-02-10T10:45:00",
+                "source_url": "",
+            },
+        ]
+    )
+    source_df["timestamp"] = pd.to_datetime(source_df["timestamp"])
+    links_df = pd.DataFrame(
+        [
+            {
+                "phase": "pre",
+                "signal_id": ic_module._signal_id_for_row(source_df.iloc[0], "pre"),
+                "attribution_score": 0.7,
+                "attributed_at": "2026-02-11T00:00:00",
+            },
+            {
+                "phase": "active",
+                "signal_id": ic_module._signal_id_for_row(source_df.iloc[1], "active"),
+                "attribution_score": 0.9,
+                "attributed_at": "2026-02-11T00:00:00",
+            },
+        ]
+    )
+
+    details = build_campaign_signal_details_frame(links_df, source_df, campaign)
+
+    assert details["phase"].tolist() == ["active", "pre"]
+    assert details.iloc[0]["text_excerpt"] == "ramy actif source"
+    assert details.iloc[1]["text_excerpt"] == "ramy pre source"
+    assert details.iloc[0]["timestamp"] == pd.Timestamp("2026-02-10T10:45:00")
+
+
+def test_build_campaign_comparison_frame_ne_garde_que_le_dernier_post():
+    """La comparaison multi-campagnes doit prendre le dernier snapshot post par campagne."""
+    campaigns = [
+        {"campaign_id": "c1", "campaign_name": "Campagne 1"},
+        {"campaign_id": "c2", "campaign_name": "Campagne 2"},
+    ]
+    snapshots_df = pd.DataFrame(
+        [
+            {
+                "campaign_id": "c1",
+                "phase": "post",
+                "nss_uplift": 10.0,
+                "volume_lift_pct": 20.0,
+                "computed_at": "2026-02-10T10:00:00",
+            },
+            {
+                "campaign_id": "c1",
+                "phase": "post",
+                "nss_uplift": 15.0,
+                "volume_lift_pct": 25.0,
+                "computed_at": "2026-02-11T10:00:00",
+            },
+            {
+                "campaign_id": "c2",
+                "phase": "active",
+                "nss_uplift": 99.0,
+                "volume_lift_pct": 99.0,
+                "computed_at": "2026-02-12T10:00:00",
+            },
+            {
+                "campaign_id": "c2",
+                "phase": "post",
+                "nss_uplift": -5.0,
+                "volume_lift_pct": 5.0,
+                "computed_at": "2026-02-13T10:00:00",
+            },
+        ]
+    )
+
+    comparison = build_campaign_comparison_frame(campaigns, snapshots_df)
+
+    assert comparison["campaign_name"].tolist() == ["Campagne 1", "Campagne 2"]
+    assert comparison.loc[comparison["campaign_id"] == "c1", "uplift_nss"].iloc[0] == 15.0
+    assert comparison.loc[comparison["campaign_id"] == "c2", "uplift_volume_pct"].iloc[0] == 5.0

@@ -6,6 +6,8 @@ import logging
 from pathlib import Path
 
 import streamlit as st
+from core.runtime.diagnostics import collect_runtime_diagnostics
+from ui_helpers.runtime_panel import render_runtime_panel
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +40,12 @@ _DEMO_CHUNKS = [
         "score": 0.0276,
     },
 ]
+
+
+@st.cache_data(ttl=60, show_spinner=False)
+def _load_runtime_diagnostics() -> dict:
+    """Charge le diagnostic runtime partage pour les pages utilisateur."""
+    return collect_runtime_diagnostics()
 
 
 @st.cache_resource(show_spinner=False)
@@ -315,6 +323,7 @@ def main() -> None:
 
     runtime = _load_runtime()
     _render_header(runtime["mode"], runtime.get("reason"), runtime.get("backend_label"))
+    render_runtime_panel(_load_runtime_diagnostics(), title="Diagnostic runtime")
     _render_example_questions()
     _render_history()
 

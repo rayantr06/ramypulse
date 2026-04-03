@@ -9,6 +9,7 @@ import uuid
 from datetime import datetime
 
 import config
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -302,3 +303,82 @@ def update_watchlist(watchlist_id: str, updates: dict) -> bool:
 def deactivate_watchlist(watchlist_id: str) -> bool:
     """Desactive une watchlist sans la supprimer."""
     return update_watchlist(watchlist_id, {"is_active": 0})
+
+
+def suggest_watchlists(df_annotated: pd.DataFrame, limit: int = 5) -> list[dict]:
+    """Propose des watchlists automatiques a partir des segments les plus fragiles.
+
+    Heuristique v1:
+    - groupe par couple wilaya x aspect
+    - retient les segments avec au moins 3 signaux
+    - trie par NSS croissant puis volume decroissant
+    """
+    if df_annotated.empty:
+        return []
+
+    dataframe = df_annotated.copy()
+    for column in ("aspect", "wilaya", "channel", "product", "sentiment_label"):
+        if column not in dataframe.columns:
+            dataframe[column] = None
+    dataframe["aspect"] = dataframe["aspect"].fillna("").astype(str).str.strip()
+    dataframe["wilaya"] = dataframe["wilaya"].fillna("").astype(str).str.strip().str.lower()
+    dataframe["channel"] = dataframe["channel"].fillna("").astype(str).str.strip().str.lower()
+    dataframe["product"] = dataframe["product"].fillna("").astype(str).str.strip().str.lower()
+
+    candidates: list[dict] = []
+    grouped = dataframe.groupby(["wilaya", "aspect"], dropna=False)
+    for (wilaya, aspect), group in grouped:
+        if not wilaya or not aspect or len(group) < 3:
+            continue
+
+        positives = int(group["sentiment_label"].isin({"très_positif", "positif"}).sum())
+        negatives = int(group["sentiment_label"].isin({"très_négatif", "négatif"}).sum())
+        nss = round(((positives - negatives) / len(group)) * 100.0, 2)
+        channel_mode = (
+            group["channel"].mode(dropna=True).iloc[0]
+            if not group["channel"].dropna().empty
+            else None
+        )
+        product_mode = (
+            group["product"].mode(dropna=True).iloc[0]
+            if not group["product"].dropna().empty
+            else None
+        )
+
+        candidates.append(
+            {
+                "watchlist_name": f"Surveillance {aspect} {wilaya.title()}",
+                "description": (
+                    f"Suggestion auto pour surveiller {aspect} sur {wilaya.title()} "
+                    f"apres un NSS de {nss:.1f} sur {len(group)} signaux."
+                ),
+                "scope_type": "cross_dimension",
+                "filters": _normalize_filters(
+                    {
+                        "channel": channel_mode or None,
+                        "aspect": aspect,
+                        "wilaya": wilaya,
+                        "product": product_mode or None,
+                        "sentiment": None,
+                        "period_days": 7,
+                        "min_volume": max(3, min(10, len(group))),
+                    }
+                ),
+                "reason": f"NSS {aspect}/{wilaya} = {nss:.1f} sur {len(group)} signaux.",
+                "metrics": {
+                    "nss": nss,
+                    "volume": int(len(group)),
+                    "positive_count": positives,
+                    "negative_count": negatives,
+                },
+            }
+        )
+
+    candidates.sort(
+        key=lambda item: (
+            float(item["metrics"]["nss"]),
+            -int(item["metrics"]["volume"]),
+            item["watchlist_name"],
+        )
+    )
+    return candidates[: max(0, limit)]

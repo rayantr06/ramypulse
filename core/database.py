@@ -795,6 +795,9 @@ def _seed_default_alert_rules(connection: sqlite3.Connection) -> None:
         ("no_recent_signals", "Aucun signal recent", "drift", 7.0, "gte", "7d", "high"),
         ("aspect_critical", "Aspect critique", "absolute", -10.0, "lt", "7d", "high"),
         ("volume_drop", "Chute de volume", "relative", 50.0, "lt", "7d", "medium"),
+        ("volume_anomaly", "Anomalie statistique de volume", "anomaly", 2.0, "gt", "8d", "high"),
+        ("nss_temporal_drift", "Derive temporelle NSS", "drift", 3.0, "lt", "3d", "high"),
+        ("segment_divergence", "Divergence entre segments", "divergence", 25.0, "gt", "7d", "high"),
         ("campaign_impact_positive", "Impact campagne positif", "relative", 10.0, "gt", "30d", "high"),
         ("campaign_underperformance", "Sous-performance campagne", "relative", 0.0, "lte", "7d", "medium"),
     ]

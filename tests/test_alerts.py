@@ -562,3 +562,137 @@ def test_run_alert_detection_persiste_watchlist_metric_snapshots(
     assert row[2] == 2
     assert row[3] is not None
     assert "disponibilité" in row[4]
+def test_run_alert_detection_declenche_volume_anomaly(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Un volume courant anormalement haut vs l'historique doit creer une alerte d'anomalie."""
+    db_path = _prepare_sqlite(monkeypatch, tmp_path)
+    DatabaseManager(str(db_path)).create_tables()
+    watchlist_manager = _import_or_fail("core.watchlists.watchlist_manager")
+    alert_manager = _import_or_fail("core.alerts.alert_manager")
+    detector = _import_or_fail("core.alerts.alert_detector")
+
+    watchlist_id = _create_watchlist(
+        watchlist_manager,
+        filters=_watchlist_filters(aspect="prix", min_volume=1),
+    )
+    with sqlite3.connect(config.SQLITE_DB_PATH) as connection:
+        for index, volume in enumerate([3, 4, 3, 5], start=1):
+            connection.execute(
+                """
+                INSERT INTO watchlist_metric_snapshots (
+                    snapshot_id, watchlist_id, nss_current, nss_previous,
+                    volume_current, volume_previous, delta_nss, delta_volume_pct,
+                    aspect_breakdown, computed_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    f"hist-anomaly-{index}",
+                    watchlist_id,
+                    20.0,
+                    18.0,
+                    volume,
+                    max(1, volume - 1),
+                    2.0,
+                    5.0,
+                    '{"prix": 20.0}',
+                    f"2026-03-0{index}T10:00:00",
+                ),
+            )
+        connection.commit()
+
+    df_annotated = _frame(
+        [
+            _signal(f"2026-03-20T{10 + (index % 10):02d}:00:00", "positif", aspect="prix")
+            for index in range(20)
+        ]
+    )
+
+    detector.run_alert_detection(df_annotated)
+
+    assert "volume_anomaly" in _list_rule_ids(alert_manager)
+
+
+def test_run_alert_detection_declenche_nss_temporal_drift(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Une baisse continue du NSS sur plusieurs cycles doit creer une alerte de derive."""
+    db_path = _prepare_sqlite(monkeypatch, tmp_path)
+    DatabaseManager(str(db_path)).create_tables()
+    watchlist_manager = _import_or_fail("core.watchlists.watchlist_manager")
+    alert_manager = _import_or_fail("core.alerts.alert_manager")
+    detector = _import_or_fail("core.alerts.alert_detector")
+
+    watchlist_id = _create_watchlist(
+        watchlist_manager,
+        filters=_watchlist_filters(aspect="emballage", min_volume=1),
+    )
+    with sqlite3.connect(config.SQLITE_DB_PATH) as connection:
+        for index, nss_value in enumerate([50.0, 25.0, 5.0], start=1):
+            connection.execute(
+                """
+                INSERT INTO watchlist_metric_snapshots (
+                    snapshot_id, watchlist_id, nss_current, nss_previous,
+                    volume_current, volume_previous, delta_nss, delta_volume_pct,
+                    aspect_breakdown, computed_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    f"hist-drift-{index}",
+                    watchlist_id,
+                    nss_value,
+                    nss_value + 10.0,
+                    6,
+                    6,
+                    -10.0,
+                    0.0,
+                    '{"emballage": 5.0}',
+                    f"2026-03-1{index}T10:00:00",
+                ),
+            )
+        connection.commit()
+
+    df_annotated = _frame(
+        [
+            _signal("2026-03-18T10:00:00", "négatif", aspect="emballage"),
+            _signal("2026-03-19T10:00:00", "négatif", aspect="emballage"),
+            _signal("2026-03-20T10:00:00", "positif", aspect="emballage"),
+        ]
+    )
+
+    detector.run_alert_detection(df_annotated)
+
+    assert "nss_temporal_drift" in _list_rule_ids(alert_manager)
+
+
+def test_run_alert_detection_declenche_segment_divergence_wilaya(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Un ecart NSS tres fort entre wilayas doit creer une alerte de divergence."""
+    db_path = _prepare_sqlite(monkeypatch, tmp_path)
+    DatabaseManager(str(db_path)).create_tables()
+    watchlist_manager = _import_or_fail("core.watchlists.watchlist_manager")
+    alert_manager = _import_or_fail("core.alerts.alert_manager")
+    detector = _import_or_fail("core.alerts.alert_detector")
+
+    _create_watchlist(
+        watchlist_manager,
+        filters=_watchlist_filters(channel="facebook", aspect="goût", wilaya=None, min_volume=1),
+    )
+    df_annotated = _frame(
+        [
+            _signal("2026-03-18T10:00:00", "positif", channel="facebook", aspect="goût", wilaya="oran"),
+            _signal("2026-03-19T10:00:00", "positif", channel="facebook", aspect="goût", wilaya="oran"),
+            _signal("2026-03-20T10:00:00", "positif", channel="facebook", aspect="goût", wilaya="oran"),
+            _signal("2026-03-18T11:00:00", "négatif", channel="facebook", aspect="goût", wilaya="alger"),
+            _signal("2026-03-19T11:00:00", "négatif", channel="facebook", aspect="goût", wilaya="alger"),
+            _signal("2026-03-20T11:00:00", "négatif", channel="facebook", aspect="goût", wilaya="alger"),
+        ]
+    )
+
+    detector.run_alert_detection(df_annotated)
+
+    assert "segment_divergence_wilaya" in _list_rule_ids(alert_manager)

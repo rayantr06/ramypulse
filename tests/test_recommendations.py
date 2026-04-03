@@ -645,6 +645,127 @@ def test_build_context_enrichit_watchlists_et_campagnes_depuis_snapshots(tmp_db)
     assert context["recent_campaigns"][0]["latest_uplift_nss"] == 17.0
 
 
+def test_build_context_priorise_watchlist_et_campagne_du_declencheur(tmp_db) -> None:
+    """Le contexte doit remonter en premier la watchlist et la campagne liees a l'alerte source."""
+    from core.alerts.alert_manager import create_alert
+    from core.campaigns.campaign_manager import create_campaign
+    from core.recommendation.context_builder import build_recommendation_context
+    from core.watchlists.watchlist_manager import create_watchlist
+
+    target_watchlist_id = create_watchlist(
+        name="Watchlist cible",
+        description="desc",
+        scope_type="region",
+        filters={
+            "channel": "facebook",
+            "aspect": "goût",
+            "wilaya": "oran",
+            "product": None,
+            "sentiment": None,
+            "period_days": 7,
+            "min_volume": 3,
+        },
+    )
+    other_watchlist_id = create_watchlist(
+        name="Watchlist secondaire",
+        description="desc",
+        scope_type="region",
+        filters={
+            "channel": "facebook",
+            "aspect": "prix",
+            "wilaya": "alger",
+            "product": None,
+            "sentiment": None,
+            "period_days": 7,
+            "min_volume": 3,
+        },
+    )
+    target_campaign_id = create_campaign(
+        {
+            "campaign_name": "Campagne cible",
+            "campaign_type": "promotion",
+            "platform": "facebook",
+            "target_aspects": ["goût"],
+            "target_regions": ["oran"],
+            "keywords": ["ramy"],
+            "start_date": "2026-03-01",
+            "end_date": "2026-03-20",
+            "status": "active",
+        }
+    )
+    other_campaign_id = create_campaign(
+        {
+            "campaign_name": "Campagne secondaire",
+            "campaign_type": "promotion",
+            "platform": "facebook",
+            "target_aspects": ["prix"],
+            "target_regions": ["alger"],
+            "keywords": ["ramy"],
+            "start_date": "2026-03-01",
+            "end_date": "2026-03-20",
+            "status": "active",
+        }
+    )
+    alert_id = create_alert(
+        title="Alerte cible",
+        description="desc",
+        severity="critical",
+        watchlist_id=target_watchlist_id,
+        alert_payload={
+            "rule_id": "nss_critical_low",
+            "active_campaigns": [{"campaign_id": target_campaign_id, "campaign_name": "Campagne cible"}],
+        },
+    )
+
+    with sqlite3.connect(tmp_db) as connection:
+        connection.execute(
+            """
+            INSERT INTO watchlist_metric_snapshots (
+                snapshot_id, watchlist_id, nss_current, nss_previous,
+                volume_current, volume_previous, delta_nss, delta_volume_pct,
+                aspect_breakdown, computed_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            ("snap-target", target_watchlist_id, -15.0, 10.0, 10, 8, -25.0, 25.0, '{"goût": -15.0}', "2026-03-21T10:00:00"),
+        )
+        connection.execute(
+            """
+            INSERT INTO watchlist_metric_snapshots (
+                snapshot_id, watchlist_id, nss_current, nss_previous,
+                volume_current, volume_previous, delta_nss, delta_volume_pct,
+                aspect_breakdown, computed_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            ("snap-other", other_watchlist_id, 12.0, 8.0, 9, 9, 4.0, 0.0, '{"prix": 12.0}', "2026-03-21T10:00:00"),
+        )
+        connection.execute(
+            """
+            INSERT INTO campaign_metrics_snapshots (
+                snapshot_id, campaign_id, phase, metric_date, nss_filtered,
+                nss_baseline, nss_uplift, volume_filtered, volume_baseline,
+                volume_lift_pct, aspect_breakdown, sentiment_breakdown, computed_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            ("snap-camp-target", target_campaign_id, "post", "2026-03-20", 15.0, 5.0, 10.0, 20, 10, 100.0, '{"goût": 15.0}', '{"positif": 10}', "2026-03-21T10:00:00"),
+        )
+        connection.execute(
+            """
+            INSERT INTO campaign_metrics_snapshots (
+                snapshot_id, campaign_id, phase, metric_date, nss_filtered,
+                nss_baseline, nss_uplift, volume_filtered, volume_baseline,
+                volume_lift_pct, aspect_breakdown, sentiment_breakdown, computed_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            ("snap-camp-other", other_campaign_id, "post", "2026-03-20", 30.0, 10.0, 20.0, 20, 10, 100.0, '{"prix": 30.0}', '{"positif": 12}', "2026-03-21T10:00:00"),
+        )
+        connection.commit()
+
+    context = build_recommendation_context("alert_triggered", alert_id, _make_minimal_df())
+
+    assert context["active_watchlists"][0]["watchlist_id"] == target_watchlist_id
+    assert context["recent_campaigns"][0]["campaign_id"] == target_campaign_id
+
+
 def test_create_alert_declenche_recommandation_si_auto_trigger_active(tmp_db, monkeypatch) -> None:
     """Une alerte high/critical doit pouvoir creer une recommandation automatiquement."""
     import core.alerts.alert_manager as alert_manager
@@ -699,6 +820,46 @@ def test_create_alert_declenche_recommandation_si_auto_trigger_active(tmp_db, mo
     assert recommendation["alert_id"] == alert_id
     assert recommendation["trigger_type"] == "alert_triggered"
     assert get_client_agent_config(db_path=tmp_db)["auto_trigger_on_alert"] is True
+
+
+def test_generate_recommendations_complete_data_basis_et_baisse_confiance_si_donnees_pauvres() -> None:
+    """Le client doit normaliser les recommandations incomplètes et signaler une faible fiabilité."""
+    from core.recommendation.agent_client import generate_recommendations
+
+    context = {
+        "trigger": {"type": "manual", "id": None},
+        "current_metrics": {
+            "nss_global": -12.5,
+            "volume_total": 12,
+            "top_negative_aspects": ["disponibilité", "prix"],
+        },
+        "active_alerts": [],
+        "active_watchlists": [],
+        "recent_campaigns": [],
+        "rag_chunks": [],
+        "client_profile": {"client_name": "Ramy"},
+    }
+
+    with patch("core.recommendation.agent_client._call_ollama") as mock_call:
+        mock_call.return_value = {
+            "analysis_summary": "Signal faible mais clair.",
+            "recommendations": [
+                {
+                    "id": "rec_001",
+                    "priority": "high",
+                    "title": "Renforcer la disponibilité",
+                    "content": {},
+                }
+            ],
+            "watchlist_priorities": [],
+            "confidence_score": 0.92,
+            "data_quality_note": "",
+        }
+        result = generate_recommendations(context, provider="ollama_local")
+
+    assert result["confidence_score"] < 0.5
+    assert result["data_quality_note"]
+    assert result["recommendations"][0]["data_basis"]
 
 
 def test_create_alert_auto_trigger_respecte_seuil_de_severite(tmp_db, monkeypatch) -> None:
