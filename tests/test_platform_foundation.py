@@ -53,7 +53,7 @@ def test_batch_import_connector_et_normalization_pipeline_creent_la_trace_comple
     monkeypatch,
     tmp_path: Path,
 ) -> None:
-    """Un import batch doit alimenter raw_documents puis normalized_records/enriched_signals."""
+    """Un import batch doit alimenter raw_documents puis normaliser dans la meme sync."""
     from core.database import DatabaseManager
     from core.ingestion.orchestrator import IngestionOrchestrator
     import core.analysis.absa_engine as absa_engine
@@ -125,11 +125,10 @@ def test_batch_import_connector_et_normalization_pipeline_creent_la_trace_comple
         column_mapping={"review": "text"},
         run_mode="manual",
     )
-    normalization_result = orchestrator.run_normalization_cycle(batch_size=10)
 
     assert sync_result["status"] == "success"
     assert sync_result["records_inserted"] == 2
-    assert normalization_result["processed_count"] == 2
+    assert sync_result["normalization"]["processed_count"] == 2
 
     with sqlite3.connect(platform_db) as connection:
         raw_count = connection.execute("SELECT COUNT(*) FROM raw_documents").fetchone()[0]
@@ -155,6 +154,78 @@ def test_batch_import_connector_et_normalization_pipeline_creent_la_trace_comple
     assert row[1] == "ramy_citron"
     assert row[2] == "oran"
     assert row[3]
+
+
+def test_run_source_sync_preserve_raw_documents_si_normalization_echoue(
+    platform_db,
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    """Une panne aval doit laisser les raw_documents en base avec un statut explicite."""
+    from core.database import DatabaseManager
+    from core.ingestion.orchestrator import IngestionOrchestrator
+
+    database = DatabaseManager(str(platform_db))
+    database.create_tables()
+    database.close()
+
+    csv_path = tmp_path / "import_single.csv"
+    pd.DataFrame(
+        [
+            {
+                "review": "ramy tres bon",
+                "channel": "facebook",
+                "timestamp": "2026-04-03T10:00:00",
+            }
+        ]
+    ).to_csv(csv_path, index=False)
+
+    orchestrator = IngestionOrchestrator(db_path=str(platform_db))
+    source = orchestrator.create_source(
+        {
+            "client_id": "client-preserve",
+            "source_name": "Import preserve",
+            "platform": "import",
+            "source_type": "batch_import",
+            "owner_type": "owned",
+            "auth_mode": "file_upload",
+            "config_json": {
+                "snapshot_path": str(csv_path),
+                "column_mapping": {"review": "text"},
+            },
+        }
+    )
+
+    monkeypatch.setattr(
+        "core.ingestion.orchestrator.run_normalization_job",
+        lambda **kwargs: (_ for _ in ()).throw(RuntimeError("normalization down")),
+    )
+
+    result = orchestrator.run_source_sync(source["source_id"], client_id="client-preserve")
+
+    assert result["status"] == "failed_downstream"
+    assert result["records_inserted"] == 1
+    assert result["normalization_error"] == "normalization down"
+
+    with sqlite3.connect(platform_db) as connection:
+        raw_count = connection.execute("SELECT COUNT(*) FROM raw_documents").fetchone()[0]
+        normalized_count = connection.execute("SELECT COUNT(*) FROM normalized_records").fetchone()[0]
+        run_row = connection.execute(
+            """
+            SELECT status, records_inserted, error_message
+            FROM source_sync_runs
+            WHERE source_id = ?
+            ORDER BY started_at DESC
+            LIMIT 1
+            """,
+            (source["source_id"],),
+        ).fetchone()
+
+    assert raw_count == 1
+    assert normalized_count == 0
+    assert run_row[0] == "failed_downstream"
+    assert run_row[1] == 1
+    assert run_row[2] == "normalization down"
 
 
 def test_health_checker_persiste_un_snapshot_source(platform_db) -> None:

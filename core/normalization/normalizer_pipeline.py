@@ -61,14 +61,19 @@ def run_normalization_job(
     db_path=None,
     normalizer_version: str = DEFAULT_NORMALIZER_VERSION,
     client_id: str | None = None,
+    source_id: str | None = None,
 ) -> dict:
     """Traite les raw_documents non normalisés et écrit les tables cibles."""
     with _get_connection(db_path) as connection:
         params: list = []
-        where_clause = "WHERE is_normalized = 0"
+        where_clauses = ["is_normalized = 0"]
         if client_id:
-            where_clause += " AND client_id = ?"
+            where_clauses.append("client_id = ?")
             params.append(client_id)
+        if source_id:
+            where_clauses.append("source_id = ?")
+            params.append(source_id)
+        where_clause = "WHERE " + " AND ".join(where_clauses)
         params.append(batch_size)
         rows = connection.execute(
             f"""

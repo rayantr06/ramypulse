@@ -813,19 +813,18 @@ def test_source_admin_service_trace_compte_le_pipeline_par_source(
         }
     )
 
-    orchestrator.run_source_sync(
+    sync_result = orchestrator.run_source_sync(
         source["source_id"],
         manual_file_path=str(csv_path),
         column_mapping={"review": "text"},
         client_id="client-trace",
     )
-    normalization = orchestrator.run_normalization_cycle(batch_size=10, client_id="client-trace")
     compute_source_health(source["source_id"], db_path=str(platform_db), client_id="client-trace")
 
     service = SourceAdminService(db_path=str(platform_db))
     trace = service.get_source_trace(source["source_id"], client_id="client-trace")
 
-    assert normalization["processed_count"] == 2
+    assert sync_result["normalization"]["processed_count"] == 2
     assert trace["client_id"] == "client-trace"
     assert trace["raw_document_count"] == 2
     assert trace["normalized_count"] == 2

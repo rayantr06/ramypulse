@@ -211,6 +211,37 @@ class IngestionOrchestrator:
                 )
                 connection.commit()
 
+            normalization_result = {
+                "processed_count": 0,
+                "normalizer_version": None,
+            }
+            if inserted > 0:
+                try:
+                    normalization_result = run_normalization_job(
+                        batch_size=inserted,
+                        db_path=self.db_path,
+                        client_id=source.get("client_id") or DEFAULT_CLIENT_ID,
+                        source_id=source_id,
+                    )
+                except Exception as exc:
+                    self._finish_sync_run(
+                        sync_run_id,
+                        status="failed_downstream",
+                        records_fetched=len(documents),
+                        records_inserted=inserted,
+                        records_failed=max(0, len(documents) - inserted),
+                        error_message=str(exc),
+                    )
+                    return {
+                        "sync_run_id": sync_run_id,
+                        "status": "failed_downstream",
+                        "records_fetched": len(documents),
+                        "records_inserted": inserted,
+                        "records_failed": max(0, len(documents) - inserted),
+                        "normalization": normalization_result,
+                        "normalization_error": str(exc),
+                    }
+
             self._finish_sync_run(
                 sync_run_id,
                 status="success",
@@ -224,6 +255,7 @@ class IngestionOrchestrator:
                 "records_fetched": len(documents),
                 "records_inserted": inserted,
                 "records_failed": max(0, len(documents) - inserted),
+                "normalization": normalization_result,
             }
         except Exception as exc:
             self._finish_sync_run(
