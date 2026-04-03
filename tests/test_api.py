@@ -423,3 +423,155 @@ class TestExplorer:
         # Pages should be different (if enough data) or both valid
         assert r1.json()["page"] == 1
         assert r2.json()["page"] == 2
+
+
+# ===========================================================================
+# Admin
+# ===========================================================================
+
+class TestAdmin:
+    def test_create_source(self):
+        r = client.post("/api/admin/sources", json={
+            "source_name": "Test Facebook Page",
+            "platform": "facebook",
+            "source_type": "managed_page",
+            "owner_type": "owned",
+        })
+        assert r.status_code == 200
+        data = r.json()
+        assert "source_id" in data
+        assert data["source_name"] == "Test Facebook Page"
+
+    def test_list_sources(self):
+        r = client.get("/api/admin/sources")
+        assert r.status_code == 200
+        assert isinstance(r.json(), list)
+
+    def test_get_source_trace(self):
+        # Create one first
+        r_create = client.post("/api/admin/sources", json={
+            "source_name": "Detail Source",
+            "platform": "facebook",
+            "source_type": "managed_page",
+            "owner_type": "owned",
+        })
+        sid = r_create.json()["source_id"]
+
+        r = client.get(f"/api/admin/sources/{sid}")
+        assert r.status_code == 200
+        data = r.json()
+        assert data["source_id"] == sid
+        assert "latest_sync_run" in data
+
+    def test_get_source_404(self):
+        r = client.get("/api/admin/sources/nonexistent-source")
+        assert r.status_code == 404
+
+    def test_update_source(self):
+        r_create = client.post("/api/admin/sources", json={
+            "source_name": "Update Source",
+            "platform": "facebook",
+            "source_type": "managed_page",
+            "owner_type": "owned",
+        })
+        sid = r_create.json()["source_id"]
+
+        r = client.put(f"/api/admin/sources/{sid}", json={
+            "is_active": False,
+            "sync_frequency_minutes": 120
+        })
+        assert r.status_code == 200
+        data = r.json()
+        assert data["is_active"] == 0 # SQLite returns 0 for False
+        assert data["sync_frequency_minutes"] == 120
+
+    def test_trigger_source_health(self):
+        r_create = client.post("/api/admin/sources", json={
+            "source_name": "Health Source",
+            "platform": "facebook",
+            "source_type": "managed_page",
+            "owner_type": "owned",
+        })
+        sid = r_create.json()["source_id"]
+
+        r = client.post(f"/api/admin/sources/{sid}/health")
+        assert r.status_code == 200
+        data = r.json()
+        assert "snapshot_id" in data
+        assert "health_score" in data
+
+    def test_trigger_source_sync_mock(self):
+        r_create = client.post("/api/admin/sources", json={
+            "source_name": "Sync Source",
+            "platform": "import",
+            "source_type": "batch_import",
+            "owner_type": "owned",
+        })
+        sid = r_create.json()["source_id"]
+
+        mock_docs = [
+            {
+                "external_document_id": "doc1",
+                "raw_text": "text1",
+                "raw_payload": {},
+                "raw_metadata": {},
+                "collected_at": "2026-01-01T00:00:00Z",
+                "checksum_sha256": "hash1"
+            }
+        ]
+
+        with patch("core.connectors.batch_import_connector.BatchImportConnector.fetch_documents", return_value=mock_docs):
+            r = client.post(f"/api/admin/sources/{sid}/sync", json={
+                "run_mode": "manual"
+            })
+            assert r.status_code == 200
+            data = r.json()
+            assert data["status"] == "success"
+            assert data["records_inserted"] == 1
+
+    def test_trigger_source_sync_failure_mock(self):
+        r_create = client.post("/api/admin/sources", json={
+            "source_name": "Sync Fail Source",
+            "platform": "import",
+            "source_type": "batch_import",
+            "owner_type": "owned",
+        })
+        sid = r_create.json()["source_id"]
+
+        with patch("core.connectors.batch_import_connector.BatchImportConnector.fetch_documents", side_effect=Exception("API limit reached")):
+            r = client.post(f"/api/admin/sources/{sid}/sync", json={})
+            # FastAPI returns 500 when orchestrator raises the error
+            assert r.status_code == 500
+            assert "API limit" in r.json()["detail"]
+
+    def test_list_sync_runs(self):
+        r_create = client.post("/api/admin/sources", json={
+            "source_name": "Run List",
+            "platform": "facebook",
+            "source_type": "managed_page",
+            "owner_type": "owned",
+        })
+        sid = r_create.json()["source_id"]
+        r = client.get(f"/api/admin/sources/{sid}/runs")
+        assert r.status_code == 200
+        assert isinstance(r.json(), list)
+
+    def test_list_health_snapshots(self):
+        r_create = client.post("/api/admin/sources", json={
+            "source_name": "Snap List",
+            "platform": "facebook",
+            "source_type": "managed_page",
+            "owner_type": "owned",
+        })
+        sid = r_create.json()["source_id"]
+        r = client.get(f"/api/admin/sources/{sid}/snapshots")
+        assert r.status_code == 200
+        assert isinstance(r.json(), list)
+
+    def test_trigger_normalization(self):
+        with patch("api.routers.admin.IngestionOrchestrator.run_normalization_cycle", return_value={"status": "success", "processed": 5}):
+            r = client.post("/api/admin/normalization", json={
+                "batch_size": 200
+            })
+            assert r.status_code == 200
+            assert r.json()["status"] == "success"
