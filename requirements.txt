@@ -15,3 +15,6 @@ pyarrow>=15.0
 openpyxl>=3.1
 numpy>=1.26
 tqdm>=4.66
+fastapi>=0.100
+uvicorn>=0.23
+pydantic>=2.0
