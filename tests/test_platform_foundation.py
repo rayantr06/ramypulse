@@ -243,3 +243,46 @@ def test_health_checker_persiste_un_snapshot_source(platform_db) -> None:
 
     assert row is not None
     assert row[0] == result["health_score"]
+
+
+def test_orchestrator_resout_credential_ref_pour_la_sync(
+    platform_db,
+    monkeypatch,
+) -> None:
+    """run_source_sync doit transmettre les credentials resolus depuis credential_ref."""
+    from core.ingestion.orchestrator import IngestionOrchestrator
+    from core.security.secret_manager import store_secret
+
+    secret_store = Path(platform_db).with_name("secrets.json")
+    monkeypatch.setattr(config, "SECRETS_STORE_PATH", secret_store, raising=False)
+
+    orchestrator = IngestionOrchestrator(db_path=str(platform_db))
+    credential_ref = store_secret("collector-token", label="facebook")
+    source = orchestrator.create_source(
+        {
+            "source_name": "Facebook credential ref",
+            "platform": "facebook",
+            "source_type": "facebook_feed",
+            "owner_type": "owned",
+            "auth_mode": "token",
+            "config_json": {
+                "fetch_mode": "collector",
+                "page_url": "https://facebook.com/ramy",
+                "credential_ref": credential_ref,
+            },
+        }
+    )
+
+    captured: dict[str, object] = {}
+
+    class _FakeFacebookConnector:
+        def fetch_documents(self, source: dict, *, credentials=None, **kwargs) -> list[dict]:
+            captured["credentials"] = credentials
+            return []
+
+    orchestrator._connectors["facebook"] = _FakeFacebookConnector()
+
+    result = orchestrator.run_source_sync(source["source_id"])
+
+    assert result["status"] == "success"
+    assert captured["credentials"]["token"] == "collector-token"

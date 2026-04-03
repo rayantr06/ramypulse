@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 
+from core.security.secret_manager import resolve_secret, store_secret
+
 _VALID_FETCH_MODES = {"snapshot", "collector", "api"}
 _REQUIRED_FIELDS = {
     "facebook": (("page_id", "page_url"),),
@@ -36,6 +38,31 @@ def parse_source_config(source: dict) -> dict:
             return {}
         return dict(parsed) if isinstance(parsed, dict) else {}
     return {}
+
+
+def materialize_secret_reference(
+    config: dict,
+    *,
+    secret_value: str | None,
+    label: str | None = None,
+) -> dict:
+    """Stocke un secret brut hors base et insere sa reference dans la config."""
+    updated = dict(config)
+    reference = store_secret(secret_value, label=label)
+    if reference:
+        updated["credential_ref"] = reference
+    return updated
+
+
+def resolve_credentials(config: dict) -> dict:
+    """Resout les credentials runtime a partir d'une config source normalisee."""
+    token = resolve_secret(config.get("credential_ref"))
+    if not token:
+        return {}
+    return {
+        "token": token,
+        "credential_ref": config.get("credential_ref"),
+    }
 
 
 def validate_source_config(

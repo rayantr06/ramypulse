@@ -6,6 +6,7 @@ import json
 import sqlite3
 import sys
 import types
+import importlib
 from pathlib import Path
 
 import pandas as pd
@@ -16,12 +17,25 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import config
 
 
+def _config_module():
+    """Retourne le module config courant, meme apres reload dans les tests."""
+    return importlib.import_module("config")
+
+
 @pytest.fixture
 def platform_db(tmp_path, monkeypatch):
     """Base SQLite temporaire pour les tests d'admin sources."""
     db_path = tmp_path / "platform_sources.db"
     monkeypatch.setattr(config, "SQLITE_DB_PATH", db_path, raising=False)
     return db_path
+
+
+@pytest.fixture
+def temp_secret_store(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Redirige le store local de secrets vers un fichier temporaire."""
+    secret_store = tmp_path / "secrets.json"
+    monkeypatch.setattr(_config_module(), "SECRETS_STORE_PATH", secret_store, raising=False)
+    return secret_store
 
 
 def _write_import_csv(path: Path, rows: list[dict]) -> Path:
@@ -523,6 +537,26 @@ def test_run_source_sync_sans_client_id_utilise_le_client_par_defaut_et_refuse_u
             manual_file_path=str(csv_owner),
             column_mapping={"review": "text"},
         )
+
+
+def test_materialize_secret_reference_ne_stocke_pas_le_secret_brut(
+    temp_secret_store: Path,
+) -> None:
+    """Le helper source_config doit convertir un secret brut en reference locale."""
+    from core.connectors.source_config import materialize_secret_reference
+    from core.security.secret_manager import resolve_secret
+
+    config_payload = {"fetch_mode": "collector"}
+
+    updated = materialize_secret_reference(
+        config_payload,
+        secret_value="super-secret-token",
+        label="facebook-collector",
+    )
+
+    assert "super-secret-token" not in str(updated)
+    assert updated["credential_ref"].startswith("local:")
+    assert resolve_secret(updated["credential_ref"]) == "super-secret-token"
 
 
 @pytest.mark.parametrize("fetch_mode", ["collector", "api"])

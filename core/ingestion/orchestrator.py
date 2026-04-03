@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 
 from config import DEFAULT_CLIENT_ID, SQLITE_DB_PATH
 from core.connectors.batch_import_connector import BatchImportConnector
+from core.connectors.source_config import parse_source_config, resolve_credentials
 from core.connectors.facebook_connector import FacebookConnector
 from core.connectors.google_maps_connector import GoogleMapsConnector
 from core.connectors.instagram_connector import InstagramConnector
@@ -165,9 +166,14 @@ class IngestionOrchestrator:
         sync_run_id = self._start_sync_run(source_id, run_mode)
         try:
             connector = self._select_connector(source)
+            source_config = parse_source_config(source)
+            credentials_payload = {
+                **resolve_credentials(source_config),
+                **(credentials or {}),
+            }
             documents = connector.fetch_documents(
                 source,
-                credentials=credentials,
+                credentials=credentials_payload,
                 file_path=manual_file_path,
                 column_mapping=column_mapping,
             )
