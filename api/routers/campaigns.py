@@ -15,7 +15,7 @@ router = APIRouter(prefix="/campaigns", tags=["Campaigns"])
 def create_campaign(data: CampaignCreate):
     """Création d'une nouvelle campagne marketing."""
     try:
-        campaign_dict = data.dict(exclude_unset=True)
+        campaign_dict = data.model_dump(exclude_unset=True)
         # Handle lists directly, campaign_manager takes lists via _serialize_list internally if needed, but it expects them as Python lists!
         campaign_id = campaign_manager.create_campaign(campaign_dict)
         return {"campaign_id": campaign_id, "status": "created"}
