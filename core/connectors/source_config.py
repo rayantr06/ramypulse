@@ -10,7 +10,6 @@ _REQUIRED_FIELDS = {
     "google_maps": (("place_id", "place_url"),),
     "youtube": (("channel_id", "video_ids"),),
     "instagram": (("profile_id", "profile_url"),),
-    "import": (("snapshot_path",),),
 }
 
 

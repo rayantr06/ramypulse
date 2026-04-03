@@ -145,14 +145,25 @@ class SnapshotPlatformConnector(BaseConnector):
         **kwargs,
     ) -> list[dict]:
         source_config = parse_source_config(source)
+        fetch_mode = str(source_config.get("fetch_mode") or "snapshot").strip().lower() or "snapshot"
         resolved_mapping = column_mapping or source_config.get("column_mapping")
         mapping = resolved_mapping if isinstance(resolved_mapping, dict) else None
 
-        documents = self._load_from_snapshots(
+        if fetch_mode == "snapshot":
+            documents = self._load_from_snapshots(
+                source,
+                file_path=file_path,
+                column_mapping=mapping,
+            )
+            if documents:
+                return documents
+            return self._load_from_scraper(source, credentials=credentials)
+
+        documents = self._load_from_scraper(source, credentials=credentials)
+        if documents:
+            return documents
+        return self._load_from_snapshots(
             source,
             file_path=file_path,
             column_mapping=mapping,
         )
-        if documents:
-            return documents
-        return self._load_from_scraper(source, credentials=credentials)

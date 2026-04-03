@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import sqlite3
 import sys
+import types
 from pathlib import Path
 
 import pandas as pd
@@ -90,6 +91,77 @@ def test_platform_connector_charge_snapshot_configure(
     assert documents[0]["raw_text"]
     assert documents[0]["raw_metadata"]["channel"] == platform
     assert documents[0]["raw_metadata"]["source_id"] == f"src-client-a-{platform}"
+
+
+@pytest.mark.parametrize(
+    "platform",
+    ["facebook", "google_maps", "youtube"],
+)
+def test_platform_connector_respecte_fetch_mode_collector(
+    tmp_path: Path,
+    monkeypatch,
+    platform: str,
+) -> None:
+    """Le mode collector doit etre prioritaire sur un snapshot local existant."""
+    connector_path = {
+        "facebook": "core.connectors.facebook_connector",
+        "google_maps": "core.connectors.google_maps_connector",
+        "youtube": "core.connectors.youtube_connector",
+    }[platform]
+    class_name = {
+        "facebook": "FacebookConnector",
+        "google_maps": "GoogleMapsConnector",
+        "youtube": "YouTubeConnector",
+    }[platform]
+    module = __import__(connector_path, fromlist=[class_name])
+    connector_cls = getattr(module, class_name)
+
+    snapshot = tmp_path / f"{platform}.parquet"
+    pd.DataFrame(
+        [
+            {
+                "text": f"{platform} snapshot",
+                "channel": platform,
+                "timestamp": "2026-03-20T10:00:00",
+                "source_url": f"https://example.test/{platform}/snapshot",
+            }
+        ]
+    ).to_parquet(snapshot, index=False)
+
+    connector = connector_cls()
+    scraper_module_name = connector.scraper_modules[0]
+    fake_module = types.ModuleType(scraper_module_name)
+    fake_module.collect = lambda source=None, credentials=None: pd.DataFrame(
+        [
+            {
+                "text": f"{platform} collector",
+                "channel": platform,
+                "timestamp": "2026-03-20T11:00:00",
+                "source_url": f"https://example.test/{platform}/collector",
+            }
+        ]
+    )
+    monkeypatch.setitem(sys.modules, scraper_module_name, fake_module)
+
+    documents = connector.fetch_documents(
+        {
+            "source_id": f"src-{platform}-collector",
+            "client_id": "client-a",
+            "source_name": f"{platform} source",
+            "platform": platform,
+            "source_type": f"{platform}_feed",
+            "owner_type": "owned",
+            "auth_mode": "file_snapshot",
+            "config_json": {
+                "fetch_mode": "collector",
+                "snapshot_path": str(snapshot),
+            },
+        }
+    )
+
+    assert len(documents) == 1
+    assert documents[0]["raw_text"] == f"{platform} collector"
+    assert documents[0]["raw_metadata"]["source_url"].endswith("/collector")
 
 
 def test_source_admin_service_filtre_sources_et_runs_par_client(

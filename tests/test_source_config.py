@@ -63,6 +63,19 @@ def test_validate_source_config_ajoute_fetch_mode_snapshot_par_defaut() -> None:
     assert config["fetch_mode"] == "snapshot"
 
 
+def test_validate_source_config_accepte_import_sans_snapshot_path() -> None:
+    """Une source import peut etre valide sans snapshot_path si le runtime fournit le fichier."""
+    source = {
+        "platform": "import",
+        "config_json": {"fetch_mode": "snapshot"},
+    }
+
+    config = validate_source_config(source)
+
+    assert config["fetch_mode"] == "snapshot"
+    assert "snapshot_path" not in config
+
+
 def test_validate_source_config_rejette_fetch_mode_invalide() -> None:
     """Un fetch_mode inconnu doit etre refuse explicitement."""
     source = {
