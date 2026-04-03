@@ -186,7 +186,7 @@ export default function Explorateur() {
             Explorateur
           </h2>
           <p className="text-on-surface-variant font-body text-sm mt-1">
-            Recherche semantique et verbatims a travers l'ecosysteme digital
+            Recherche sémantique et verbatims à travers l'écosystème digital
           </p>
         </section>
 
@@ -199,7 +199,7 @@ export default function Explorateur() {
               </span>
               <input
                 className="flex-1 bg-transparent border-none text-on-surface placeholder:text-gray-600 px-4 py-3 focus:ring-0 focus:outline-none text-base"
-                placeholder="Recherche en langage naturel (ex: 'Que pensent les clients du gout a Alger ?')"
+                placeholder="Recherche en langage naturel (ex: 'Que pensent les clients du goût à Alger ?')"
                 type="text"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
@@ -266,7 +266,7 @@ export default function Explorateur() {
               ))
             ) : searchResults.length === 0 ? (
               <div className="bg-surface-container p-5 rounded-lg border border-outline-variant/5 text-sm text-on-surface-variant col-span-full">
-                Aucun resultat pour cette recherche.
+                Aucun résultat pour cette recherche.
               </div>
             ) : (
               searchResults.map((result) => (
@@ -325,7 +325,7 @@ export default function Explorateur() {
                 Tous les verbatims
               </h3>
               <p className="text-xs text-on-surface-variant mt-0.5">
-                Base de donnees complete des interactions clients
+                Base de données complète des interactions clients
               </p>
             </div>
             <button className="flex items-center gap-2 px-3 py-1.5 rounded bg-surface-container-highest text-on-surface-variant text-[10px] font-black uppercase tracking-widest hover:text-on-surface transition-colors">
@@ -362,7 +362,7 @@ export default function Explorateur() {
                 ) : verbatimsData.items.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-6 py-8 text-sm text-on-surface-variant">
-                      Aucun verbatim disponible pour cette selection.
+                      Aucun verbatim disponible pour cette sélection.
                     </td>
                   </tr>
                 ) : (

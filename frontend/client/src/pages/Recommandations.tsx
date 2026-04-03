@@ -44,7 +44,7 @@ interface ProviderGroup {
 
 function toTriggerLabel(trigger: string | undefined | null): string {
   if (trigger === "alert") return "Depuis une alerte";
-  if (trigger === "weekly_report") return "Planifie";
+  if (trigger === "weekly_report") return "Planifié";
   return "Manuel";
 }
 
@@ -69,10 +69,10 @@ function buildRecoView(value: unknown): RecommendationView {
     rationale:
       primary?.description ||
       recommendation.data_quality_note ||
-      "Aucun rationale detaille n'est encore disponible.",
+      "Aucun rationale détaillé n'est encore disponible.",
     target: primary?.target_platform || "Toutes",
     timing: primary?.timing || "A prioriser",
-    kpi_impact: primary?.kpi_impact || "A evaluer",
+    kpi_impact: primary?.kpi_impact || "À évaluer",
     status: recommendation.status || "active",
     created_at: recommendation.created_at || "-",
     confidence,
@@ -81,7 +81,7 @@ function buildRecoView(value: unknown): RecommendationView {
     summary:
       recommendation.analysis_summary ||
       recommendation.data_quality_note ||
-      "Analyse generee sans resume complementaire.",
+      "Analyse générée sans résumé complémentaire.",
     count: recommendation.recommendations.length,
     trigger: toTriggerLabel(recommendation.trigger_type),
   };
@@ -112,6 +112,13 @@ function buildProviderGroups(value: unknown): ProviderGroup[] {
     grouped.set(provider.provider_id, current);
   });
   return Array.from(grouped.values());
+}
+
+function estimateCost(providerId: string, estimatedTokens: number): string {
+  if (!providerId || providerId === "ollama_local") return "0.00$";
+  if (estimatedTokens <= 0) return "0.00$";
+  const roughDollars = Math.max(0.01, (estimatedTokens / 1000) * 0.003);
+  return `${roughDollars.toFixed(2)}$`;
 }
 
 function PriorityBadge({ priority }: { priority: string }) {
@@ -248,7 +255,7 @@ export default function Recommandations() {
               Module IA
             </span>
             <h2 className="font-headline font-extrabold text-3xl tracking-tight">
-              Generer des recommandations
+              Générer des recommandations
             </h2>
           </header>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -256,7 +263,7 @@ export default function Recommandations() {
               <div className="grid grid-cols-2 gap-5">
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold uppercase text-gray-500">
-                    Type de Declencheur
+                    Type de Déclencheur
                   </label>
                   <select
                     className="w-full bg-surface-container-highest border-none text-sm py-3 px-4 rounded-sm focus:ring-1 focus:ring-primary/40 focus:outline-none"
@@ -268,7 +275,7 @@ export default function Recommandations() {
                   >
                     <option value="manual">Manuel</option>
                     <option value="alert">Depuis une alerte</option>
-                    <option value="weekly_report">Planifie (Cron)</option>
+                    <option value="weekly_report">Planifié (Cron)</option>
                   </select>
                 </div>
                 <div className="space-y-2">
@@ -293,7 +300,7 @@ export default function Recommandations() {
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-bold uppercase text-gray-500">
-                  Nom du Modele / Endpoint
+                  Nom du Modèle / Endpoint
                 </label>
                 <select
                   className="w-full bg-surface-container-highest border-none text-sm py-3 px-4 rounded-sm focus:ring-1 focus:ring-primary/40 focus:outline-none"
@@ -312,7 +319,7 @@ export default function Recommandations() {
                 <div className="flex gap-4">
                   <div className="px-3 py-1.5 bg-surface-container-high rounded-sm">
                     <span className="text-[10px] font-bold text-gray-500 uppercase block">
-                      Tokens Estimes
+                      Tokens Estimés
                     </span>
                     <span className="text-sm font-bold text-tertiary">
                       {contextData.estimated_tokens}
@@ -320,10 +327,10 @@ export default function Recommandations() {
                   </div>
                   <div className="px-3 py-1.5 bg-surface-container-high rounded-sm">
                     <span className="text-[10px] font-bold text-gray-500 uppercase block">
-                      Provider actif
+                      Coût est.
                     </span>
                     <span className="text-sm font-bold text-white">
-                      {activeProvider || "-"}
+                      {estimateCost(activeProvider, contextData.estimated_tokens)}
                     </span>
                   </div>
                 </div>
@@ -334,7 +341,7 @@ export default function Recommandations() {
                   data-testid="btn-generate"
                 >
                   <span className="material-symbols-outlined text-sm">rocket_launch</span>
-                  <span>{generateMutation.isPending ? "Generation..." : "Generer"}</span>
+                  <span>{generateMutation.isPending ? "Génération..." : "Générer"}</span>
                 </button>
               </div>
             </div>
@@ -548,11 +555,11 @@ export default function Recommandations() {
                 <tr className="bg-surface-container-high/50">
                   {[
                     "Date",
-                    "Declencheur",
+                    "Déclencheur",
                     "# Recos",
                     "Confiance",
                     "Provider",
-                    "Modele",
+                    "Modèle",
                     "Statut",
                   ].map((heading) => (
                     <th

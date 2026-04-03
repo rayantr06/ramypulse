@@ -111,7 +111,7 @@ function mapActionViews(value: unknown): DashboardActionView[] {
   return mapDashboardActions(value).map((action) => ({
     id: action.recommendation_id,
     title: action.title,
-    description: action.description || "Aucune description detaillee disponible.",
+    description: action.description || "Aucune description détaillée disponible.",
     priority: action.priority,
     icon: priorityIcon(action.priority, action.icon),
     ctaLabel: action.cta_label || "VOIR DETAILS",
@@ -160,9 +160,9 @@ export default function Dashboard() {
     score: 0,
     trend: "flat" as const,
     delta: 0,
-    summary: "Pas de donnees suffisantes pour etablir un diagnostic.",
+    summary: "Pas de données suffisantes pour établir un diagnostic.",
     totalMentions: 0,
-    period: "sur la periode chargee",
+    period: "sur la période chargée",
     regionalDistribution: [],
     productPerformance: [],
   };
@@ -187,10 +187,10 @@ export default function Dashboard() {
           <div className="flex gap-2">
             <div className="bg-surface-container px-3 py-1.5 rounded text-[11px] font-semibold text-on-surface-variant flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>
-              Direct Temps Reel
+              Direct Temps Réel
             </div>
             <div className="bg-surface-container px-3 py-1.5 rounded text-[11px] font-semibold text-on-surface-variant">
-              Algerie (Toutes regions)
+              Algérie (Toutes régions)
             </div>
           </div>
         </div>
@@ -202,7 +202,7 @@ export default function Dashboard() {
           >
             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-50"></div>
             <span className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest absolute top-6 left-6">
-              SANTE DE LA MARQUE
+              SANTÉ DE LA MARQUE
             </span>
             {summaryLoading ? (
               <div className="w-48 h-48 rounded-full bg-surface-container-high animate-pulse mt-4"></div>
@@ -316,7 +316,7 @@ export default function Dashboard() {
         <div className="space-y-4">
           <div className="flex items-center gap-4">
             <span className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest">
-              ACTIONS RECOMMANDEES PAR L'IA
+              ACTIONS RECOMMANDÉES PAR L'IA
             </span>
             <div className="h-px flex-1 bg-outline-variant/10"></div>
           </div>
@@ -385,7 +385,7 @@ export default function Dashboard() {
               </div>
             ) : summaryView.productPerformance.length === 0 ? (
               <div className="bg-surface-container-low rounded-sm p-6 text-sm text-on-surface-variant leading-relaxed">
-                Pas encore assez de donnees produit pour alimenter cette vue.
+                Pas encore assez de données produit pour alimenter cette vue.
               </div>
             ) : (
               <div className="space-y-5">
@@ -419,7 +419,7 @@ export default function Dashboard() {
 
           <div className="col-span-12 lg:col-span-5 bg-surface-container p-6 rounded-xl flex flex-col">
             <span className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest block mb-4">
-              DISTRIBUTION REGIONALE
+              DISTRIBUTION RÉGIONALE
             </span>
             <div className="flex-1 bg-surface-container-low rounded-sm relative overflow-hidden p-4">
               {summaryLoading ? (
@@ -430,7 +430,7 @@ export default function Dashboard() {
                 </div>
               ) : summaryView.regionalDistribution.length === 0 ? (
                 <div className="h-full flex items-center justify-center text-center text-sm text-on-surface-variant max-w-xs mx-auto leading-relaxed">
-                  Pas encore assez de donnees regionales pour alimenter cette vue.
+                  Pas encore assez de données régionales pour alimenter cette vue.
                 </div>
               ) : (
                 <div className="relative space-y-3">

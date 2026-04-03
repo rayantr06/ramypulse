@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AppShell } from "@/components/AppShell";
 import { apiRequest } from "@/lib/queryClient";
 import {
   mapAdminHealthSnapshot,
   mapAdminSource,
   mapAdminSyncRun,
 } from "@/lib/apiMappings";
+import { Link } from "wouter";
 
 interface SourceView {
   id: string;
@@ -92,8 +92,8 @@ function labelFromOptions(value: string, options: Array<{ value: string; label: 
 }
 
 function buildLastSync(status: string | null | undefined, timestamp: string | null | undefined): string {
-  if (!timestamp) return "Jamais synchronise";
-  if (status === "failed" || status === "failed_downstream") return `Echec ${timestamp}`;
+  if (!timestamp) return "Jamais synchronisé";
+  if (status === "failed" || status === "failed_downstream") return `Échec ${timestamp}`;
   if (status === "running") return `En cours ${timestamp}`;
   return timestamp;
 }
@@ -161,7 +161,7 @@ function mapSnapshotView(value: unknown): HealthSnapshotView {
   const level = snapshotLevel(snapshot.health_score);
   const parts = [
     `Score: ${snapshot.health_score}%`,
-    snapshot.success_rate_pct != null ? `Succes: ${snapshot.success_rate_pct}%` : null,
+    snapshot.success_rate_pct != null ? `Succès: ${snapshot.success_rate_pct}%` : null,
     snapshot.freshness_hours != null ? `Freshness: ${snapshot.freshness_hours}h` : null,
     snapshot.records_fetched_avg != null ? `Moy. fetched: ${snapshot.records_fetched_avg}` : null,
   ].filter(Boolean);
@@ -240,6 +240,98 @@ function SnapshotLevelDot({ level }: { level: string }) {
   return (
     <div className={`absolute left-0 top-1.5 w-[22px] h-[22px] ${style.bg} rounded-full flex items-center justify-center`}>
       <div className={`w-2 h-2 ${style.ring} rounded-full`}></div>
+    </div>
+  );
+}
+
+function AdminShell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="bg-background text-on-surface font-body selection:bg-primary-container selection:text-on-primary-container min-h-screen">
+      <nav className="bg-[#121315] text-[#ffb693] font-headline tracking-tight font-bold text-lg flex justify-between items-center w-full px-6 py-3 h-16 fixed top-0 z-50">
+        <div className="text-xl font-black text-[#ffb693] tracking-tighter">RamyPulse Admin</div>
+        <div className="hidden md:flex items-center gap-8">
+          <Link href="/">
+            <a className="text-gray-400 font-medium hover:text-white transition-colors duration-200 active:scale-95">
+              Dashboard
+            </a>
+          </Link>
+          <a className="text-[#ffb693] border-b-2 border-[#ffb693] pb-1 hover:text-white transition-colors duration-200 active:scale-95">
+            Ingestion
+          </a>
+          <a className="text-gray-400 font-medium hover:text-white transition-colors duration-200 active:scale-95">
+            Pipelines
+          </a>
+          <a className="text-gray-400 font-medium hover:text-white transition-colors duration-200 active:scale-95">
+            Logs
+          </a>
+        </div>
+        <div className="flex items-center gap-4">
+          <span className="material-symbols-outlined hover:text-white transition-colors cursor-pointer">
+            notifications
+          </span>
+          <span className="material-symbols-outlined hover:text-white transition-colors cursor-pointer">
+            settings
+          </span>
+          <div className="w-8 h-8 rounded-full border-2 border-primary/20 bg-surface-container-high flex items-center justify-center">
+            <span className="material-symbols-outlined text-sm text-gray-400">person</span>
+          </div>
+        </div>
+      </nav>
+
+      <div className="flex min-h-screen pt-16">
+        <aside className="bg-[#121315] font-body text-sm font-semibold tracking-wide flex flex-col h-[calc(100vh-4rem)] border-r border-white/5 p-4 gap-2 w-64 shrink-0 fixed top-16 left-0">
+          <div className="mb-6 px-2">
+            <p className="text-xs text-on-surface-variant/50 uppercase tracking-widest font-bold mb-1">
+              COMMAND CENTER
+            </p>
+            <h2 className="text-on-surface text-base">Ramy Juice Intelligence</h2>
+          </div>
+          <nav className="flex-1 space-y-1">
+            {[
+              { label: "Sources", icon: "database", active: true },
+              { label: "Connectors", icon: "alt_route" },
+              { label: "Health", icon: "analytics" },
+              { label: "Validation", icon: "fact_check" },
+              { label: "Archive", icon: "inventory_2" },
+            ].map((item) => (
+              <a
+                key={item.label}
+                className={`flex items-center gap-3 px-3 py-2 rounded-sm transition-all duration-200 ease-out ${
+                  item.active
+                    ? "text-[#ffb693] bg-[#1c1e21]"
+                    : "text-gray-500 hover:bg-[#1c1e21] hover:text-white"
+                }`}
+              >
+                <span className="material-symbols-outlined">{item.icon}</span>
+                <span>{item.label}</span>
+              </a>
+            ))}
+          </nav>
+          <button className="mt-4 bg-gradient-to-r from-primary to-primary-container text-on-primary-fixed px-4 py-3 rounded-lg flex items-center justify-center gap-2 font-bold shadow-lg hover:brightness-110 active:scale-95 transition-all">
+            <span className="material-symbols-outlined">add</span>
+            New Pipeline
+          </button>
+          <div className="mt-auto pt-4 space-y-1 border-t border-white/5">
+            <a className="flex items-center gap-3 px-3 py-2 text-gray-500 hover:text-white transition-all">
+              <span className="material-symbols-outlined">help</span>
+              <span>Support</span>
+            </a>
+            <a className="flex items-center gap-3 px-3 py-2 text-gray-500 hover:text-white transition-all">
+              <span className="material-symbols-outlined">description</span>
+              <span>Documentation</span>
+            </a>
+          </div>
+        </aside>
+
+        <main className="flex-1 overflow-y-auto bg-surface-container-lowest ml-64">
+          {children}
+        </main>
+      </div>
+
+      <div className="fixed top-0 left-0 w-full h-full pointer-events-none z-[-1] opacity-20">
+        <div className="absolute top-[10%] left-[20%] w-96 h-96 bg-primary/20 blur-[120px] rounded-full"></div>
+        <div className="absolute bottom-[20%] right-[10%] w-[500px] h-[500px] bg-tertiary/10 blur-[160px] rounded-full"></div>
+      </div>
     </div>
   );
 }
@@ -412,14 +504,14 @@ export default function AdminSources() {
   const snapshotsData = snapshots ?? [];
 
   return (
-    <AppShell>
+    <AdminShell>
       <div className="p-8">
         <div className="grid grid-cols-12 gap-8 items-start">
           <div className="col-span-12 lg:col-span-8 space-y-6">
             <div className="flex items-end justify-between">
               <div>
                 <p className="text-on-surface-variant font-bold tracking-[0.15em] mb-1 uppercase text-[10px]">
-                  SOURCES DE DONNEES
+                  SOURCES DE DONNÉES
                 </p>
                 <h1 className="text-3xl font-headline font-extrabold tracking-tight">
                   Ramy Intelligence Dashboard
@@ -456,7 +548,7 @@ export default function AdminSources() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-surface-container-high">
-                    {["Nom", "Plateforme", "Owner", "Sante", "Actif", "Dernier Sync", "Actions"].map((heading, index) => (
+                    {["Nom", "Plateforme", "Owner", "Santé", "Actif", "Dernier Sync", "Actions"].map((heading, index) => (
                       <th
                         key={heading}
                         className={`px-6 py-4 text-xs font-bold text-on-surface-variant/70 uppercase tracking-widest ${index === 6 ? "text-right" : index === 4 ? "text-center" : ""}`}
@@ -516,7 +608,7 @@ export default function AdminSources() {
                             ></div>
                           </button>
                         </td>
-                        <td className={`px-6 py-4 text-sm ${source.lastSync.startsWith("Echec") ? "text-error font-medium" : "text-on-surface-variant"}`}>
+                        <td className={`px-6 py-4 text-sm ${source.lastSync.startsWith("Échec") ? "text-error font-medium" : "text-on-surface-variant"}`}>
                           {source.lastSync}
                         </td>
                         <td className="px-6 py-4 text-right">
@@ -533,7 +625,7 @@ export default function AdminSources() {
 
             <div className="bg-surface-container p-6 rounded-xl border border-white/5">
               <p className="text-xs font-bold text-on-surface-variant tracking-widest uppercase mb-6">
-                PIPELINE TRACE & DEBIT
+                    PIPELINE TRACE & DÉBIT
               </p>
               <div className="flex items-center justify-between gap-4">
                 {[
@@ -597,7 +689,7 @@ export default function AdminSources() {
                           {run.status === "success" ? (
                             <span className="inline-flex items-center gap-1.5 text-tertiary font-bold text-xs">
                               <span className="w-1.5 h-1.5 rounded-full bg-tertiary animate-pulse"></span>
-                              Succes
+                                  Succès
                             </span>
                           ) : run.status === "running" ? (
                             <span className="inline-flex items-center gap-1.5 text-primary font-bold text-xs">
@@ -612,7 +704,7 @@ export default function AdminSources() {
                           ) : (
                             <span className="inline-flex items-center gap-1.5 text-error font-bold text-xs">
                               <span className="w-1.5 h-1.5 rounded-full bg-error"></span>
-                              Echec
+                                  Échec
                             </span>
                           )}
                         </td>
@@ -629,7 +721,7 @@ export default function AdminSources() {
           <div className="col-span-12 lg:col-span-4 space-y-6 sticky top-20">
             <div className="bg-surface-container p-6 rounded-xl border border-white/5">
               <p className="text-xs font-bold text-on-surface-variant tracking-widest uppercase mb-5">
-                {isCreateMode ? "CREATION DE SOURCE" : "EDITION DE SOURCE"}
+                    {isCreateMode ? "CRÉATION DE SOURCE" : "ÉDITION DE SOURCE"}
               </p>
               <form className="space-y-4" onSubmit={handleSubmit}>
                 <div>
@@ -685,7 +777,7 @@ export default function AdminSources() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-on-surface-variant mb-1 ml-1">Frequence (min)</label>
+                        <label className="block text-xs font-bold text-on-surface-variant mb-1 ml-1">Fréquence (min)</label>
                     <input
                       className="w-full bg-surface-container-highest border-none rounded-lg text-sm py-2 px-3 focus:outline-none"
                       type="number"
@@ -718,7 +810,7 @@ export default function AdminSources() {
                     disabled={healthCheckMutation.isPending}
                     className="w-full py-2 bg-surface-container-high text-on-surface-variant font-bold rounded-lg text-xs hover:bg-surface-bright transition-all disabled:opacity-50"
                   >
-                    {healthCheckMutation.isPending ? "Verification..." : "Verifier la sante"}
+                        {healthCheckMutation.isPending ? "Vérification..." : "Vérifier la santé"}
                   </button>
                 ) : null}
               </form>
@@ -742,7 +834,7 @@ export default function AdminSources() {
                 </div>
               ) : snapshotsData.length === 0 ? (
                 <div className="text-sm text-on-surface-variant">
-                  Aucun snapshot de sante disponible pour cette source.
+                      Aucun snapshot de santé disponible pour cette source.
                 </div>
               ) : (
                 <div className="space-y-6 relative before:content-[''] before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[1px] before:bg-white/10">
@@ -762,6 +854,6 @@ export default function AdminSources() {
           </div>
         </div>
       </div>
-    </AppShell>
+    </AdminShell>
   );
 }

@@ -70,6 +70,14 @@ function mapWatchlistMetricsView(value: unknown): WatchlistMetricsView {
   };
 }
 
+function buildInsightsTitle(name: string): string {
+  const parenthetical = name.match(/\(([^)]+)\)/)?.[1]?.trim();
+  if (!parenthetical) {
+    return "Quick Insights";
+  }
+  return `Quick Insights - ${parenthetical.replace(/^Tout\s+/i, "")}`;
+}
+
 function ScopeBadge({ scope }: { scope: string }) {
   return (
     <span className="text-[10px] font-bold text-on-surface-variant tracking-wider uppercase mb-2 block">
@@ -227,7 +235,7 @@ export default function Watchlists() {
                   <span className="material-symbols-outlined text-primary">add</span>
                 </div>
                 <span className="text-xs font-semibold text-on-surface-variant group-hover:text-primary transition-colors">
-                  Création via back-office
+                  Créer une watchlist
                 </span>
               </div>
             </div>
@@ -303,7 +311,7 @@ export default function Watchlists() {
                   <div className="space-y-4 mb-8">
                     <div className="flex justify-between items-center">
                       <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
-                        Répartition par aspect
+                        Répartition par Aspect
                       </span>
                       <span className="text-[10px] text-on-surface-variant/40 italic">
                         Mise à jour {metricsData.last_updated}
@@ -349,7 +357,7 @@ export default function Watchlists() {
             <div className="bg-surface-container p-6 rounded-xl border border-white/5">
               <h4 className="text-xs font-bold text-on-surface mb-4 flex items-center gap-2">
                 <span className="material-symbols-outlined text-tertiary text-sm">insights</span>
-                Quick Insights
+                {buildInsightsTitle(selectedWatchlist.name)}
               </h4>
               <p className="text-[11px] text-on-surface-variant leading-relaxed">
                 {metricsData?.quick_insight ||

@@ -1,0 +1,86 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import test from "node:test";
+import { fileURLToPath } from "node:url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const pagesDir = path.resolve(__dirname, "../client/src/pages");
+
+function readPage(name) {
+  return readFileSync(path.join(pagesDir, name), "utf8");
+}
+
+function contains(source, text) {
+  assert.ok(source.includes(text), `Expected source to contain: ${text}`);
+}
+
+function lacks(source, text) {
+  assert.ok(!source.includes(text), `Expected source not to contain: ${text}`);
+}
+
+test("Dashboard keeps Stitch headline copy", () => {
+  const source = readPage("Dashboard.tsx");
+  contains(source, "Direct Temps Réel");
+  contains(source, "Algérie (Toutes régions)");
+  contains(source, "ACTIONS RECOMMANDÉES PAR L'IA");
+  contains(source, "VENTES PAR PRODUIT (7 JOURS)");
+  contains(source, "DISTRIBUTION RÉGIONALE");
+  lacks(source, "Direct Temps Reel");
+  lacks(source, "Algerie (Toutes regions)");
+});
+
+test("Recommandations keeps Stitch form labels and stats copy", () => {
+  const source = readPage("Recommandations.tsx");
+  contains(source, "Générer des recommandations");
+  contains(source, "Type de Déclencheur");
+  contains(source, "Coût est.");
+  contains(source, "Historique des runs");
+  lacks(source, "Generer des recommandations");
+  lacks(source, "Type de Declencheur");
+  lacks(source, "Provider actif");
+});
+
+test("Watchlists keeps Stitch CTA copy", () => {
+  const source = readPage("Watchlists.tsx");
+  contains(source, "Créer une watchlist");
+  contains(source, "SÉLECTION");
+  contains(source, "Répartition par Aspect");
+  contains(source, "Voir les détails analytiques");
+  lacks(source, "Création via back-office");
+});
+
+test("Alertes keeps Stitch real-time excerpt label", () => {
+  const source = readPage("Alertes.tsx");
+  contains(source, "Extraits Sociaux (Temps Réel)");
+  lacks(source, "Extraits Sociaux (Temps Reel)");
+});
+
+test("Campagnes keeps Stitch capitalization and accents", () => {
+  const source = readPage("Campagnes.tsx");
+  contains(source, "Gestion Opérationnelle");
+  contains(source, "CRÉER UNE CAMPAGNE");
+  lacks(source, "Gestion Operationnelle");
+  lacks(source, "CREER UNE CAMPAGNE");
+});
+
+test("Explorateur keeps Stitch search copy", () => {
+  const source = readPage("Explorateur.tsx");
+  contains(source, "Recherche sémantique et verbatims à travers l'écosystème digital");
+  contains(source, "Que pensent les clients du goût à Alger ?");
+  contains(source, "Base de données complète des interactions clients");
+});
+
+test("AdminSources keeps Stitch labels and dedicated admin shell", () => {
+  const source = readPage("AdminSources.tsx");
+  contains(source, "function AdminShell");
+  contains(source, "RamyPulse Admin");
+  contains(source, "COMMAND CENTER");
+  contains(source, "New Pipeline");
+  contains(source, "SOURCES DE DONNÉES");
+  contains(source, "PIPELINE TRACE & DÉBIT");
+  lacks(source, "import { AppShell }");
+  lacks(source, "SOURCES DE DONNEES");
+  lacks(source, "PIPELINE TRACE & DEBIT");
+});

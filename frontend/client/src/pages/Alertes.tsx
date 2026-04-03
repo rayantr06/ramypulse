@@ -73,7 +73,7 @@ function buildLocation(payload: Record<string, unknown>, navigationUrl: string |
   if (typeof payload.region === "string" && payload.region) return payload.region;
   if (typeof payload.segment === "string" && payload.segment) return payload.segment;
   if (navigationUrl) return "Lien de contexte disponible";
-  return "Non renseignee";
+  return "Non renseignée";
 }
 
 function buildSocialExcerpts(payload: Record<string, unknown>): SocialExcerpt[] {
@@ -230,7 +230,7 @@ export default function Alertes() {
           </div>
           <div className="flex items-center gap-2 text-xs text-on-surface-variant">
             <span className="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>
-            Systeme en ligne : {alertsList.filter((alert) => alert.status !== "RESOLU" && alert.status !== "ECARTE").length} alertes actives
+            Système en ligne : {alertsList.filter((alert) => alert.status !== "RESOLU" && alert.status !== "ECARTE").length} alertes actives
           </div>
         </div>
 
@@ -372,7 +372,7 @@ export default function Alertes() {
                   <div className="space-y-6">
                     <div>
                       <h4 className="text-[10px] font-bold uppercase tracking-widest text-primary mb-3">
-                        Analyse Complete
+                        Analyse Complète
                       </h4>
                       <p className="text-on-surface leading-relaxed text-sm">
                         {selectedAlert.description}
@@ -382,7 +382,7 @@ export default function Alertes() {
                     {selectedAlert.social_excerpts.length > 0 ? (
                       <div className="bg-surface-container-lowest p-5 rounded-sm border border-outline-variant/10">
                         <h4 className="text-[10px] font-bold uppercase tracking-widest text-tertiary mb-4">
-                          Extraits Sociaux (Temps Reel)
+                          Extraits Sociaux (Temps Réel)
                         </h4>
                         <div className="space-y-4">
                           {selectedAlert.social_excerpts.map((excerpt, index) => (
@@ -469,7 +469,7 @@ export default function Alertes() {
               </section>
             ) : (
               <div className="flex items-center justify-center h-64 text-on-surface-variant text-sm">
-                Selectionnez une alerte pour voir les details
+                Sélectionnez une alerte pour voir les détails
               </div>
             )}
           </div>

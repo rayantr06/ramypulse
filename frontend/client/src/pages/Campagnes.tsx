@@ -46,7 +46,7 @@ function mapCampaignView(value: unknown): CampaignView {
     name: campaign.campaign_name,
     type: campaign.campaign_type || "Social Media",
     platform: campaign.platform || "Toutes",
-    influencer: campaign.influencer_handle || "Aucun influenceur renseigne",
+    influencer: campaign.influencer_handle || "Aucun influenceur renseigné",
     budget_dza: campaign.budget_dza ?? null,
     start_date: campaign.start_date || "-",
     end_date: campaign.end_date || "-",
@@ -188,7 +188,7 @@ export default function Campagnes() {
     post_campaign_nss: null,
     uplift_pct: null,
     retention_pct: null,
-    ai_insight: "Selectionnez une campagne pour afficher son impact.",
+    ai_insight: "Sélectionnez une campagne pour afficher son impact.",
   };
 
   const activeNss = impactData.during_campaign_nss;
@@ -202,7 +202,7 @@ export default function Campagnes() {
         <div className="flex items-end justify-between">
           <div>
             <span className="text-[10px] font-bold tracking-[0.2em] text-primary uppercase">
-              Gestion Operationnelle
+              Gestion Opérationnelle
             </span>
             <h2 className="text-3xl font-headline font-extrabold tracking-tighter mt-1">
               Campagnes Marketing
@@ -216,7 +216,7 @@ export default function Campagnes() {
               className="px-6 py-2 bg-gradient-to-r from-primary to-primary-container text-on-primary-fixed text-xs font-bold transition-transform active:scale-95 shadow-lg shadow-primary/10 rounded-sm"
               data-testid="btn-create-campaign"
             >
-              CREER UNE CAMPAGNE
+              CRÉER UNE CAMPAGNE
             </button>
           </div>
         </div>
@@ -243,7 +243,7 @@ export default function Campagnes() {
                   </label>
                   <input
                     className="w-full bg-surface-container-highest border-none rounded-sm text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
-                    placeholder="ex: Ramy Citron Ete 2024"
+                    placeholder="ex: Ramy Citron Été 2024"
                     value={form.campaign_name}
                     onChange={(event) =>
                       setForm({ ...form, campaign_name: event.target.value })
@@ -384,7 +384,7 @@ export default function Campagnes() {
                   className="w-full py-3 bg-primary text-on-primary-fixed font-bold text-xs uppercase tracking-widest hover:brightness-110 transition-all disabled:opacity-50 rounded-sm"
                   data-testid="btn-submit-campaign"
                 >
-                  {createMutation.isPending ? "Creation..." : "Lancer la Campagne"}
+                  {createMutation.isPending ? "Création..." : "Lancer la Campagne"}
                 </button>
               </form>
             </div>
@@ -630,7 +630,7 @@ export default function Campagnes() {
                       </span>
                       <span className="w-1 h-1 bg-on-surface-variant rounded-full"></span>
                       <span className="text-xs text-tertiary">
-                        {allCampaigns[0]?.platform || "Plateforme non renseignee"}
+                        {allCampaigns[0]?.platform || "Plateforme non renseignée"}
                       </span>
                     </div>
                   </div>
