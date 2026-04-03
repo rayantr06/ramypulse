@@ -7,9 +7,14 @@ import { fileURLToPath } from "node:url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const pagesDir = path.resolve(__dirname, "../client/src/pages");
+const componentsDir = path.resolve(__dirname, "../client/src/components");
 
 function readPage(name) {
   return readFileSync(path.join(pagesDir, name), "utf8");
+}
+
+function readComponent(name) {
+  return readFileSync(path.join(componentsDir, name), "utf8");
 }
 
 function contains(source, text) {
@@ -76,6 +81,7 @@ test("AdminSources keeps Stitch labels and dedicated admin shell", () => {
   const source = readPage("AdminSources.tsx");
   contains(source, "function AdminShell");
   contains(source, "RamyPulse Admin");
+  contains(source, "Administrator profile");
   contains(source, "COMMAND CENTER");
   contains(source, "New Pipeline");
   contains(source, "SOURCES DE DONNÉES");
@@ -83,4 +89,12 @@ test("AdminSources keeps Stitch labels and dedicated admin shell", () => {
   lacks(source, "import { AppShell }");
   lacks(source, "SOURCES DE DONNEES");
   lacks(source, "PIPELINE TRACE & DEBIT");
+});
+
+test("Shared product shell keeps Stitch branding and avatar", () => {
+  const appShell = readComponent("AppShell.tsx");
+  const sidebar = readComponent("Sidebar.tsx");
+  contains(appShell, "Ammar Profile Picture");
+  contains(sidebar, "Marketing Intelligence");
+  contains(sidebar, "Ammar, Brand Manager");
 });

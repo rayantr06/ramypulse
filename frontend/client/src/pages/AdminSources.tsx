@@ -8,6 +8,9 @@ import {
 } from "@/lib/apiMappings";
 import { Link } from "wouter";
 
+const ADMIN_AVATAR_URL =
+  "https://lh3.googleusercontent.com/aida-public/AB6AXuDYjekNYsJPISJP_ApqgVYwWlY6jmjIWwMsNcVYjsiW_28pC-k18dLVevSEVax_5nH33RbYu6F7VSa3RjhIKA7JFwYWuExsE0eI-F5nguXeSkPtuV9FLgz5uIRRW3CGxiRZYZ2F6BcDRJPYybt2Pv6tzYMIajxl0_TXeeRaWbfW1foLsk8LUKO8cCOdDtgkBSgQXwiA4fFNMk5oeK_1DwwY4cChE67ilh3M7jPJvNJv8kim9FShvwr18C2TJEAfJw6OPLaN6SrnlGwk";
+
 interface SourceView {
   id: string;
   name: string;
@@ -272,9 +275,11 @@ function AdminShell({ children }: { children: React.ReactNode }) {
           <span className="material-symbols-outlined hover:text-white transition-colors cursor-pointer">
             settings
           </span>
-          <div className="w-8 h-8 rounded-full border-2 border-primary/20 bg-surface-container-high flex items-center justify-center">
-            <span className="material-symbols-outlined text-sm text-gray-400">person</span>
-          </div>
+          <img
+            alt="Administrator profile"
+            className="w-8 h-8 rounded-full border-2 border-primary/20 object-cover"
+            src={ADMIN_AVATAR_URL}
+          />
         </div>
       </nav>
 
