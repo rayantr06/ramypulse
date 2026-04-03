@@ -1,0 +1,137 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* RamyPulse Obsidian Design System — Global Base */
+
+:root {
+  --background: 228 7% 8%;
+  --foreground: 240 3% 90%;
+  --card: 225 5% 13%;
+  --card-foreground: 240 3% 90%;
+  --popover: 225 5% 13%;
+  --popover-foreground: 240 3% 90%;
+  --primary: 21 100% 79%;
+  --primary-foreground: 18 60% 13%;
+  --secondary: 225 3% 28%;
+  --secondary-foreground: 240 3% 79%;
+  --muted: 225 5% 13%;
+  --muted-foreground: 228 2% 72%;
+  --accent: 225 5% 17%;
+  --accent-foreground: 240 3% 90%;
+  --destructive: 354 100% 29%;
+  --destructive-foreground: 11 100% 92%;
+  --border: 14 19% 29%;
+  --input: 225 2% 21%;
+  --ring: 21 100% 79%;
+  --radius: 0.25rem;
+}
+
+.dark {
+  --background: 228 7% 8%;
+  --foreground: 240 3% 90%;
+  --card: 225 5% 13%;
+  --card-foreground: 240 3% 90%;
+  --popover: 225 5% 13%;
+  --popover-foreground: 240 3% 90%;
+  --primary: 21 100% 79%;
+  --primary-foreground: 18 60% 13%;
+  --secondary: 225 3% 28%;
+  --secondary-foreground: 240 3% 79%;
+  --muted: 225 5% 13%;
+  --muted-foreground: 228 2% 72%;
+  --accent: 225 5% 17%;
+  --accent-foreground: 240 3% 90%;
+  --destructive: 354 100% 29%;
+  --destructive-foreground: 11 100% 92%;
+  --border: 14 19% 29%;
+  --input: 225 2% 21%;
+  --ring: 21 100% 79%;
+}
+
+* {
+  @apply border-border;
+}
+
+body {
+  @apply bg-surface-container-lowest text-on-surface;
+  font-family: 'Inter', sans-serif;
+}
+
+h1, h2, h3, h4, .font-headline {
+  font-family: 'Manrope', sans-serif;
+}
+
+/* Material Icons */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  vertical-align: middle;
+  display: inline-block;
+  user-select: none;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #121315;
+}
+::-webkit-scrollbar-thumb {
+  background: #343537;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #454749;
+}
+
+/* Pulse gradient utility */
+.pulse-gradient {
+  background: linear-gradient(135deg, #ffb693 0%, #f56600 100%);
+}
+
+/* Glass panel utility */
+.glass-panel {
+  background: rgba(56, 57, 59, 0.4);
+  backdrop-filter: blur(20px);
+}
+
+/* Selection */
+::selection {
+  background: rgba(255, 182, 147, 0.3);
+  color: #e3e2e5;
+}
+
+/* Ambient glow on floating elements */
+.shadow-ambient {
+  box-shadow: 0px 24px 24px 0px rgba(255, 255, 255, 0.06);
+}
+
+/* Focus ring for inputs */
+.focus-ring:focus {
+  outline: none;
+  box-shadow: 0 0 0 1px rgba(255, 182, 147, 0.4);
+}
+
+/* Data table rows */
+.data-row {
+  @apply transition-colors duration-200;
+}
+.data-row:hover {
+  @apply bg-surface-container-high;
+}
+
+/* Status badge base */
+.badge-urgent {
+  @apply bg-error-container text-error text-[10px] font-bold px-2 py-0.5 rounded;
+}
+.badge-analyse {
+  @apply bg-tertiary/10 text-tertiary text-[10px] font-bold px-2 py-0.5 rounded;
+}
+.badge-systeme {
+  @apply bg-surface-container-highest text-gray-400 text-[10px] font-bold px-2 py-0.5 rounded;
+}
