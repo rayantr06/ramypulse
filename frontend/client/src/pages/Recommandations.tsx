@@ -8,6 +8,7 @@ import {
   mapContextPreview,
   mapRecommendation,
 } from "@/lib/apiMappings";
+import { STITCH_AVATARS } from "@/lib/stitchAssets";
 
 interface RecommendationContextView {
   nss_global: number | null;
@@ -247,6 +248,8 @@ export default function Recommandations() {
     <AppShell
       headerSearchPlaceholder="Rechercher une recommandation..."
       onSearch={() => {}}
+      avatarSrc={STITCH_AVATARS.recommandations.src}
+      avatarAlt={STITCH_AVATARS.recommandations.alt}
     >
       <div className="p-8 max-w-7xl mx-auto space-y-10">
         <section>

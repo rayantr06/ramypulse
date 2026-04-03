@@ -7,9 +7,7 @@ import {
   mapAdminSyncRun,
 } from "@/lib/apiMappings";
 import { Link } from "wouter";
-
-const ADMIN_AVATAR_URL =
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuDYjekNYsJPISJP_ApqgVYwWlY6jmjIWwMsNcVYjsiW_28pC-k18dLVevSEVax_5nH33RbYu6F7VSa3RjhIKA7JFwYWuExsE0eI-F5nguXeSkPtuV9FLgz5uIRRW3CGxiRZYZ2F6BcDRJPYybt2Pv6tzYMIajxl0_TXeeRaWbfW1foLsk8LUKO8cCOdDtgkBSgQXwiA4fFNMk5oeK_1DwwY4cChE67ilh3M7jPJvNJv8kim9FShvwr18C2TJEAfJw6OPLaN6SrnlGwk";
+import { STITCH_AVATARS } from "@/lib/stitchAssets";
 
 interface SourceView {
   id: string;
@@ -276,9 +274,9 @@ function AdminShell({ children }: { children: React.ReactNode }) {
             settings
           </span>
           <img
-            alt="Administrator profile"
+            alt={STITCH_AVATARS.admin.alt}
             className="w-8 h-8 rounded-full border-2 border-primary/20 object-cover"
-            src={ADMIN_AVATAR_URL}
+            src={STITCH_AVATARS.admin.src}
           />
         </div>
       </nav>

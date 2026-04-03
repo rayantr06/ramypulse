@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
 import { apiRequest } from "@/lib/queryClient";
 import { mapAlert } from "@/lib/apiMappings";
+import { STITCH_AVATARS } from "@/lib/stitchAssets";
 
 type StatusFilter = "NOUVEAU" | "RECONNU" | "RESOLU" | "ECARTE";
 type SeverityFilter = "CRITIQUE" | "HAUTE" | "MOYENNE" | "BASSE";
@@ -217,6 +218,8 @@ export default function Alertes() {
     <AppShell
       headerSearchPlaceholder="Rechercher une alerte..."
       onSearch={() => {}}
+      avatarSrc={STITCH_AVATARS.alertes.src}
+      avatarAlt={STITCH_AVATARS.alertes.alt}
     >
       <div className="p-8 min-h-[calc(100vh-64px)]">
         <div className="flex justify-between items-end mb-8">

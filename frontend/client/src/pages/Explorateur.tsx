@@ -6,6 +6,7 @@ import {
   mapExplorerSearchResults,
   mapExplorerVerbatims,
 } from "@/lib/apiMappings";
+import { STITCH_AVATARS } from "@/lib/stitchAssets";
 
 const SOURCES = [
   { id: "facebook", label: "Facebook", icon: "social_leaderboard", color: "#1877F2" },
@@ -179,7 +180,10 @@ export default function Explorateur() {
   }, [verbatims]);
 
   return (
-    <AppShell>
+    <AppShell
+      avatarSrc={STITCH_AVATARS.explorateur.src}
+      avatarAlt={STITCH_AVATARS.explorateur.alt}
+    >
       <div className="p-8 space-y-8 max-w-7xl mx-auto w-full">
         <section>
           <h2 className="text-3xl font-extrabold font-headline tracking-tighter text-on-surface">

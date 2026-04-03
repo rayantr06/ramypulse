@@ -1,8 +1,6 @@
 import { ReactNode } from "react";
 import { Sidebar } from "./Sidebar";
-
-const PRODUCT_AVATAR_URL =
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuAbstAt_tWvE5h2NY5MXWK4cCBohfZE-lOubtu48ifibFEHoVqqeVJ_fHFTzlXlHddmZWQvql0Ju3QLkxMoVWrxOR3t5YOGyfN76aRZ4tCpJWEcv_RLehZlSe70OWTew5i4uU9L7yjtQydQQduRb1IrergO3YFDviqFbiyX8Z_qMG8HuJeaQaK0Dhv9pzeUTRyYN0052wCWxY_-uYhxnkRHcaknxa-Cz7QahA69bCRXYqfCMdhYTueYLZqVVZwZhHQDz4jRKR5FXWdK";
+import { STITCH_AVATARS } from "@/lib/stitchAssets";
 
 interface AppShellProps {
   children: ReactNode;
@@ -11,6 +9,8 @@ interface AppShellProps {
   headerRight?: ReactNode;
   headerSearchPlaceholder?: string;
   onSearch?: (query: string) => void;
+  avatarSrc?: string;
+  avatarAlt?: string;
 }
 
 export function AppShell({
@@ -18,6 +18,8 @@ export function AppShell({
   headerRight,
   headerSearchPlaceholder = "Rechercher...",
   onSearch,
+  avatarSrc = STITCH_AVATARS.dashboard.src,
+  avatarAlt = STITCH_AVATARS.dashboard.alt,
 }: AppShellProps) {
   const hasSearch = Boolean(onSearch);
 
@@ -86,9 +88,9 @@ export function AppShell({
             )}
             <div className="h-8 w-8 rounded-full bg-surface-container-high flex items-center justify-center overflow-hidden border border-outline-variant/20">
               <img
-                alt="Ammar Profile Picture"
+                alt={avatarAlt}
                 className="w-full h-full object-cover"
-                src={PRODUCT_AVATAR_URL}
+                src={avatarSrc}
               />
             </div>
           </div>

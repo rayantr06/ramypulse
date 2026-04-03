@@ -7,6 +7,7 @@ import {
   mapCampaign,
   mapCampaignImpact,
 } from "@/lib/apiMappings";
+import { STITCH_AVATARS } from "@/lib/stitchAssets";
 
 type CampaignFilter = "TOUTES" | "ACTIVES" | "ARCHIVES";
 
@@ -197,6 +198,8 @@ export default function Campagnes() {
     <AppShell
       headerSearchPlaceholder="Rechercher une campagne..."
       onSearch={() => {}}
+      avatarSrc={STITCH_AVATARS.campagnes.src}
+      avatarAlt={STITCH_AVATARS.campagnes.alt}
     >
       <div className="p-8 max-w-7xl mx-auto space-y-8">
         <div className="flex items-end justify-between">

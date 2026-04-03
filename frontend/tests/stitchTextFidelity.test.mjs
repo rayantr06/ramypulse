@@ -81,7 +81,7 @@ test("AdminSources keeps Stitch labels and dedicated admin shell", () => {
   const source = readPage("AdminSources.tsx");
   contains(source, "function AdminShell");
   contains(source, "RamyPulse Admin");
-  contains(source, "Administrator profile");
+  contains(source, "STITCH_AVATARS.admin.alt");
   contains(source, "COMMAND CENTER");
   contains(source, "New Pipeline");
   contains(source, "SOURCES DE DONNÉES");
@@ -94,7 +94,17 @@ test("AdminSources keeps Stitch labels and dedicated admin shell", () => {
 test("Shared product shell keeps Stitch branding and avatar", () => {
   const appShell = readComponent("AppShell.tsx");
   const sidebar = readComponent("Sidebar.tsx");
-  contains(appShell, "Ammar Profile Picture");
+  contains(appShell, "avatarSrc = STITCH_AVATARS.dashboard.src");
+  contains(appShell, "avatarAlt = STITCH_AVATARS.dashboard.alt");
   contains(sidebar, "Marketing Intelligence");
   contains(sidebar, "Ammar, Brand Manager");
+});
+
+test("Pages wire Stitch-specific header avatars", () => {
+  contains(readPage("Watchlists.tsx"), "STITCH_AVATARS.watchlists.src");
+  contains(readPage("Explorateur.tsx"), "STITCH_AVATARS.explorateur.src");
+  contains(readPage("Recommandations.tsx"), "STITCH_AVATARS.recommandations.src");
+  contains(readPage("Alertes.tsx"), "STITCH_AVATARS.alertes.src");
+  contains(readPage("Campagnes.tsx"), "STITCH_AVATARS.campagnes.src");
+  contains(readPage("AdminSources.tsx"), "STITCH_AVATARS.admin.src");
 });

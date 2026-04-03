@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
 import { apiRequest } from "@/lib/queryClient";
 import { mapWatchlist, mapWatchlistMetrics } from "@/lib/apiMappings";
+import { STITCH_AVATARS } from "@/lib/stitchAssets";
 
 type TabFilter = "Toutes" | "Actives" | "Inactives";
 
@@ -140,6 +141,8 @@ export default function Watchlists() {
     <AppShell
       headerSearchPlaceholder="Rechercher une watchlist..."
       onSearch={() => {}}
+      avatarSrc={STITCH_AVATARS.watchlists.src}
+      avatarAlt={STITCH_AVATARS.watchlists.alt}
     >
       <div className="p-8 flex gap-8">
         <div className="flex-1 min-w-0">
