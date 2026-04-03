@@ -201,6 +201,51 @@ def test_platform_connector_rejette_fetch_mode_invalide(tmp_path: Path) -> None:
         )
 
 
+def test_platform_connector_propage_une_typeerror_interne_du_collector(tmp_path: Path, monkeypatch) -> None:
+    """Une TypeError interne du collecteur ne doit pas etre confondue avec un mauvais appel."""
+    from core.connectors.facebook_connector import FacebookConnector
+
+    snapshot = tmp_path / "facebook.parquet"
+    pd.DataFrame(
+        [
+            {
+                "text": "facebook snapshot",
+                "channel": "facebook",
+                "timestamp": "2026-03-20T10:00:00",
+                "source_url": "https://example.test/facebook/snapshot",
+            }
+        ]
+    ).to_parquet(snapshot, index=False)
+
+    connector = FacebookConnector()
+    scraper_module_name = connector.scraper_modules[0]
+    fake_module = types.ModuleType(scraper_module_name)
+
+    def collect(source=None, credentials=None):
+        raise TypeError("collector bug interne")
+
+    fake_module.collect = collect
+    monkeypatch.setitem(sys.modules, scraper_module_name, fake_module)
+
+    with pytest.raises(TypeError, match="collector bug interne"):
+        connector.fetch_documents(
+            {
+                "source_id": "src-facebook-typeerror",
+                "client_id": "client-a",
+                "source_name": "facebook source",
+                "platform": "facebook",
+                "source_type": "facebook_feed",
+                "owner_type": "owned",
+                "auth_mode": "file_snapshot",
+                "config_json": {
+                    "fetch_mode": "collector",
+                    "page_url": "https://facebook.com/ramy",
+                    "snapshot_path": str(snapshot),
+                },
+            }
+        )
+
+
 def test_source_admin_service_filtre_sources_et_runs_par_client(
     platform_db: Path,
     tmp_path: Path,

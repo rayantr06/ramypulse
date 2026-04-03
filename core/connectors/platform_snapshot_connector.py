@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib
+import inspect
 import logging
 from pathlib import Path
 
@@ -20,16 +21,17 @@ logger = logging.getLogger(__name__)
 def _call_scraper_entrypoint(function, *, source: dict, credentials: dict | None):
     """Tente plusieurs signatures d'appel pour les collecteurs optionnels."""
     attempts = [
-        lambda: function(source=source, credentials=credentials),
-        lambda: function(source=source),
-        lambda: function(credentials=credentials),
-        lambda: function(),
+        ((), {"source": source, "credentials": credentials}),
+        ((), {"source": source}),
+        ((), {"credentials": credentials}),
+        ((), {}),
     ]
-    for attempt in attempts:
+    for args, kwargs in attempts:
         try:
-            result = attempt()
+            inspect.signature(function).bind(*args, **kwargs)
         except TypeError:
             continue
+        result = function(*args, **kwargs)
         if isinstance(result, pd.DataFrame):
             return result
     return None
