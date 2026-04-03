@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import streamlit as st
@@ -15,13 +14,14 @@ from core.runtime.diagnostics import collect_runtime_diagnostics
 from ui_helpers.runtime_panel import render_runtime_panel
 from ui_helpers.source_admin_helpers import (
     build_health_snapshots_frame,
+    build_source_config_json,
     build_source_sync_runs_frame,
     build_sources_frame,
     compute_source_metrics,
     filter_source_records,
 )
 
-st.set_page_config(page_title="Admin Sources — RamyPulse", layout="wide")
+st.set_page_config(page_title="Admin Sources - RamyPulse", layout="wide")
 
 
 @st.cache_resource
@@ -36,13 +36,25 @@ def load_runtime_diagnostics() -> dict:
     return collect_runtime_diagnostics()
 
 
-def _parse_json_mapping(raw: str) -> dict[str, str] | None:
-    if not raw.strip():
-        return None
-    parsed = json.loads(raw)
-    if not isinstance(parsed, dict):
-        raise ValueError("Le mapping JSON doit être un objet.")
-    return {str(key): str(value) for key, value in parsed.items()}
+def _default_source_type(platform: str) -> str:
+    defaults = {
+        "facebook": "facebook_feed",
+        "google_maps": "public_reviews",
+        "youtube": "youtube_channel",
+        "instagram": "instagram_profile",
+        "import": "batch_import",
+    }
+    return defaults.get(platform, f"{platform}_feed")
+
+
+def _platform_field_label(platform: str) -> str | None:
+    labels = {
+        "facebook": "Page URL",
+        "google_maps": "Place URL",
+        "youtube": "Channel ID",
+        "instagram": "Profile URL",
+    }
+    return labels.get(platform)
 
 
 def _render_create_source_form(orchestrator: IngestionOrchestrator) -> None:
@@ -51,31 +63,49 @@ def _render_create_source_form(orchestrator: IngestionOrchestrator) -> None:
         left, right = st.columns(2)
         with left:
             source_name = st.text_input("Nom source", placeholder="Ex : Facebook Ramy Oran")
-            platform = st.selectbox("Plateforme", ["facebook", "google_maps", "youtube", "import"])
-            source_type = st.text_input("Source type", value="batch_import" if platform == "import" else f"{platform}_feed")
+            platform = st.selectbox("Plateforme", ["facebook", "google_maps", "youtube", "instagram", "import"])
+            source_type = st.text_input("Source type", value=_default_source_type(platform))
             owner_type = st.selectbox("Owner type", ["owned", "competitor", "market"])
             auth_mode = st.selectbox("Auth mode", ["public", "file_upload", "token", "manual"])
+            platform_label = _platform_field_label(platform)
+            platform_value = (
+                st.text_input(platform_label, placeholder="Identifiant ou URL source")
+                if platform_label
+                else ""
+            )
         with right:
-            sync_frequency_minutes = st.number_input("Fréquence sync (minutes)", min_value=5, value=60, step=5)
-            freshness_sla_hours = st.number_input("SLA fraîcheur (heures)", min_value=1, value=24, step=1)
-            snapshot_path = st.text_input("Snapshot path / import path", placeholder=str(Path("data/raw/facebook_raw.parquet")))
+            fetch_mode = st.selectbox("Fetch mode", ["snapshot", "collector", "api"], index=0)
+            sync_frequency_minutes = st.number_input("Frequence sync (minutes)", min_value=5, value=60, step=5)
+            freshness_sla_hours = st.number_input("SLA fraicheur (heures)", min_value=1, value=24, step=1)
+            snapshot_path = st.text_input(
+                "Snapshot path / import path",
+                placeholder=str(Path("data/raw/facebook_raw.parquet")),
+            )
             mapping_raw = st.text_area(
                 "Mapping JSON optionnel",
                 value='{"review": "text"}' if platform == "import" else "",
                 height=90,
             )
+            secret_value = st.text_input(
+                "Secret brut optionnel",
+                type="password",
+                help="Stocke une reference locale/env au lieu d'ecrire le secret en base.",
+            )
 
-        submitted = st.form_submit_button("Créer la source", use_container_width=True)
+        submitted = st.form_submit_button("Creer la source", use_container_width=True)
         if not submitted:
             return
 
         try:
-            config_json: dict[str, object] = {}
-            if snapshot_path.strip():
-                config_json["snapshot_path"] = snapshot_path.strip()
-            parsed_mapping = _parse_json_mapping(mapping_raw)
-            if parsed_mapping:
-                config_json["column_mapping"] = parsed_mapping
+            config_json = build_source_config_json(
+                platform=platform,
+                fetch_mode=fetch_mode,
+                snapshot_path=snapshot_path,
+                mapping_raw=mapping_raw,
+                secret_value=secret_value,
+                secret_label=f"{platform}-{source_name or 'source'}",
+                platform_value=platform_value,
+            )
 
             orchestrator.create_source(
                 {
@@ -91,10 +121,10 @@ def _render_create_source_form(orchestrator: IngestionOrchestrator) -> None:
                 }
             )
         except Exception as exc:  # pragma: no cover - garde-fou UI
-            st.error(f"Impossible de créer la source : {exc}")
+            st.error(f"Impossible de creer la source : {exc}")
             return
 
-        st.success("Source créée.")
+        st.success("Source creee.")
         st.rerun()
 
 
@@ -105,11 +135,11 @@ def _render_source_actions(
 ) -> None:
     st.subheader("Actions")
     if not records:
-        st.info("Aucune source à administrer pour le moment.")
+        st.info("Aucune source a administrer pour le moment.")
         return
 
     selected_source_id = st.selectbox(
-        "Sélectionner une source",
+        "Selectionner une source",
         options=[row["source_id"] for row in records],
         format_func=lambda value: next(
             (
@@ -127,8 +157,15 @@ def _render_source_actions(
     manual_file_path = st.text_input(
         "Chemin fichier manuel",
         value=str(source_config.get("snapshot_path") or ""),
-        help="Utilisé pour les sources import et les snapshots locaux de connecteurs plateforme.",
+        help="Utilise pour les sources import et les snapshots locaux de connecteurs plateforme.",
     )
+    fetch_mode = source_config.get("fetch_mode", "snapshot")
+    credential_ref = source_config.get("credential_ref")
+    if fetch_mode or credential_ref:
+        st.caption(
+            f"Fetch mode : `{fetch_mode}`"
+            + (f" | Secret : `{credential_ref}`" if credential_ref else "")
+        )
 
     columns = st.columns(4)
     if columns[0].button("Lancer sync", use_container_width=True):
@@ -138,35 +175,35 @@ def _render_source_actions(
                 manual_file_path=manual_file_path or None,
                 client_id=DEFAULT_CLIENT_ID,
             )
-            st.success("Synchronisation lancée.")
+            st.success("Synchronisation lancee.")
             st.rerun()
         except Exception as exc:  # pragma: no cover
             st.error(f"Echec sync : {exc}")
 
-    if columns[1].button("Calculer santé", use_container_width=True):
+    if columns[1].button("Calculer sante", use_container_width=True):
         try:
             compute_source_health(selected_source_id, client_id=DEFAULT_CLIENT_ID)
-            st.success("Snapshot de santé calculé.")
+            st.success("Snapshot de sante calcule.")
             st.rerun()
         except Exception as exc:  # pragma: no cover
-            st.error(f"Echec calcul santé : {exc}")
+            st.error(f"Echec calcul sante : {exc}")
 
     if bool(selected_source.get("is_active")):
-        if columns[2].button("Désactiver", use_container_width=True):
+        if columns[2].button("Desactiver", use_container_width=True):
             try:
                 service.update_source(selected_source_id, {"is_active": 0}, client_id=DEFAULT_CLIENT_ID)
-                st.success("Source désactivée.")
+                st.success("Source desactivee.")
                 st.rerun()
             except Exception as exc:  # pragma: no cover
-                st.error(f"Echec désactivation : {exc}")
+                st.error(f"Echec desactivation : {exc}")
     else:
-        if columns[2].button("Réactiver", use_container_width=True):
+        if columns[2].button("Reactiver", use_container_width=True):
             try:
                 service.update_source(selected_source_id, {"is_active": 1}, client_id=DEFAULT_CLIENT_ID)
-                st.success("Source réactivée.")
+                st.success("Source reactivee.")
                 st.rerun()
             except Exception as exc:  # pragma: no cover
-                st.error(f"Echec réactivation : {exc}")
+                st.error(f"Echec reactivation : {exc}")
 
     columns[3].caption("Les suppressions restent interdites depuis l'UI.")
 
@@ -177,14 +214,14 @@ def _render_source_actions(
     trace_cols[1].metric("Normalized", int(trace.get("normalized_count") or 0))
     trace_cols[2].metric("Enriched", int(trace.get("enriched_count") or 0))
 
-    with st.expander("Détail source sélectionnée", expanded=False):
+    with st.expander("Detail source selectionnee", expanded=False):
         st.json(trace)
 
 
 def main() -> None:
     st.title("Admin Sources")
     st.caption(f"Administration Wave 5.1 des sources PRD pour le client {DEFAULT_CLIENT_ID}.")
-    render_runtime_panel(load_runtime_diagnostics(), title="État runtime", expanded=False)
+    render_runtime_panel(load_runtime_diagnostics(), title="Etat runtime", expanded=False)
 
     orchestrator, service = _get_services()
     records = service.list_sources(client_id=DEFAULT_CLIENT_ID)
@@ -197,7 +234,7 @@ def main() -> None:
     kpi2.metric("Actives", metrics["active"])
     kpi3.metric("Inactives", metrics["inactive"])
     kpi4.metric("Plateformes", metrics["platforms"])
-    kpi5.metric("Dégradées", metrics["degraded"])
+    kpi5.metric("Degradees", metrics["degraded"])
 
     st.divider()
     filter_cols = st.columns(3)
@@ -229,7 +266,7 @@ def main() -> None:
     )
     with sources_tab:
         if sources_frame.empty:
-            st.info("Aucune source enregistrée.")
+            st.info("Aucune source enregistree.")
         else:
             st.dataframe(sources_frame, use_container_width=True, hide_index=True)
     with runs_tab:
@@ -239,7 +276,7 @@ def main() -> None:
             st.dataframe(runs_frame, use_container_width=True, hide_index=True)
     with health_tab:
         if health_frame.empty:
-            st.info("Aucun snapshot de santé disponible.")
+            st.info("Aucun snapshot de sante disponible.")
         else:
             st.dataframe(health_frame, use_container_width=True, hide_index=True)
 

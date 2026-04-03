@@ -22,6 +22,70 @@ def platform_db(tmp_path, monkeypatch):
     return db_path
 
 
+@pytest.mark.parametrize(
+    ("platform", "source_type", "config_json"),
+    [
+        ("facebook", "facebook_feed", {"page_url": "https://facebook.com/ramy", "fetch_mode": "snapshot"}),
+        ("google_maps", "public_reviews", {"place_url": "https://maps.google.com/?cid=1", "fetch_mode": "snapshot"}),
+        ("youtube", "youtube_channel", {"channel_id": "UC123", "fetch_mode": "snapshot"}),
+        ("instagram", "instagram_profile", {"profile_url": "https://instagram.com/ramy", "fetch_mode": "snapshot"}),
+        ("import", "batch_import", {"fetch_mode": "snapshot"}),
+    ],
+)
+def test_create_source_accepte_les_cinq_plateformes_du_socle(
+    platform_db,
+    tmp_path: Path,
+    platform: str,
+    source_type: str,
+    config_json: dict[str, str],
+) -> None:
+    """L'orchestrateur doit accepter exactement les cinq plateformes du socle initial."""
+    from core.ingestion.orchestrator import IngestionOrchestrator
+
+    effective_config = dict(config_json)
+    if platform == "import":
+        csv_path = tmp_path / "five-sources-import.csv"
+        pd.DataFrame(
+            [{"text": "ramy dispo", "channel": "import", "timestamp": "2026-04-03T11:00:00"}]
+        ).to_csv(csv_path, index=False)
+        effective_config["snapshot_path"] = str(csv_path)
+
+    orchestrator = IngestionOrchestrator(db_path=str(platform_db))
+    source = orchestrator.create_source(
+        {
+            "client_id": "client-five",
+            "source_name": f"{platform} source",
+            "platform": platform,
+            "source_type": source_type,
+            "owner_type": "owned",
+            "auth_mode": "public",
+            "config_json": effective_config,
+        }
+    )
+
+    assert source["platform"] == platform
+    assert source["source_type"] == source_type
+
+
+def test_create_source_rejette_une_plateforme_hors_socle(platform_db) -> None:
+    """Le socle ingestion ne doit pas accepter des plateformes non supportees."""
+    from core.ingestion.orchestrator import IngestionOrchestrator
+
+    orchestrator = IngestionOrchestrator(db_path=str(platform_db))
+
+    with pytest.raises(ValueError, match="Plateforme non supportee"):
+        orchestrator.create_source(
+            {
+                "client_id": "client-five",
+                "source_name": "TikTok Ramy",
+                "platform": "tiktok",
+                "source_type": "tiktok_feed",
+                "owner_type": "owned",
+                "auth_mode": "public",
+            }
+        )
+
+
 def test_database_cree_les_tables_plateforme_wave5(platform_db) -> None:
     """create_tables() doit provisionner les tables PRD plateforme de base."""
     from core.database import DatabaseManager
@@ -53,7 +117,7 @@ def test_batch_import_connector_et_normalization_pipeline_creent_la_trace_comple
     monkeypatch,
     tmp_path: Path,
 ) -> None:
-    """Un import batch doit alimenter raw_documents puis normalized_records/enriched_signals."""
+    """Un import batch doit alimenter raw_documents puis normaliser dans la meme sync."""
     from core.database import DatabaseManager
     from core.ingestion.orchestrator import IngestionOrchestrator
     import core.analysis.absa_engine as absa_engine
@@ -125,11 +189,10 @@ def test_batch_import_connector_et_normalization_pipeline_creent_la_trace_comple
         column_mapping={"review": "text"},
         run_mode="manual",
     )
-    normalization_result = orchestrator.run_normalization_cycle(batch_size=10)
 
     assert sync_result["status"] == "success"
     assert sync_result["records_inserted"] == 2
-    assert normalization_result["processed_count"] == 2
+    assert sync_result["normalization"]["processed_count"] == 2
 
     with sqlite3.connect(platform_db) as connection:
         raw_count = connection.execute("SELECT COUNT(*) FROM raw_documents").fetchone()[0]
@@ -155,6 +218,78 @@ def test_batch_import_connector_et_normalization_pipeline_creent_la_trace_comple
     assert row[1] == "ramy_citron"
     assert row[2] == "oran"
     assert row[3]
+
+
+def test_run_source_sync_preserve_raw_documents_si_normalization_echoue(
+    platform_db,
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    """Une panne aval doit laisser les raw_documents en base avec un statut explicite."""
+    from core.database import DatabaseManager
+    from core.ingestion.orchestrator import IngestionOrchestrator
+
+    database = DatabaseManager(str(platform_db))
+    database.create_tables()
+    database.close()
+
+    csv_path = tmp_path / "import_single.csv"
+    pd.DataFrame(
+        [
+            {
+                "review": "ramy tres bon",
+                "channel": "facebook",
+                "timestamp": "2026-04-03T10:00:00",
+            }
+        ]
+    ).to_csv(csv_path, index=False)
+
+    orchestrator = IngestionOrchestrator(db_path=str(platform_db))
+    source = orchestrator.create_source(
+        {
+            "client_id": "client-preserve",
+            "source_name": "Import preserve",
+            "platform": "import",
+            "source_type": "batch_import",
+            "owner_type": "owned",
+            "auth_mode": "file_upload",
+            "config_json": {
+                "snapshot_path": str(csv_path),
+                "column_mapping": {"review": "text"},
+            },
+        }
+    )
+
+    monkeypatch.setattr(
+        "core.ingestion.orchestrator.run_normalization_job",
+        lambda **kwargs: (_ for _ in ()).throw(RuntimeError("normalization down")),
+    )
+
+    result = orchestrator.run_source_sync(source["source_id"], client_id="client-preserve")
+
+    assert result["status"] == "failed_downstream"
+    assert result["records_inserted"] == 1
+    assert result["normalization_error"] == "normalization down"
+
+    with sqlite3.connect(platform_db) as connection:
+        raw_count = connection.execute("SELECT COUNT(*) FROM raw_documents").fetchone()[0]
+        normalized_count = connection.execute("SELECT COUNT(*) FROM normalized_records").fetchone()[0]
+        run_row = connection.execute(
+            """
+            SELECT status, records_inserted, error_message
+            FROM source_sync_runs
+            WHERE source_id = ?
+            ORDER BY started_at DESC
+            LIMIT 1
+            """,
+            (source["source_id"],),
+        ).fetchone()
+
+    assert raw_count == 1
+    assert normalized_count == 0
+    assert run_row[0] == "failed_downstream"
+    assert run_row[1] == 1
+    assert run_row[2] == "normalization down"
 
 
 def test_health_checker_persiste_un_snapshot_source(platform_db) -> None:
@@ -243,3 +378,46 @@ def test_health_checker_persiste_un_snapshot_source(platform_db) -> None:
 
     assert row is not None
     assert row[0] == result["health_score"]
+
+
+def test_orchestrator_resout_credential_ref_pour_la_sync(
+    platform_db,
+    monkeypatch,
+) -> None:
+    """run_source_sync doit transmettre les credentials resolus depuis credential_ref."""
+    from core.ingestion.orchestrator import IngestionOrchestrator
+    from core.security.secret_manager import store_secret
+
+    secret_store = Path(platform_db).with_name("secrets.json")
+    monkeypatch.setattr(config, "SECRETS_STORE_PATH", secret_store, raising=False)
+
+    orchestrator = IngestionOrchestrator(db_path=str(platform_db))
+    credential_ref = store_secret("collector-token", label="facebook")
+    source = orchestrator.create_source(
+        {
+            "source_name": "Facebook credential ref",
+            "platform": "facebook",
+            "source_type": "facebook_feed",
+            "owner_type": "owned",
+            "auth_mode": "token",
+            "config_json": {
+                "fetch_mode": "collector",
+                "page_url": "https://facebook.com/ramy",
+                "credential_ref": credential_ref,
+            },
+        }
+    )
+
+    captured: dict[str, object] = {}
+
+    class _FakeFacebookConnector:
+        def fetch_documents(self, source: dict, *, credentials=None, **kwargs) -> list[dict]:
+            captured["credentials"] = credentials
+            return []
+
+    orchestrator._connectors["facebook"] = _FakeFacebookConnector()
+
+    result = orchestrator.run_source_sync(source["source_id"])
+
+    assert result["status"] == "success"
+    assert captured["credentials"]["token"] == "collector-token"

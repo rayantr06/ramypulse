@@ -2,6 +2,10 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **Execution status (2026-04-03):** Executed on `integration/wave5`.
+> Key commits: `5ac06b6a`, `ad40d256`, `84ca4927`, `c03298cd`, `0bee3e30`, `cf0f099c`, `215c6cb6`.
+> Verification evidence: focused ingestion/admin suite green, full suite green, Streamlit smoke on port `8630` returned `HTTP 200`.
+
 **Goal:** Finaliser le socle d'ingestion modulaire pour `facebook`, `google_maps`, `youtube`, `instagram` et `import`, avec onboarding admin, secrets par référence, sync tenant-safe, health snapshots et traçabilité source -> raw -> normalized -> enriched.
 
 **Architecture:** On part du socle déjà présent dans `integration/wave5` et on le durcit au lieu de le réécrire. Le travail est centré sur un helper de config source partagé, un contrat connecteur explicite, l'ajout d'Instagram comme cinquième source, puis l'admin source complète branchée sur l'orchestrateur et le secret manager. La normalisation existante reste la voie unique vers `normalized_records` et `enriched_signals`.
