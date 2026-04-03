@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 # Ensure the root project path is accessible
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from api.routers import health
+from api.routers import health, dashboard, alerts, watchlists, campaigns, recommendations, explorer
 
 app = FastAPI(
     title="RamyPulse Engine API",
@@ -35,3 +35,9 @@ def root():
 
 # Include routers
 app.include_router(health.router, prefix="/api")
+app.include_router(dashboard.router, prefix="/api")
+app.include_router(alerts.router, prefix="/api")
+app.include_router(watchlists.router, prefix="/api")
+app.include_router(campaigns.router, prefix="/api")
+app.include_router(recommendations.router, prefix="/api")
+app.include_router(explorer.router, prefix="/api")
