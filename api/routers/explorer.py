@@ -21,7 +21,7 @@ def get_retriever():
     global _retriever
     if _retriever is None:
         try:
-            faiss_path = getattr(config, "FAISS_INDEX_PATH", "data/vectors/ramypulse")
+            faiss_path = str(getattr(config, "FAISS_INDEX_PATH", "data/embeddings/faiss_index"))
             if os.path.exists(f"{faiss_path}.faiss"):
                 vs = VectorStore.load(faiss_path)
             else:

@@ -40,11 +40,11 @@ def generate_recommendations(req: RecommendationGenerate):
         df_annotated = load_annotated()
         context_data = context_builder.build_recommendation_context(trigger_type=req.trigger_type, trigger_id=req.trigger_id, df_annotated=df_annotated)
         
-        provider = req.provider or config.AGENT_PROVIDER
-        model = req.model or config.AGENT_MODEL
+        provider = req.provider or getattr(config, "DEFAULT_AGENT_PROVIDER", "google_gemini")
+        model = req.model or getattr(config, "DEFAULT_AGENT_MODEL", "gemini-2.5-flash")
         
         prediction = agent_client.generate_recommendations(
-            context_data=context_data,
+            context=context_data,
             provider=provider,
             model=model,
             api_key=req.api_key

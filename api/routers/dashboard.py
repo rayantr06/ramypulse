@@ -1,5 +1,6 @@
 import sqlite3
 import logging
+import json
 from fastapi import APIRouter
 import config
 from api.schemas import DashboardSummary, DashboardAlerts, DashboardActions, AlertSummary, ActionRecommendation
@@ -80,8 +81,6 @@ def get_critical_alerts():
         
     return DashboardAlerts(critical_alerts=alerts)
 
-import json
-
 @router.get("/top-actions", response_model=DashboardActions)
 def get_top_actions():
     """Retourne les 3 recommandations / actions prioritaires."""
@@ -107,7 +106,7 @@ def get_top_actions():
                         if isinstance(recos_list, list) and len(recos_list) > 0:
                             title = recos_list[0].get("title", title)
                             priority = "high"
-                except:
+                except (json.JSONDecodeError, TypeError, ValueError):
                     pass
                 
                 actions.append(ActionRecommendation(
