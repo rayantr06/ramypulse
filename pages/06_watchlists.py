@@ -12,11 +12,15 @@ import streamlit as st
 
 from config import ANNOTATED_PARQUET_PATH, DEFAULT_CLIENT_ID
 from core.alerts.alert_detector import compute_watchlist_metrics
+from core.runtime.diagnostics import collect_runtime_diagnostics
 from core.watchlists.watchlist_manager import (
     create_watchlist,
     deactivate_watchlist,
     list_watchlists,
+    suggest_watchlists,
 )
+from ui_helpers.annotated_data import load_annotated_parquet
+from ui_helpers.runtime_panel import render_runtime_panel
 
 logger = logging.getLogger(__name__)
 
@@ -26,12 +30,13 @@ st.set_page_config(page_title="Watchlists — RamyPulse", layout="wide")
 @st.cache_data(ttl=300)
 def load_data() -> pd.DataFrame:
     """Charge les donnees annotees ou retourne un DataFrame vide."""
-    try:
-        dataframe = pd.read_parquet(ANNOTATED_PARQUET_PATH)
-        dataframe["timestamp"] = pd.to_datetime(dataframe["timestamp"], errors="coerce")
-        return dataframe
-    except FileNotFoundError:
-        return pd.DataFrame()
+    return load_annotated_parquet(ANNOTATED_PARQUET_PATH)
+
+
+@st.cache_data(ttl=60, show_spinner=False)
+def load_runtime_diagnostics() -> dict:
+    """Charge le diagnostic runtime partage."""
+    return collect_runtime_diagnostics()
 
 
 def _options_from_column(dataframe: pd.DataFrame, column: str) -> list[str]:
@@ -113,6 +118,43 @@ def _create_watchlist_form(dataframe: pd.DataFrame) -> None:
         st.rerun()
 
 
+def _render_suggested_watchlists(dataframe: pd.DataFrame) -> None:
+    """Affiche des watchlists suggerees automatiquement a partir des donnees courantes."""
+    suggestions = suggest_watchlists(dataframe, limit=3)
+    st.subheader("Watchlists suggerees")
+    if not suggestions:
+        st.info("Pas assez de signaux faibles pour suggerer de nouvelles watchlists automatiquement.")
+        return
+
+    for index, suggestion in enumerate(suggestions, start=1):
+        header = (
+            f"{suggestion['watchlist_name']} | NSS {suggestion['metrics']['nss']:.1f} | "
+            f"volume {suggestion['metrics']['volume']}"
+        )
+        with st.expander(header, expanded=(index == 1)):
+            st.write(suggestion["description"])
+            st.caption(suggestion["reason"])
+            st.json(suggestion["filters"])
+            if st.button(
+                "Creer cette watchlist",
+                key=f"create_suggested_watchlist_{index}",
+                use_container_width=True,
+            ):
+                try:
+                    create_watchlist(
+                        name=suggestion["watchlist_name"],
+                        description=suggestion["description"],
+                        scope_type=suggestion["scope_type"],
+                        filters=suggestion["filters"],
+                    )
+                except (sqlite3.Error, RuntimeError, ValueError) as exc:
+                    logger.exception("Echec creation watchlist suggeree")
+                    st.error(f"Impossible de creer la watchlist suggeree: {exc}")
+                else:
+                    st.success("Watchlist suggeree creee.")
+                    st.rerun()
+
+
 def _metrics_dataframe(watchlists: list[dict], dataframe: pd.DataFrame) -> pd.DataFrame:
     """Construit le tableau synthetique des metriques de watchlists."""
     rows: list[dict[str, object]] = []
@@ -139,6 +181,7 @@ df = load_data()
 
 st.title("🎯 Watchlists")
 st.caption(f"Configuration des perimetres de surveillance pour le client {DEFAULT_CLIENT_ID}.")
+render_runtime_panel(load_runtime_diagnostics(), title="Diagnostic runtime")
 
 if df.empty:
     st.warning("⚠️ Données non disponibles. Lancez d'abord scripts/run_demo_05.py")
@@ -161,6 +204,8 @@ layout_left, layout_right = st.columns([1, 2])
 
 with layout_left:
     _create_watchlist_form(df)
+    st.divider()
+    _render_suggested_watchlists(df)
 
 with layout_right:
     st.subheader("Watchlists configurees")

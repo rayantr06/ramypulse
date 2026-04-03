@@ -1,9 +1,12 @@
 """Assembleur de contexte pour l'agent de recommandations.
 
-Construit le payload complet (metriques, alertes, campagnes, RAG chunks)
-a partir du DataFrame annote et de SQLite, avant d'appeler le LLM.
-Degrade gracieusement si les modules des autres agents sont absents.
+Construit un payload contextualise a partir du DataFrame annote, des alertes,
+des watchlists, des campagnes et du RAG local. Le focus produit de l'etape A
+est de rendre le contexte plus declencheur-driven sans casser le contrat
+public de Wave 5.
 """
+
+from __future__ import annotations
 
 import json
 import logging
@@ -17,90 +20,62 @@ from config import ASPECT_LIST, FAISS_INDEX_PATH
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Importations optionnelles — modules des autres agents
-# ---------------------------------------------------------------------------
-
 try:
     from core.campaigns.campaign_manager import list_campaigns as _list_campaigns
+
     _HAS_CAMPAIGNS = True
 except ImportError:
     _HAS_CAMPAIGNS = False
-    logger.debug("core.campaigns non disponible — recent_campaigns sera vide")
+    logger.debug("core.campaigns indisponible")
 
 try:
     from core.alerts.alert_manager import list_alerts as _list_alerts
+
     _HAS_ALERTS = True
 except ImportError:
     _HAS_ALERTS = False
-    logger.debug("core.alerts non disponible — active_alerts sera vide")
+    logger.debug("core.alerts indisponible")
 
 try:
     from core.watchlists.watchlist_manager import list_watchlists as _list_watchlists
+
     _HAS_WATCHLISTS = True
 except ImportError:
     _HAS_WATCHLISTS = False
-    logger.debug("core.watchlists non disponible — active_watchlists sera vide")
+    logger.debug("core.watchlists indisponible")
 
-
-# ---------------------------------------------------------------------------
-# Calcul NSS inline
-# ---------------------------------------------------------------------------
 
 _POSITIVE_LABELS = {"très_positif", "positif"}
 _NEGATIVE_LABELS = {"négatif", "très_négatif"}
 
 
 def _compute_nss(df: pd.DataFrame) -> float | None:
-    """Calcule le Net Sentiment Score sur un DataFrame de signaux.
-
-    Formule : (positifs + tres_positifs - negatifs - tres_negatifs) / total * 100.
-
-    Args:
-        df: DataFrame avec colonne 'sentiment_label'.
-
-    Returns:
-        Score NSS entre -100 et 100, ou None si le DataFrame est vide.
-    """
-    if df.empty:
+    """Calcule le NSS sur un DataFrame de signaux."""
+    if df.empty or "sentiment_label" not in df.columns:
         return None
     total = len(df)
-    positives = df["sentiment_label"].isin(_POSITIVE_LABELS).sum()
-    negatives = df["sentiment_label"].isin(_NEGATIVE_LABELS).sum()
-    return round((positives - negatives) / total * 100, 2)
+    positives = int(df["sentiment_label"].isin(_POSITIVE_LABELS).sum())
+    negatives = int(df["sentiment_label"].isin(_NEGATIVE_LABELS).sum())
+    return round((positives - negatives) / total * 100.0, 2)
 
 
 def _compute_nss_by_aspect(df: pd.DataFrame) -> dict:
-    """Calcule le NSS par aspect.
-
-    Args:
-        df: DataFrame avec colonnes 'sentiment_label' et 'aspect'.
-
-    Returns:
-        Dict {aspect: nss_value}. Les aspects sans donnees ont None.
-    """
-    result: dict = {}
+    """Calcule le NSS par aspect."""
     if "aspect" not in df.columns:
         return {aspect: None for aspect in ASPECT_LIST}
+    result: dict[str, float | None] = {}
     for aspect in ASPECT_LIST:
-        sub = df[df["aspect"] == aspect]
-        result[aspect] = _compute_nss(sub)
+        result[aspect] = _compute_nss(df[df["aspect"] == aspect])
     return result
 
 
 def _compute_nss_by_channel(df: pd.DataFrame) -> dict:
-    """Calcule le NSS par canal de collecte.
-
-    Args:
-        df: DataFrame avec colonnes 'sentiment_label' et 'channel'.
-
-    Returns:
-        Dict {channel: nss_value}.
-    """
-    result: dict = {}
-    for channel in df["channel"].dropna().unique():
-        sub = df[df["channel"] == channel]
-        result[str(channel)] = _compute_nss(sub)
+    """Calcule le NSS par canal."""
+    if "channel" not in df.columns:
+        return {}
+    result: dict[str, float | None] = {}
+    for channel in df["channel"].dropna().astype(str).unique():
+        result[str(channel)] = _compute_nss(df[df["channel"] == channel])
     return result
 
 
@@ -143,7 +118,7 @@ def _latest_watchlist_metrics_map() -> dict[str, dict]:
 
 
 def _latest_campaign_snapshot_map() -> dict[str, dict]:
-    """Retourne le dernier snapshot campagne utile pour l'uplift récent."""
+    """Retourne le dernier snapshot campagne utile pour l'uplift recent."""
     try:
         with _get_connection() as connection:
             rows = connection.execute(
@@ -174,84 +149,45 @@ def _latest_campaign_snapshot_map() -> dict[str, dict]:
     return payload
 
 
-def _top_negative_aspects(df: pd.DataFrame, n: int = 3) -> list:
-    """Retourne les n aspects avec le NSS le plus faible.
+def _top_negative_aspects(df: pd.DataFrame, n: int = 3) -> list[str]:
+    """Retourne les n aspects avec le NSS le plus faible."""
+    scored = [
+        (aspect, nss)
+        for aspect, nss in _compute_nss_by_aspect(df).items()
+        if nss is not None
+    ]
+    scored.sort(key=lambda item: item[1])
+    return [aspect for aspect, _ in scored[:n]]
 
-    Args:
-        df: DataFrame annote.
-        n: Nombre d'aspects a retourner.
-
-    Returns:
-        Liste des noms d'aspects tries du NSS le plus bas.
-    """
-    nss_by_aspect = _compute_nss_by_aspect(df)
-    scored = [(asp, nss) for asp, nss in nss_by_aspect.items() if nss is not None]
-    scored.sort(key=lambda x: x[1])
-    return [asp for asp, _ in scored[:n]]
-
-
-# ---------------------------------------------------------------------------
-# Chargement RAG optionnel
-# ---------------------------------------------------------------------------
 
 def _load_retriever() -> Any | None:
-    """Tente de charger le Retriever FAISS + BM25.
-
-    Returns:
-        Retriever si l'index existe, None sinon (degrade silencieusement).
-    """
+    """Charge le retriever hybride si l'index local est disponible."""
     try:
         from core.rag.embedder import Embedder
         from core.rag.retriever import Retriever
         from core.rag.vector_store import VectorStore
-        vs = VectorStore()
-        vs.load(str(FAISS_INDEX_PATH))
-        if not vs.metadata:
-            logger.debug("Index FAISS vide — rag_chunks sera vide")
+
+        vector_store = VectorStore()
+        vector_store.load(str(FAISS_INDEX_PATH))
+        if not vector_store.metadata:
             return None
-        return Retriever(vs, Embedder())
-    except Exception as exc:
-        logger.debug("Impossible de charger le RAG : %s", exc)
+        return Retriever(vector_store, Embedder())
+    except Exception as exc:  # pragma: no cover - degrade gracieusement
+        logger.debug("RAG indisponible: %s", exc)
         return None
 
 
-# ---------------------------------------------------------------------------
-# Estimation tokens
-# ---------------------------------------------------------------------------
-
 def _estimate_tokens(context: dict) -> int:
-    """Estime le nombre de tokens du contexte JSON serialise.
-
-    Approximation : 1 token ~ 4 caracteres.
-
-    Args:
-        context: Dict du contexte assemble.
-
-    Returns:
-        Estimation entiere.
-    """
+    """Estime le nombre de tokens du contexte JSON."""
     try:
         serialized = json.dumps(context, ensure_ascii=False, default=str)
-        return max(1, len(serialized) // 4)
     except (TypeError, ValueError):
         return 0
+    return max(1, len(serialized) // 4)
 
-
-# ---------------------------------------------------------------------------
-# Requete RAG
-# ---------------------------------------------------------------------------
 
 def _build_rag_query(trigger_type: str, trigger_id: str | None, metrics: dict) -> str:
-    """Construit la requete RAG a partir du declencheur et des metriques.
-
-    Args:
-        trigger_type: Type de declencheur.
-        trigger_id: ID de declencheur.
-        metrics: Dict des metriques courantes.
-
-    Returns:
-        Requete textuelle pour la recherche RAG.
-    """
+    """Construit la requete RAG a partir du declencheur et des metriques."""
     top_negative = metrics.get("top_negative_aspects", [])
     base = "recommandations marketing Ramy"
     if top_negative:
@@ -262,7 +198,7 @@ def _build_rag_query(trigger_type: str, trigger_id: str | None, metrics: dict) -
 
 
 def _enrich_active_alerts(alerts: list[dict], trigger_id: str | None) -> list[dict]:
-    """Trie les alertes actives en mettant l'alerte déclencheuse en tete si connue."""
+    """Trie les alertes actives en mettant l'alerte declencheuse en tete si connue."""
     if not trigger_id:
         return alerts
     triggering = [alert for alert in alerts if alert.get("alert_id") == trigger_id]
@@ -271,7 +207,7 @@ def _enrich_active_alerts(alerts: list[dict], trigger_id: str | None) -> list[di
 
 
 def _enrich_watchlists(watchlists: list[dict]) -> list[dict]:
-    """Ajoute les dernieres métriques persistées aux watchlists actives."""
+    """Ajoute les dernieres metriques persistées aux watchlists actives."""
     latest_metrics = _latest_watchlist_metrics_map()
     enriched: list[dict] = []
     for watchlist in watchlists:
@@ -281,8 +217,56 @@ def _enrich_watchlists(watchlists: list[dict]) -> list[dict]:
     return enriched
 
 
+def _build_trigger_focus(
+    trigger_type: str,
+    trigger_id: str | None,
+    active_alerts: list[dict],
+) -> dict:
+    """Derive un focus metier a partir du declencheur courant."""
+    focus = {
+        "trigger_type": trigger_type,
+        "trigger_id": trigger_id,
+        "watchlist_id": None,
+        "campaign_ids": [],
+    }
+    if trigger_type != "alert_triggered" or not trigger_id:
+        return focus
+
+    alert = next((item for item in active_alerts if item.get("alert_id") == trigger_id), None)
+    if not alert:
+        return focus
+
+    focus["watchlist_id"] = alert.get("watchlist_id")
+    payload = alert.get("alert_payload") or {}
+    for campaign in payload.get("active_campaigns", []):
+        campaign_id = str(campaign.get("campaign_id") or "").strip()
+        if campaign_id:
+            focus["campaign_ids"].append(campaign_id)
+    return focus
+
+
+def _prioritize_watchlists(watchlists: list[dict], trigger_focus: dict) -> list[dict]:
+    """Priorise la watchlist liee au declencheur puis les plus en derive."""
+    target_watchlist_id = trigger_focus.get("watchlist_id")
+
+    def _sort_key(item: dict) -> tuple:
+        latest_metrics = item.get("latest_metrics") or {}
+        delta_nss = latest_metrics.get("delta_nss")
+        try:
+            delta_value = float(delta_nss)
+        except (TypeError, ValueError):
+            delta_value = 0.0
+        return (
+            0 if item.get("watchlist_id") == target_watchlist_id else 1,
+            delta_value,
+            str(item.get("watchlist_name") or ""),
+        )
+
+    return sorted(watchlists, key=_sort_key)
+
+
 def _enrich_campaigns(campaigns: list[dict]) -> list[dict]:
-    """Ajoute l'uplift récent et le dernier snapshot aux campagnes récentes."""
+    """Ajoute l'uplift recent et le dernier snapshot aux campagnes recentes."""
     latest_snapshots = _latest_campaign_snapshot_map()
     enriched: list[dict] = []
     for campaign in campaigns:
@@ -295,9 +279,39 @@ def _enrich_campaigns(campaigns: list[dict]) -> list[dict]:
     return enriched
 
 
-# ---------------------------------------------------------------------------
-# Interface publique
-# ---------------------------------------------------------------------------
+def _prioritize_campaigns(campaigns: list[dict], trigger_focus: dict) -> list[dict]:
+    """Priorise les campagnes explicitement liees au declencheur."""
+    target_campaign_ids = {str(item) for item in trigger_focus.get("campaign_ids", []) if item}
+
+    def _sort_key(item: dict) -> tuple:
+        uplift = item.get("latest_uplift_nss")
+        try:
+            uplift_value = float(uplift)
+        except (TypeError, ValueError):
+            uplift_value = 0.0
+        return (
+            0 if str(item.get("campaign_id")) in target_campaign_ids else 1,
+            uplift_value,
+            str(item.get("campaign_name") or ""),
+        )
+
+    return sorted(campaigns, key=_sort_key)
+
+
+def _build_data_quality(df_annotated: pd.DataFrame, rag_chunks: list[dict]) -> dict:
+    """Assemble un resume simple de la qualite des donnees disponibles."""
+    volume_total = int(len(df_annotated))
+    channel_count = int(df_annotated["channel"].nunique()) if "channel" in df_annotated.columns else 0
+    sparse_dataset = volume_total < 50
+    mono_channel_dataset = channel_count <= 1
+    return {
+        "volume_total": volume_total,
+        "channel_count": channel_count,
+        "rag_chunk_count": len(rag_chunks),
+        "sparse_dataset": sparse_dataset,
+        "mono_channel_dataset": mono_channel_dataset,
+    }
+
 
 def build_recommendation_context(
     trigger_type: str,
@@ -305,90 +319,67 @@ def build_recommendation_context(
     df_annotated: pd.DataFrame,
     max_rag_chunks: int = 8,
 ) -> dict:
-    """Assemble le contexte complet pour l'agent de recommandations.
+    """Assemble le contexte complet pour l'agent de recommandations."""
+    context: dict[str, Any] = {}
 
-    Lit les alertes actives, watchlists actives et campagnes recentes depuis
-    SQLite (via les managers des autres agents si disponibles). Calcule les
-    metriques NSS directement depuis le DataFrame. Recupere les chunks RAG
-    les plus pertinents selon le declencheur.
-
-    Args:
-        trigger_type: 'manual' | 'alert_triggered' | 'scheduled'.
-        trigger_id: ID de l'alerte, watchlist ou campagne. None si global.
-        df_annotated: DataFrame annote charge depuis annotated.parquet.
-        max_rag_chunks: Nombre maximum de chunks RAG a inclure.
-
-    Returns:
-        Dict avec cles : client_profile, trigger, current_metrics,
-        active_alerts, active_watchlists, recent_campaigns, rag_chunks,
-        estimated_tokens.
-    """
-    context: dict = {}
-
-    # 1. Profil client
     context["client_profile"] = {
         "client_name": "Ramy",
         "industry": "Agroalimentaire algerien",
         "main_products": ["Ramy Citron", "Ramy Orange", "Ramy Fraise", "Ramy Multivitamines"],
         "active_regions": ["alger", "oran", "constantine", "annaba", "tlemcen", "setif"],
     }
-
-    # 2. Declencheur
     context["trigger"] = {"type": trigger_type, "id": trigger_id}
 
-    # 3. Metriques courantes depuis le DataFrame
     nss_global = _compute_nss(df_annotated)
     nss_by_aspect = _compute_nss_by_aspect(df_annotated)
     nss_by_channel = _compute_nss_by_channel(df_annotated)
-    top_neg = _top_negative_aspects(df_annotated) if not df_annotated.empty else []
-
+    top_negative = _top_negative_aspects(df_annotated) if not df_annotated.empty else []
     context["current_metrics"] = {
         "nss_global": nss_global,
         "nss_by_aspect": nss_by_aspect,
         "nss_by_channel": nss_by_channel,
         "volume_total": len(df_annotated),
-        "top_negative_aspects": top_neg,
+        "top_negative_aspects": top_negative,
     }
 
-    # 4. Alertes actives
-    active_alerts: list = []
+    active_alerts: list[dict] = []
     if _HAS_ALERTS:
         try:
             all_alerts = _list_alerts(limit=100)
             active = [
-                a for a in all_alerts
-                if a.get("status") in ("new", "acknowledged", "investigating")
+                item
+                for item in all_alerts
+                if item.get("status") in ("new", "acknowledged", "investigating")
             ]
-            _sev_order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
-            active.sort(key=lambda a: _sev_order.get(a.get("severity", "low"), 4))
-            active_alerts = _enrich_active_alerts(active[:5], trigger_id)
-        except Exception as exc:
-            logger.warning("Erreur chargement alertes : %s", exc)
-
+            severity_order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
+            active.sort(key=lambda item: severity_order.get(item.get("severity", "low"), 4))
+            active_alerts = _enrich_active_alerts(active, trigger_id)[:5]
+        except Exception as exc:  # pragma: no cover - degrade gracieusement
+            logger.warning("Erreur chargement alertes: %s", exc)
     context["active_alerts"] = active_alerts
 
-    # 5. Watchlists actives
-    active_watchlists: list = []
+    trigger_focus = _build_trigger_focus(trigger_type, trigger_id, active_alerts)
+    context["trigger_focus"] = trigger_focus
+
+    active_watchlists: list[dict] = []
     if _HAS_WATCHLISTS:
         try:
-            active_watchlists = _enrich_watchlists(_list_watchlists(is_active=True)[:5])
-        except Exception as exc:
-            logger.warning("Erreur chargement watchlists : %s", exc)
-
+            watchlists = _enrich_watchlists(_list_watchlists(is_active=True))
+            active_watchlists = _prioritize_watchlists(watchlists, trigger_focus)[:5]
+        except Exception as exc:  # pragma: no cover - degrade gracieusement
+            logger.warning("Erreur chargement watchlists: %s", exc)
     context["active_watchlists"] = active_watchlists
 
-    # 6. Campagnes recentes
-    recent_campaigns: list = []
+    recent_campaigns: list[dict] = []
     if _HAS_CAMPAIGNS:
         try:
-            recent_campaigns = _enrich_campaigns(_list_campaigns(limit=3))
-        except Exception as exc:
-            logger.warning("Erreur chargement campagnes : %s", exc)
-
+            campaigns = _enrich_campaigns(_list_campaigns(limit=20))
+            recent_campaigns = _prioritize_campaigns(campaigns, trigger_focus)[:5]
+        except Exception as exc:  # pragma: no cover - degrade gracieusement
+            logger.warning("Erreur chargement campagnes: %s", exc)
     context["recent_campaigns"] = recent_campaigns
 
-    # 7. Chunks RAG pertinents
-    rag_chunks: list = []
+    rag_chunks: list[dict] = []
     retriever = _load_retriever()
     if retriever is not None:
         try:
@@ -396,22 +387,21 @@ def build_recommendation_context(
             raw_chunks = retriever.search(query, top_k=max_rag_chunks)
             rag_chunks = [
                 {
-                    "text": c["text"],
-                    "channel": c["channel"],
-                    "timestamp": c["timestamp"],
+                    "text": chunk["text"],
+                    "channel": chunk["channel"],
+                    "timestamp": chunk["timestamp"],
                 }
-                for c in raw_chunks
+                for chunk in raw_chunks
             ]
-        except Exception as exc:
-            logger.warning("Erreur recuperation RAG : %s", exc)
-
+        except Exception as exc:  # pragma: no cover - degrade gracieusement
+            logger.warning("Erreur recuperation RAG: %s", exc)
     context["rag_chunks"] = rag_chunks
 
-    # 8. Estimation taille contexte
+    context["data_quality"] = _build_data_quality(df_annotated, rag_chunks)
     context["estimated_tokens"] = _estimate_tokens(context)
 
     logger.info(
-        "Contexte assemble — trigger=%s alertes=%d watchlists=%d campagnes=%d chunks=%d tokens~%d",
+        "Contexte assemble - trigger=%s alertes=%d watchlists=%d campagnes=%d chunks=%d tokens~%d",
         trigger_type,
         len(active_alerts),
         len(active_watchlists),

@@ -15,7 +15,7 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from pages.whatif_helpers import (  # noqa: E402
+from ui_helpers.whatif_helpers import (  # noqa: E402
     build_comparison_chart_data,
     build_mock_df,
     delta_arrow,

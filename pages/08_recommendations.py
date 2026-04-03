@@ -22,11 +22,26 @@ from config import (
     DEFAULT_CLIENT_ID,
     OLLAMA_BASE_URL,
 )
+from core.runtime.diagnostics import collect_runtime_diagnostics
+from core.recommendation.agent_client import MODEL_CATALOG
 from core.security.secret_manager import is_secret_reference, resolve_secret, store_secret
+from ui_helpers.annotated_data import load_annotated_parquet
+from ui_helpers.runtime_panel import render_runtime_panel
 
 logger = logging.getLogger(__name__)
 
 st.set_page_config(page_title="Recommendation Center — RamyPulse", layout="wide")
+
+
+def _default_model_for_provider(provider: str) -> str:
+    """Retourne le modèle recommandé pour un provider donné."""
+    catalog = MODEL_CATALOG.get(provider, [])
+    for entry in catalog:
+        if entry.get("recommended"):
+            return str(entry["id"])
+    if catalog:
+        return str(catalog[0]["id"])
+    return DEFAULT_AGENT_MODEL
 
 
 # ─── Chargement des données ───────────────────────────────────────────────────
@@ -38,15 +53,13 @@ def load_data() -> pd.DataFrame:
     Returns:
         DataFrame annote, ou DataFrame vide si le fichier est absent.
     """
-    try:
-        df = pd.read_parquet(ANNOTATED_PARQUET_PATH)
-        df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
-        df["aspect"] = df["aspect"].fillna("")
-        if "wilaya" in df.columns:
-            df["wilaya"] = df["wilaya"].fillna("").str.lower().str.strip()
-        return df
-    except FileNotFoundError:
-        return pd.DataFrame()
+    return load_annotated_parquet(ANNOTATED_PARQUET_PATH)
+
+
+@st.cache_data(ttl=60, show_spinner=False)
+def load_runtime_diagnostics() -> dict:
+    """Charge le diagnostic runtime partage."""
+    return collect_runtime_diagnostics()
 
 
 df = load_data()
@@ -55,6 +68,7 @@ df = load_data()
 
 st.title("Recommendation Center")
 st.caption("Genere des recommandations marketing actionnables a partir des donnees RamyPulse.")
+render_runtime_panel(load_runtime_diagnostics(), title="Diagnostic runtime")
 
 if df.empty:
     st.warning("Donnees non disponibles. Lancez d'abord scripts/run_demo_05.py")
@@ -80,7 +94,12 @@ except Exception as exc:
 if "reco_provider" not in st.session_state:
     st.session_state["reco_provider"] = agent_config.get("provider") or DEFAULT_AGENT_PROVIDER
 if "reco_model" not in st.session_state:
-    st.session_state["reco_model"] = agent_config.get("model") or DEFAULT_AGENT_MODEL
+    initial_provider = st.session_state["reco_provider"]
+    initial_model = agent_config.get("model") or DEFAULT_AGENT_MODEL
+    catalog_ids = [item["id"] for item in MODEL_CATALOG.get(initial_provider, [])]
+    st.session_state["reco_model"] = (
+        initial_model if not catalog_ids or initial_model in catalog_ids else _default_model_for_provider(initial_provider)
+    )
 if "reco_api_key" not in st.session_state:
     st.session_state["reco_api_key"] = ""
 if "reco_api_key_reference" not in st.session_state:
@@ -130,7 +149,69 @@ with col_scope:
     elif trigger_type == "scheduled":
         st.info("Mode planifie — utilise toutes les watchlists actives comme contexte.")
 
-generate_btn = st.button("Generer les recommandations", type="primary")
+col_gen, col_prev = st.columns([2, 1])
+generate_btn = col_gen.button("Generer les recommandations", type="primary")
+preview_btn = col_prev.button("Previsualiser le contexte client")
+
+if preview_btn:
+    with st.spinner("Assemblage du contexte..."):
+        try:
+            from core.recommendation.context_builder import build_recommendation_context
+            ctx = build_recommendation_context(
+                trigger_type=trigger_type,
+                trigger_id=trigger_id,
+                df_annotated=df,
+                max_rag_chunks=8,
+            )
+            metrics = ctx.get("current_metrics", {})
+            st.markdown("#### Contexte qui sera envoyé au LLM")
+            col_m1, col_m2, col_m3 = st.columns(3)
+            col_m1.metric("NSS global", f"{metrics.get('nss_global') or 0:.1f}")
+            col_m2.metric("Volume signaux", metrics.get("volume_total", 0))
+            col_m3.metric("Tokens estimés", ctx.get("estimated_tokens", 0))
+
+            col_d1, col_d2, col_d3 = st.columns(3)
+            col_d1.metric("Alertes actives", len(ctx.get("active_alerts", [])))
+            col_d2.metric("Watchlists actives", len(ctx.get("active_watchlists", [])))
+            col_d3.metric("Campagnes récentes", len(ctx.get("recent_campaigns", [])))
+
+            trigger_focus = ctx.get("trigger_focus", {})
+            if trigger_focus.get("watchlist_id") or trigger_focus.get("campaign_ids"):
+                st.caption(
+                    "Focus déclencheur : "
+                    f"watchlist={str(trigger_focus.get('watchlist_id') or 'aucune')[:8]}... | "
+                    f"campagnes ciblées={len(trigger_focus.get('campaign_ids', []))}"
+                )
+
+            data_quality = ctx.get("data_quality", {})
+            if data_quality.get("sparse_dataset") or data_quality.get("mono_channel_dataset"):
+                st.warning(
+                    "Qualité de contexte limitée : "
+                    f"{data_quality.get('volume_total', 0)} signaux, "
+                    f"{data_quality.get('channel_count', 0)} canal(aux)."
+                )
+
+            rag = ctx.get("rag_chunks", [])
+            if rag:
+                st.success(f"{len(rag)} extraits RAG chargés depuis l'index FAISS")
+            else:
+                st.info("Aucun chunk RAG (index FAISS absent ou vide — le LLM utilisera uniquement les métriques)")
+
+            top_neg = metrics.get("top_negative_aspects", [])
+            if top_neg:
+                st.warning(f"Aspects les plus problématiques : **{', '.join(top_neg)}**")
+
+            with st.expander("Voir NSS par aspect"):
+                asp_data = metrics.get("nss_by_aspect", {})
+                if asp_data:
+                    import pandas as _pd
+                    asp_df = _pd.DataFrame(
+                        [(k, v) for k, v in asp_data.items() if v is not None],
+                        columns=["Aspect", "NSS"],
+                    ).sort_values("NSS")
+                    st.bar_chart(asp_df.set_index("Aspect")["NSS"])
+        except Exception as exc:
+            st.error(f"Erreur assemblage contexte : {exc}")
 
 if generate_btn:
     provider = st.session_state["reco_provider"]
@@ -343,7 +424,7 @@ with st.form("agent_config_form"):
     col_prov, col_mod = st.columns(2)
 
     with col_prov:
-        provider_options = ["ollama_local", "anthropic", "openai"]
+        provider_options = ["google_gemini", "anthropic", "openai", "ollama_local"]
         try:
             current_idx = provider_options.index(st.session_state["reco_provider"])
         except ValueError:
@@ -353,6 +434,7 @@ with st.form("agent_config_form"):
             options=provider_options,
             index=current_idx,
             format_func=lambda x: {
+                "google_gemini": "Google Gemini",
                 "ollama_local": "Ollama local",
                 "anthropic": "Anthropic (Claude)",
                 "openai": "OpenAI (GPT)",
@@ -360,16 +442,37 @@ with st.form("agent_config_form"):
         )
 
     with col_mod:
-        model_defaults = {
-            "ollama_local": "qwen2.5:14b",
-            "anthropic": "claude-sonnet-4-6",
-            "openai": "gpt-4o",
-        }
-        selected_model = st.text_input(
+        catalog_for_provider = MODEL_CATALOG.get(selected_provider, [])
+        catalog_ids = [m["id"] for m in catalog_for_provider]
+        catalog_labels = {m["id"]: m["label"] for m in catalog_for_provider}
+
+        current_model = st.session_state.get("reco_model") or ""
+        use_custom = current_model not in catalog_ids and current_model != ""
+
+        model_select_options = catalog_ids + (["autre..."] if catalog_ids else [])
+        try:
+            default_sel_idx = catalog_ids.index(current_model) if current_model in catalog_ids else 0
+        except ValueError:
+            default_sel_idx = 0
+
+        selected_from_catalog = st.selectbox(
             "Modele",
-            value=st.session_state.get("reco_model") or model_defaults.get(selected_provider, ""),
-            placeholder=model_defaults.get(selected_provider, ""),
+            options=model_select_options,
+            index=default_sel_idx,
+            format_func=lambda x: catalog_labels.get(x, x),
+            key=f"model_catalog_{selected_provider}",
         )
+
+        if selected_from_catalog == "autre...":
+            selected_model = st.text_input(
+                "ID du modele personnalise",
+                value=current_model if use_custom else "",
+                placeholder="Ex: claude-opus-4-6, gpt-4o, mistral:latest",
+            )
+        else:
+            selected_model = selected_from_catalog
+            if not selected_model and catalog_ids:
+                selected_model = catalog_ids[0]
 
     col_auto, col_weekly = st.columns(2)
     with col_auto:
@@ -403,7 +506,12 @@ with st.form("agent_config_form"):
             index=max(0, min(6, int(st.session_state.get("reco_weekly_day", 1)) - 1)),
         )
 
-    if selected_provider in ("anthropic", "openai"):
+    if selected_provider in ("anthropic", "openai", "google_gemini"):
+        provider_label = {
+            "anthropic": "Anthropic",
+            "openai": "OpenAI",
+            "google_gemini": "Google",
+        }.get(selected_provider, selected_provider)
         stored_reference = (
             st.session_state.get("reco_api_key_reference")
             or agent_config.get("api_key_encrypted")
@@ -412,7 +520,7 @@ with st.form("agent_config_form"):
         if stored_reference:
             st.caption(f"Reference secret actuellement stockee: {stored_reference}")
         api_key_input = st.text_input(
-            f"Cle API {selected_provider.capitalize()}",
+            f"Cle API {provider_label}",
             value=st.session_state.get("reco_api_key", ""),
             type="password",
             help="La cle ou reference est persistée pour l'auto-trigger.",
@@ -430,7 +538,7 @@ with st.form("agent_config_form"):
         st.session_state["reco_weekly_enabled"] = weekly_enabled
         st.session_state["reco_weekly_day"] = weekly_day
         try:
-            if selected_provider in ("anthropic", "openai"):
+            if selected_provider in ("anthropic", "openai", "google_gemini"):
                 if api_key_input.strip():
                     secret_reference = store_secret(api_key_input.strip(), label=selected_provider)
                 else:

@@ -13,8 +13,16 @@ from core.database import DatabaseManager  # noqa: E402
 
 
 EXPECTED_TABLES = {
+    "clients",
     "source_registry",
+    "sources",
+    "source_sync_runs",
+    "raw_documents",
+    "normalized_records",
+    "enriched_signals",
     "products",
+    "regions",
+    "distributors",
     "wilayas",
     "competitors",
     "watchlists",
@@ -28,6 +36,7 @@ EXPECTED_TABLES = {
     "recommendations",
     "creator_profiles",
     "notifications",
+    "source_health_snapshots",
     "audit_log",
 }
 
@@ -63,8 +72,8 @@ def test_database_manager_supporte_memory() -> None:
     db.close()
 
 
-def test_database_cree_les_11_tables_du_prd() -> None:
-    """La création de schéma doit matérialiser les 11 tables attendues."""
+def test_database_cree_les_tables_du_prd() -> None:
+    """La création de schéma doit matérialiser toutes les tables attendues."""
     db = DatabaseManager(":memory:")
     db.create_tables()
 

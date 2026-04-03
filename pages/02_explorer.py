@@ -11,7 +11,8 @@ import streamlit as st
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from config import ASPECT_LIST, CHANNELS, DATA_DIR, SENTIMENT_LABELS
-from pages.phase1_dashboard_helpers import (
+from ui_helpers.annotated_data import load_annotated_parquet, normalize_annotated_dataframe
+from ui_helpers.phase1_dashboard_helpers import (
     apply_dataframe_filters,
     build_available_filters,
     build_explorer_display_columns,
@@ -19,7 +20,7 @@ from pages.phase1_dashboard_helpers import (
     format_missing_dimensions,
     missing_filter_columns,
 )
-from pages.whatif_helpers import build_mock_df
+from ui_helpers.whatif_helpers import build_mock_df
 
 logger = logging.getLogger(__name__)
 
@@ -60,13 +61,9 @@ _COLUMN_WIDTHS = {
 def _load_data() -> pd.DataFrame:
     """Charge le dataset annote depuis le Parquet ou fallback demo."""
     if _PARQUET_PATH.exists():
-        df = pd.read_parquet(_PARQUET_PATH)
-        df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
-        return df
+        return load_annotated_parquet(_PARQUET_PATH)
     logger.warning("Aucune donnee trouvee - mode demo avec donnees synthetiques.")
-    df = build_mock_df(n=500)
-    df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
-    return df
+    return normalize_annotated_dataframe(build_mock_df(n=500))
 
 
 def _build_filters(df: pd.DataFrame) -> pd.DataFrame:
