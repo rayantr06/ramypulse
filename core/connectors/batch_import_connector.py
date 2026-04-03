@@ -86,8 +86,16 @@ class BatchImportConnector(BaseConnector):
             column_mapping=column_mapping,
             **kwargs,
         )
-        resolved_file_path = runtime_inputs.get("file_path")
+        source_config = runtime_inputs.get("config") if isinstance(runtime_inputs.get("config"), dict) else {}
+        resolved_file_path = (
+            runtime_inputs.get("file_path")
+            or source_config.get("snapshot_path")
+            or source_config.get("file_path")
+            or source_config.get("import_path")
+        )
         resolved_column_mapping = runtime_inputs.get("column_mapping")
+        if not isinstance(resolved_column_mapping, dict):
+            resolved_column_mapping = source_config.get("column_mapping")
 
         if not resolved_file_path:
             raise ValueError("file_path est requis pour un import batch")

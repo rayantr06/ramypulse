@@ -94,17 +94,12 @@ class IngestionOrchestrator:
         return self.get_source(source["source_id"], client_id=source["client_id"])
 
     def get_source(self, source_id: str, *, client_id: str | None = None) -> dict | None:
+        effective_client_id = client_id or DEFAULT_CLIENT_ID
         with self._get_connection() as connection:
-            if client_id:
-                row = connection.execute(
-                    "SELECT * FROM sources WHERE source_id = ? AND client_id = ?",
-                    (source_id, client_id),
-                ).fetchone()
-            else:
-                row = connection.execute(
-                    "SELECT * FROM sources WHERE source_id = ?",
-                    (source_id,),
-                ).fetchone()
+            row = connection.execute(
+                "SELECT * FROM sources WHERE source_id = ? AND client_id = ?",
+                (source_id, effective_client_id),
+            ).fetchone()
         return dict(row) if row else None
 
     def _select_connector(self, source: dict):

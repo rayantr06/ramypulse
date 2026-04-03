@@ -407,8 +407,8 @@ def test_create_source_conserve_config_json_chaine(tmp_path: Path) -> None:
     assert stored["config_json"] == config_json
 
 
-def test_run_source_sync_accepte_sans_client_id(tmp_path: Path) -> None:
-    """Une sync existante doit rester appelable sans client_id explicite."""
+def test_run_source_sync_utilise_config_import_persistee_sans_kwargs(tmp_path: Path) -> None:
+    """Un import batch doit reutiliser la config persistée quand les kwargs runtime manquent."""
     from core.database import DatabaseManager
     from core.ingestion.orchestrator import IngestionOrchestrator
 
@@ -430,6 +430,74 @@ def test_run_source_sync_accepte_sans_client_id(tmp_path: Path) -> None:
     orchestrator = IngestionOrchestrator(db_path=str(tmp_path / "tenant.db"))
     source = orchestrator.create_source(
         {
+            "client_id": "client-a",
+            "source_name": "Import persisted config",
+            "platform": "import",
+            "source_type": "batch_import",
+            "owner_type": "owned",
+            "auth_mode": "file_upload",
+            "config_json": {
+                "snapshot_path": str(csv_path),
+                "column_mapping": {"review": "text"},
+            },
+        }
+    )
+
+    result = orchestrator.run_source_sync(
+        source["source_id"],
+        client_id="client-a",
+    )
+
+    assert result["status"] == "success"
+    assert result["records_fetched"] == 1
+    assert result["records_inserted"] == 1
+
+
+def test_run_source_sync_sans_client_id_utilise_le_client_par_defaut_et_refuse_un_client_non_defaut(
+    tmp_path: Path,
+) -> None:
+    """Le client implicite doit rester le client par defaut, pas un acces cross-tenant."""
+    from config import DEFAULT_CLIENT_ID
+    from core.database import DatabaseManager
+    from core.ingestion.orchestrator import IngestionOrchestrator
+
+    database = DatabaseManager(str(tmp_path / "tenant-default.db"))
+    database.create_tables()
+    database.close()
+
+    csv_default = tmp_path / "default.csv"
+    csv_owner = tmp_path / "owner.csv"
+    pd.DataFrame(
+        [
+            {
+                "review": "default client",
+                "channel": "facebook",
+                "timestamp": "2026-03-20T10:00:00",
+            }
+        ]
+    ).to_csv(csv_default, index=False)
+    pd.DataFrame(
+        [
+            {
+                "review": "owner client",
+                "channel": "facebook",
+                "timestamp": "2026-03-20T11:00:00",
+            }
+        ]
+    ).to_csv(csv_owner, index=False)
+
+    orchestrator = IngestionOrchestrator(db_path=str(tmp_path / "tenant-default.db"))
+    default_source = orchestrator.create_source(
+        {
+            "source_name": "Import default",
+            "platform": "import",
+            "source_type": "batch_import",
+            "owner_type": "owned",
+            "auth_mode": "file_upload",
+        }
+    )
+    owner_source = orchestrator.create_source(
+        {
             "client_id": "client-owner",
             "source_name": "Import owner",
             "platform": "import",
@@ -439,15 +507,22 @@ def test_run_source_sync_accepte_sans_client_id(tmp_path: Path) -> None:
         }
     )
 
-    result = orchestrator.run_source_sync(
-        source["source_id"],
-        manual_file_path=str(csv_path),
+    default_result = orchestrator.run_source_sync(
+        default_source["source_id"],
+        manual_file_path=str(csv_default),
         column_mapping={"review": "text"},
     )
 
-    assert result["status"] == "success"
-    assert result["records_fetched"] == 1
-    assert result["records_inserted"] == 1
+    assert default_result["status"] == "success"
+    assert default_result["records_inserted"] == 1
+    assert orchestrator.get_source(default_source["source_id"])["client_id"] == DEFAULT_CLIENT_ID
+
+    with pytest.raises(KeyError):
+        orchestrator.run_source_sync(
+            owner_source["source_id"],
+            manual_file_path=str(csv_owner),
+            column_mapping={"review": "text"},
+        )
 
 
 @pytest.mark.parametrize("fetch_mode", ["collector", "api"])
