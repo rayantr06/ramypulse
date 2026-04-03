@@ -17,6 +17,8 @@ from typing import NamedTuple
 
 import pandas as pd
 
+from config import SQLITE_DB_PATH
+
 # Limite minimale de longueur pour le matching par sous-chaîne.
 # Les keywords plus courts exigent un matching mot-entier (word boundary)
 # pour éviter les faux positifs (ex: "to" dans "partout").
@@ -518,3 +520,25 @@ def _is_na(value) -> bool:
         return pd.isna(value)
     except (TypeError, ValueError):
         return False
+
+
+def resolve_text(text: str, source_metadata: dict | None = None, db_path=None) -> dict:
+    """Wrapper module-level pour la resolution d'entites sur un texte unique."""
+    database = DatabaseManager(str(db_path or SQLITE_DB_PATH))
+    database.create_tables()
+    resolver = EntityResolver(database)
+    try:
+        return resolver.resolve_text(text, source_metadata)
+    finally:
+        database.close()
+
+
+def enrich_dataframe(df: pd.DataFrame, source_metadata_map: dict | None = None, db_path=None) -> pd.DataFrame:
+    """Wrapper module-level pour enrichir un DataFrame complet."""
+    database = DatabaseManager(str(db_path or SQLITE_DB_PATH))
+    database.create_tables()
+    resolver = EntityResolver(database)
+    try:
+        return resolver.enrich_dataframe(df, source_metadata_map)
+    finally:
+        database.close()

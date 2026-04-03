@@ -118,3 +118,31 @@ def run_absa_pipeline(
         result.to_parquet(output, index=False)
 
     return result
+
+
+def analyze_text(text: str, aspects: list[str] | None = None) -> dict[str, object]:
+    """Analyse un texte unique et retourne un payload ABSA unifie.
+
+    Ce wrapper stabilise l'interface pour les futurs jobs de normalisation
+    plateforme sans remplacer le pipeline batch existant.
+    """
+    _ensure_classifier_available()
+    safe_text = str(text or "")
+    global_classification = classify_sentiment(safe_text)
+    aspect_mentions = extract_aspects(safe_text)
+    unique_aspects = _deduplicate_aspects(aspect_mentions)
+    aspect_sentiments = _build_aspect_sentiments(safe_text, aspect_mentions)
+
+    if aspects:
+        requested = {str(item) for item in aspects}
+        unique_aspects = [aspect for aspect in unique_aspects if aspect in requested]
+        aspect_sentiments = [
+            item for item in aspect_sentiments if str(item.get("aspect")) in requested
+        ]
+
+    return {
+        "global_sentiment": global_classification["label"],
+        "confidence": global_classification["confidence"],
+        "aspects": unique_aspects,
+        "aspect_sentiments": aspect_sentiments,
+    }

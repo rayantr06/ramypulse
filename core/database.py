@@ -22,6 +22,15 @@ logger = logging.getLogger(__name__)
 
 
 _SCHEMA_STATEMENTS = {
+    "clients": """
+        CREATE TABLE IF NOT EXISTS clients (
+            client_id TEXT PRIMARY KEY,
+            client_name TEXT NOT NULL,
+            industry TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """,
     "source_registry": """
         CREATE TABLE IF NOT EXISTS source_registry (
             source_id TEXT PRIMARY KEY,
@@ -40,6 +49,99 @@ _SCHEMA_STATEMENTS = {
             updated_at DATETIME
         )
     """,
+    "sources": """
+        CREATE TABLE IF NOT EXISTS sources (
+            source_id TEXT PRIMARY KEY,
+            client_id TEXT NOT NULL DEFAULT 'ramy_client_001',
+            source_name TEXT NOT NULL,
+            platform TEXT NOT NULL,
+            source_type TEXT NOT NULL,
+            owner_type TEXT NOT NULL,
+            auth_mode TEXT,
+            config_json TEXT DEFAULT '{}',
+            is_active INTEGER NOT NULL DEFAULT 1,
+            sync_frequency_minutes INTEGER DEFAULT 60,
+            freshness_sla_hours INTEGER DEFAULT 24,
+            last_sync_at TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """,
+    "source_sync_runs": """
+        CREATE TABLE IF NOT EXISTS source_sync_runs (
+            sync_run_id TEXT PRIMARY KEY,
+            source_id TEXT NOT NULL,
+            run_mode TEXT NOT NULL,
+            status TEXT NOT NULL,
+            records_fetched INTEGER DEFAULT 0,
+            records_inserted INTEGER DEFAULT 0,
+            records_failed INTEGER DEFAULT 0,
+            error_message TEXT,
+            started_at TEXT NOT NULL,
+            ended_at TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """,
+    "raw_documents": """
+        CREATE TABLE IF NOT EXISTS raw_documents (
+            raw_document_id TEXT PRIMARY KEY,
+            client_id TEXT NOT NULL DEFAULT 'ramy_client_001',
+            source_id TEXT NOT NULL,
+            sync_run_id TEXT,
+            external_document_id TEXT,
+            raw_payload TEXT,
+            raw_text TEXT,
+            raw_metadata TEXT DEFAULT '{}',
+            checksum_sha256 TEXT,
+            collected_at TEXT NOT NULL,
+            is_normalized INTEGER DEFAULT 0,
+            normalizer_version TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """,
+    "normalized_records": """
+        CREATE TABLE IF NOT EXISTS normalized_records (
+            normalized_record_id TEXT PRIMARY KEY,
+            client_id TEXT NOT NULL DEFAULT 'ramy_client_001',
+            source_id TEXT NOT NULL,
+            raw_document_id TEXT,
+            text TEXT,
+            text_original TEXT,
+            channel TEXT,
+            source_url TEXT,
+            published_at TEXT,
+            language TEXT,
+            script_detected TEXT,
+            normalized_payload TEXT DEFAULT '{}',
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """,
+    "enriched_signals": """
+        CREATE TABLE IF NOT EXISTS enriched_signals (
+            signal_id TEXT PRIMARY KEY,
+            client_id TEXT NOT NULL DEFAULT 'ramy_client_001',
+            normalized_record_id TEXT NOT NULL,
+            source_id TEXT,
+            sentiment_label TEXT,
+            confidence REAL,
+            aspect TEXT,
+            aspects TEXT DEFAULT '[]',
+            aspect_sentiments TEXT DEFAULT '[]',
+            brand TEXT,
+            competitor TEXT,
+            product TEXT,
+            product_line TEXT,
+            sku TEXT,
+            wilaya TEXT,
+            region_id TEXT,
+            distributor_id TEXT,
+            source_url TEXT,
+            channel TEXT,
+            event_timestamp TEXT,
+            normalizer_version TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """,
     "products": """
         CREATE TABLE IF NOT EXISTS products (
             product_id TEXT PRIMARY KEY,
@@ -53,6 +155,28 @@ _SCHEMA_STATEMENTS = {
             keywords_fr TEXT NOT NULL DEFAULT '[]',
             is_active BOOLEAN DEFAULT TRUE,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    """,
+    "regions": """
+        CREATE TABLE IF NOT EXISTS regions (
+            region_id TEXT PRIMARY KEY,
+            client_id TEXT NOT NULL DEFAULT 'ramy_client_001',
+            region_name TEXT NOT NULL,
+            region_code TEXT,
+            wilayas_json TEXT DEFAULT '[]',
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """,
+    "distributors": """
+        CREATE TABLE IF NOT EXISTS distributors (
+            distributor_id TEXT PRIMARY KEY,
+            client_id TEXT NOT NULL DEFAULT 'ramy_client_001',
+            distributor_name TEXT NOT NULL,
+            region_id TEXT,
+            distributor_type TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
         )
     """,
     "wilayas": """
@@ -247,6 +371,17 @@ _SCHEMA_STATEMENTS = {
             status            TEXT DEFAULT 'unread',
             created_at        TEXT,
             read_at           TEXT
+        )
+    """,
+    "source_health_snapshots": """
+        CREATE TABLE IF NOT EXISTS source_health_snapshots (
+            snapshot_id TEXT PRIMARY KEY,
+            source_id TEXT NOT NULL,
+            health_score REAL NOT NULL,
+            success_rate_pct REAL,
+            freshness_hours REAL,
+            records_fetched_avg REAL,
+            computed_at TEXT NOT NULL
         )
     """,
     "audit_log": """
@@ -864,6 +999,26 @@ def _seed_default_client_agent_config(connection: sqlite3.Connection) -> None:
     )
 
 
+def _seed_default_client(connection: sqlite3.Connection) -> None:
+    """Insere le client mono-tenant par defaut pour la couche plateforme."""
+    connection.execute(
+        """
+        INSERT OR IGNORE INTO clients (
+            client_id,
+            client_name,
+            industry,
+            created_at,
+            updated_at
+        ) VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        """,
+        (
+            DEFAULT_CLIENT_ID,
+            "Ramy",
+            "Agroalimentaire algerien",
+        ),
+    )
+
+
 class DatabaseManager:
     """Gestionnaire de connexion SQLite pour RamyPulse."""
 
@@ -926,6 +1081,7 @@ class DatabaseManager:
 
             for statement in _SCHEMA_STATEMENTS.values():
                 connection.execute(statement)
+            _seed_default_client(connection)
             _seed_default_alert_rules(connection)
             _seed_default_client_agent_config(connection)
             connection.commit()
