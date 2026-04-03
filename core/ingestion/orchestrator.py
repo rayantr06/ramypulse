@@ -156,6 +156,8 @@ class IngestionOrchestrator:
         client_id: str | None = None,
     ) -> dict:
         """Exécute un run de synchronisation et insère les raw_documents."""
+        if not client_id:
+            raise ValueError("client_id explicite requis pour lancer une synchronisation")
         source = self.get_source(source_id, client_id=client_id)
         if source is None:
             raise KeyError(source_id)

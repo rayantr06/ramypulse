@@ -81,8 +81,7 @@ class SnapshotPlatformConnector(BaseConnector):
         )
         if "channel" in dataframe.columns:
             filtered = dataframe[dataframe["channel"].fillna("").astype(str) == self.platform]
-            if not filtered.empty:
-                return filtered.reset_index(drop=True)
+            return filtered.reset_index(drop=True)
         return dataframe.reset_index(drop=True)
 
     def _load_from_snapshots(
@@ -146,6 +145,13 @@ class SnapshotPlatformConnector(BaseConnector):
         column_mapping: dict[str, str] | None = None,
         **kwargs,
     ) -> list[dict]:
+        source_config = parse_source_config(source)
+        fetch_mode = str(source_config.get("fetch_mode") or "snapshot").strip().lower() or "snapshot"
+        require_platform_fields = fetch_mode in {"collector", "api"}
+        source_config = self.validate_source_config(
+            source,
+            require_platform_fields=require_platform_fields,
+        )
         runtime_inputs = self.resolve_runtime_inputs(
             source,
             credentials=credentials,
@@ -153,8 +159,6 @@ class SnapshotPlatformConnector(BaseConnector):
             column_mapping=column_mapping,
             **kwargs,
         )
-        source_config = self.validate_source_config(source, require_platform_fields=False)
-        fetch_mode = str(source_config.get("fetch_mode") or "snapshot").strip().lower() or "snapshot"
         resolved_mapping = runtime_inputs.get("column_mapping") or source_config.get("column_mapping")
         mapping = resolved_mapping if isinstance(resolved_mapping, dict) else None
         resolved_file_path = runtime_inputs.get("file_path")

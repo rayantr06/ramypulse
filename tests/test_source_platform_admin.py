@@ -139,6 +139,43 @@ def test_instagram_connector_charge_un_snapshot(tmp_path: Path) -> None:
     assert documents[0]["raw_metadata"]["source_id"] == "src-instagram-001"
 
 
+def test_instagram_connector_rejette_les_lignes_d_une_autre_plateforme(tmp_path: Path) -> None:
+    """Un snapshot Instagram ne doit pas ingérer des lignes Facebook."""
+    from core.connectors.instagram_connector import InstagramConnector
+
+    snapshot = tmp_path / "instagram_wrong_platform.parquet"
+    pd.DataFrame(
+        [
+            {
+                "text": "facebook snapshot",
+                "channel": "facebook",
+                "timestamp": "2026-03-20T10:00:00",
+                "source_url": "https://example.test/facebook/1",
+            }
+        ]
+    ).to_parquet(snapshot, index=False)
+
+    connector = InstagramConnector()
+    documents = connector.fetch_documents(
+        {
+            "source_id": "src-instagram-wrong",
+            "client_id": "client-a",
+            "source_name": "Instagram Ramy",
+            "platform": "instagram",
+            "source_type": "instagram_profile",
+            "owner_type": "owned",
+            "auth_mode": "file_snapshot",
+            "config_json": {
+                "snapshot_path": str(snapshot),
+                "profile_url": "https://instagram.com/ramy",
+                "column_mapping": {"text": "text"},
+            },
+        }
+    )
+
+    assert documents == []
+
+
 @pytest.mark.parametrize(
     "platform",
     ["facebook", "google_maps", "youtube"],
@@ -158,6 +195,11 @@ def test_platform_connector_respecte_fetch_mode_collector(
         "facebook": "FacebookConnector",
         "google_maps": "GoogleMapsConnector",
         "youtube": "YouTubeConnector",
+    }[platform]
+    required_config = {
+        "facebook": {"page_url": "https://facebook.com/ramy"},
+        "google_maps": {"place_url": "https://maps.google.com/?cid=1"},
+        "youtube": {"channel_id": "UC123"},
     }[platform]
     module = __import__(connector_path, fromlist=[class_name])
     connector_cls = getattr(module, class_name)
@@ -201,6 +243,7 @@ def test_platform_connector_respecte_fetch_mode_collector(
             "config_json": {
                 "fetch_mode": "collector",
                 "snapshot_path": str(snapshot),
+                **required_config,
             },
         }
     )
@@ -208,6 +251,58 @@ def test_platform_connector_respecte_fetch_mode_collector(
     assert len(documents) == 1
     assert documents[0]["raw_text"] == f"{platform} collector"
     assert documents[0]["raw_metadata"]["source_url"].endswith("/collector")
+
+
+def test_facebook_connector_exige_un_identifiant_en_mode_collector(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    """Facebook en collector doit exiger un identifiant ou une URL de page."""
+    from core.connectors.facebook_connector import FacebookConnector
+
+    snapshot = tmp_path / "facebook_snapshot.parquet"
+    pd.DataFrame(
+        [
+            {
+                "text": "facebook snapshot",
+                "channel": "facebook",
+                "timestamp": "2026-03-20T10:00:00",
+                "source_url": "https://example.test/facebook/snapshot",
+            }
+        ]
+    ).to_parquet(snapshot, index=False)
+
+    connector = FacebookConnector()
+    scraper_module_name = connector.scraper_modules[0]
+    fake_module = types.ModuleType(scraper_module_name)
+    fake_module.collect = lambda source=None, credentials=None: pd.DataFrame(
+        [
+            {
+                "text": "facebook collector",
+                "channel": "facebook",
+                "timestamp": "2026-03-20T11:00:00",
+                "source_url": "https://example.test/facebook/collector",
+            }
+        ]
+    )
+    monkeypatch.setitem(sys.modules, scraper_module_name, fake_module)
+
+    with pytest.raises(ValueError, match="page_id|page_url"):
+        connector.fetch_documents(
+            {
+                "source_id": "src-facebook-missing-id",
+                "client_id": "client-a",
+                "source_name": "Facebook Ramy",
+                "platform": "facebook",
+                "source_type": "facebook_feed",
+                "owner_type": "owned",
+                "auth_mode": "file_snapshot",
+                "config_json": {
+                    "fetch_mode": "collector",
+                    "snapshot_path": str(snapshot),
+                },
+            }
+        )
 
 
 def test_facebook_connector_utilise_le_collecteur_en_mode_collector(
@@ -279,6 +374,46 @@ def test_orchestrator_selecte_instagram_connector(tmp_path: Path) -> None:
     connector = orchestrator._select_connector(source)
 
     assert connector.__class__.__name__ == "InstagramConnector"
+
+
+def test_run_source_sync_exige_un_client_id_explicit(tmp_path: Path) -> None:
+    """Une sync doit toujours recevoir un client_id explicite."""
+    from core.database import DatabaseManager
+    from core.ingestion.orchestrator import IngestionOrchestrator
+
+    database = DatabaseManager(str(tmp_path / "tenant.db"))
+    database.create_tables()
+    database.close()
+
+    csv_path = tmp_path / "tenant.csv"
+    pd.DataFrame(
+        [
+            {
+                "review": "tenant safe",
+                "channel": "facebook",
+                "timestamp": "2026-03-20T10:00:00",
+            }
+        ]
+    ).to_csv(csv_path, index=False)
+
+    orchestrator = IngestionOrchestrator(db_path=str(tmp_path / "tenant.db"))
+    source = orchestrator.create_source(
+        {
+            "client_id": "client-owner",
+            "source_name": "Import owner",
+            "platform": "import",
+            "source_type": "batch_import",
+            "owner_type": "owned",
+            "auth_mode": "file_upload",
+        }
+    )
+
+    with pytest.raises(ValueError, match="client_id"):
+        orchestrator.run_source_sync(
+            source["source_id"],
+            manual_file_path=str(csv_path),
+            column_mapping={"review": "text"},
+        )
 
 
 def test_platform_connector_rejette_fetch_mode_invalide(tmp_path: Path) -> None:
