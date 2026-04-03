@@ -12,6 +12,7 @@ from config import DEFAULT_CLIENT_ID, SQLITE_DB_PATH
 from core.connectors.batch_import_connector import BatchImportConnector
 from core.connectors.facebook_connector import FacebookConnector
 from core.connectors.google_maps_connector import GoogleMapsConnector
+from core.connectors.instagram_connector import InstagramConnector
 from core.connectors.youtube_connector import YouTubeConnector
 from core.database import DatabaseManager
 from core.normalization.normalizer_pipeline import run_normalization_job
@@ -36,6 +37,7 @@ class IngestionOrchestrator:
             "import": BatchImportConnector(),
             "facebook": FacebookConnector(),
             "google_maps": GoogleMapsConnector(),
+            "instagram": InstagramConnector(),
             "youtube": YouTubeConnector(),
         }
         database = DatabaseManager(self.db_path)

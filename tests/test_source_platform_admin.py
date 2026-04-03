@@ -93,6 +93,52 @@ def test_platform_connector_charge_snapshot_configure(
     assert documents[0]["raw_metadata"]["source_id"] == f"src-client-a-{platform}"
 
 
+def test_instagram_connector_charge_un_snapshot(tmp_path: Path) -> None:
+    """Le connecteur Instagram doit charger un snapshot local."""
+    from core.connectors.instagram_connector import InstagramConnector
+
+    snapshot = tmp_path / "instagram.parquet"
+    pd.DataFrame(
+        [
+            {
+                "review": "Ramy instagram tres bon",
+                "channel": "instagram",
+                "timestamp": "2026-03-20T10:00:00",
+                "source_url": "https://example.test/instagram/1",
+            },
+            {
+                "review": "Ramy instagram dispo",
+                "channel": "instagram",
+                "timestamp": "2026-03-20T11:00:00",
+                "source_url": "https://example.test/instagram/2",
+            },
+        ]
+    ).to_parquet(snapshot, index=False)
+
+    connector = InstagramConnector()
+    documents = connector.fetch_documents(
+        {
+            "source_id": "src-instagram-001",
+            "client_id": "client-a",
+            "source_name": "Instagram Ramy",
+            "platform": "instagram",
+            "source_type": "instagram_profile",
+            "owner_type": "owned",
+            "auth_mode": "file_snapshot",
+            "config_json": {
+                "snapshot_path": str(snapshot),
+                "profile_url": "https://instagram.com/ramy",
+                "column_mapping": {"review": "text"},
+            },
+        }
+    )
+
+    assert len(documents) == 2
+    assert documents[0]["raw_text"]
+    assert documents[0]["raw_metadata"]["channel"] == "instagram"
+    assert documents[0]["raw_metadata"]["source_id"] == "src-instagram-001"
+
+
 @pytest.mark.parametrize(
     "platform",
     ["facebook", "google_maps", "youtube"],
@@ -162,6 +208,21 @@ def test_platform_connector_respecte_fetch_mode_collector(
     assert len(documents) == 1
     assert documents[0]["raw_text"] == f"{platform} collector"
     assert documents[0]["raw_metadata"]["source_url"].endswith("/collector")
+
+
+def test_orchestrator_selecte_instagram_connector(tmp_path: Path) -> None:
+    """L'orchestrateur doit router Instagram vers le connecteur dedie."""
+    from core.ingestion.orchestrator import IngestionOrchestrator
+
+    orchestrator = IngestionOrchestrator(db_path=str(tmp_path / "instagram.db"))
+    source = {
+        "platform": "instagram",
+        "source_type": "instagram_profile",
+    }
+
+    connector = orchestrator._select_connector(source)
+
+    assert connector.__class__.__name__ == "InstagramConnector"
 
 
 def test_platform_connector_rejette_fetch_mode_invalide(tmp_path: Path) -> None:

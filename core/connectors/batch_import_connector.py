@@ -79,12 +79,22 @@ class BatchImportConnector(BaseConnector):
         column_mapping: dict[str, str] | None = None,
         **kwargs,
     ) -> list[dict]:
-        if not file_path:
+        runtime_inputs = self.resolve_runtime_inputs(
+            source,
+            credentials=credentials,
+            file_path=file_path,
+            column_mapping=column_mapping,
+            **kwargs,
+        )
+        resolved_file_path = runtime_inputs.get("file_path")
+        resolved_column_mapping = runtime_inputs.get("column_mapping")
+
+        if not resolved_file_path:
             raise ValueError("file_path est requis pour un import batch")
 
         dataframe = self._engine.import_file(
-            file_path=file_path,
-            column_mapping=column_mapping,
+            file_path=resolved_file_path,
+            column_mapping=resolved_column_mapping if isinstance(resolved_column_mapping, dict) else None,
             source_registry_id=str(source.get("source_id") or ""),
             deduplicate=True,
         )

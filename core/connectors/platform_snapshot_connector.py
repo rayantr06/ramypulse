@@ -146,26 +146,34 @@ class SnapshotPlatformConnector(BaseConnector):
         column_mapping: dict[str, str] | None = None,
         **kwargs,
     ) -> list[dict]:
+        runtime_inputs = self.resolve_runtime_inputs(
+            source,
+            credentials=credentials,
+            file_path=file_path,
+            column_mapping=column_mapping,
+            **kwargs,
+        )
         source_config = self.validate_source_config(source, require_platform_fields=False)
         fetch_mode = str(source_config.get("fetch_mode") or "snapshot").strip().lower() or "snapshot"
-        resolved_mapping = column_mapping or source_config.get("column_mapping")
+        resolved_mapping = runtime_inputs.get("column_mapping") or source_config.get("column_mapping")
         mapping = resolved_mapping if isinstance(resolved_mapping, dict) else None
+        resolved_file_path = runtime_inputs.get("file_path")
 
         if fetch_mode == "snapshot":
             documents = self._load_from_snapshots(
                 source,
-                file_path=file_path,
+                file_path=resolved_file_path,
                 column_mapping=mapping,
             )
             if documents:
                 return documents
-            return self._load_from_scraper(source, credentials=credentials)
+            return self._load_from_scraper(source, credentials=runtime_inputs.get("credentials"))
 
-        documents = self._load_from_scraper(source, credentials=credentials)
+        documents = self._load_from_scraper(source, credentials=runtime_inputs.get("credentials"))
         if documents:
             return documents
         return self._load_from_snapshots(
             source,
-            file_path=file_path,
+            file_path=resolved_file_path,
             column_mapping=mapping,
         )

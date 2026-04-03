@@ -30,11 +30,12 @@ class BaseConnector(ABC):
         **kwargs,
     ) -> dict:
         """Construit les entrees runtime partagees pour un connecteur."""
-        return {
+        runtime_inputs = {
             "config": parse_source_config(source),
             "credentials": credentials or {},
             **kwargs,
         }
+        return runtime_inputs
 
     def health_hints(
         self,
