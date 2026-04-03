@@ -173,11 +173,4 @@ class SnapshotPlatformConnector(BaseConnector):
                 return documents
             return self._load_from_scraper(source, credentials=runtime_inputs.get("credentials"))
 
-        documents = self._load_from_scraper(source, credentials=runtime_inputs.get("credentials"))
-        if documents:
-            return documents
-        return self._load_from_snapshots(
-            source,
-            file_path=resolved_file_path,
-            column_mapping=mapping,
-        )
+        return self._load_from_scraper(source, credentials=runtime_inputs.get("credentials"))

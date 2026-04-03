@@ -376,8 +376,39 @@ def test_orchestrator_selecte_instagram_connector(tmp_path: Path) -> None:
     assert connector.__class__.__name__ == "InstagramConnector"
 
 
-def test_run_source_sync_exige_un_client_id_explicit(tmp_path: Path) -> None:
-    """Une sync doit toujours recevoir un client_id explicite."""
+def test_create_source_conserve_config_json_chaine(tmp_path: Path) -> None:
+    """create_source doit persister config_json sans double-encodage."""
+    from core.ingestion.orchestrator import IngestionOrchestrator
+
+    orchestrator = IngestionOrchestrator(db_path=str(tmp_path / "config.db"))
+    config_json = json.dumps(
+        {
+            "fetch_mode": "snapshot",
+            "snapshot_path": "data/raw/import.csv",
+        },
+        ensure_ascii=False,
+    )
+
+    source = orchestrator.create_source(
+        {
+            "client_id": "client-config",
+            "source_name": "Import config",
+            "platform": "import",
+            "source_type": "batch_import",
+            "owner_type": "owned",
+            "auth_mode": "file_upload",
+            "config_json": config_json,
+        }
+    )
+
+    stored = orchestrator.get_source(source["source_id"], client_id="client-config")
+
+    assert stored is not None
+    assert stored["config_json"] == config_json
+
+
+def test_run_source_sync_accepte_sans_client_id(tmp_path: Path) -> None:
+    """Une sync existante doit rester appelable sans client_id explicite."""
     from core.database import DatabaseManager
     from core.ingestion.orchestrator import IngestionOrchestrator
 
@@ -408,12 +439,57 @@ def test_run_source_sync_exige_un_client_id_explicit(tmp_path: Path) -> None:
         }
     )
 
-    with pytest.raises(ValueError, match="client_id"):
-        orchestrator.run_source_sync(
-            source["source_id"],
-            manual_file_path=str(csv_path),
-            column_mapping={"review": "text"},
-        )
+    result = orchestrator.run_source_sync(
+        source["source_id"],
+        manual_file_path=str(csv_path),
+        column_mapping={"review": "text"},
+    )
+
+    assert result["status"] == "success"
+    assert result["records_fetched"] == 1
+    assert result["records_inserted"] == 1
+
+
+@pytest.mark.parametrize("fetch_mode", ["collector", "api"])
+def test_platform_connector_ne_fall_pas_vers_snapshot_si_collecteur_indisponible(
+    tmp_path: Path,
+    fetch_mode: str,
+) -> None:
+    """Collector/api doit echouer sans servir un snapshot si le collecteur est absent."""
+    from core.connectors.facebook_connector import FacebookConnector
+
+    snapshot = tmp_path / f"facebook_{fetch_mode}.parquet"
+    pd.DataFrame(
+        [
+            {
+                "text": "facebook snapshot",
+                "channel": "facebook",
+                "timestamp": "2026-03-20T10:00:00",
+                "source_url": "https://example.test/facebook/snapshot",
+            }
+        ]
+    ).to_parquet(snapshot, index=False)
+
+    connector = FacebookConnector()
+
+    documents = connector.fetch_documents(
+        {
+            "source_id": f"src-facebook-{fetch_mode}",
+            "client_id": "client-a",
+            "source_name": "Facebook Ramy",
+            "platform": "facebook",
+            "source_type": "facebook_feed",
+            "owner_type": "owned",
+            "auth_mode": "file_snapshot",
+            "config_json": {
+                "fetch_mode": fetch_mode,
+                "page_url": "https://facebook.com/ramy",
+                "snapshot_path": str(snapshot),
+            },
+        }
+    )
+
+    assert documents == []
 
 
 def test_platform_connector_rejette_fetch_mode_invalide(tmp_path: Path) -> None:

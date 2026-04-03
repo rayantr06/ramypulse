@@ -51,6 +51,13 @@ class IngestionOrchestrator:
 
     def create_source(self, payload: dict) -> dict:
         """Crée une source PRD dans la table sources."""
+        raw_config_json = payload.get("config_json")
+        if isinstance(raw_config_json, str) and raw_config_json.strip():
+            stored_config_json = raw_config_json
+        elif isinstance(raw_config_json, dict):
+            stored_config_json = json.dumps(raw_config_json, ensure_ascii=False)
+        else:
+            stored_config_json = "{}"
         source = {
             "source_id": payload.get("source_id") or _new_id("src"),
             "client_id": payload.get("client_id") or DEFAULT_CLIENT_ID,
@@ -59,7 +66,7 @@ class IngestionOrchestrator:
             "source_type": str(payload.get("source_type") or "").strip(),
             "owner_type": str(payload.get("owner_type") or "").strip(),
             "auth_mode": payload.get("auth_mode"),
-            "config_json": json.dumps(payload.get("config_json") or {}, ensure_ascii=False),
+            "config_json": stored_config_json,
             "is_active": 1 if bool(payload.get("is_active", True)) else 0,
             "sync_frequency_minutes": int(payload.get("sync_frequency_minutes") or 60),
             "freshness_sla_hours": int(payload.get("freshness_sla_hours") or 24),
@@ -156,8 +163,6 @@ class IngestionOrchestrator:
         client_id: str | None = None,
     ) -> dict:
         """Exécute un run de synchronisation et insère les raw_documents."""
-        if not client_id:
-            raise ValueError("client_id explicite requis pour lancer une synchronisation")
         source = self.get_source(source_id, client_id=client_id)
         if source is None:
             raise KeyError(source_id)
