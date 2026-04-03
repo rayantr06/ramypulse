@@ -46,6 +46,33 @@ Le système est organisé autour de quatre couches:
 
 Le connecteur collecte uniquement des documents bruts traçables. Il ne porte ni ABSA métier ni logique d'analyse avancée. L'enrichissement continue dans les tables plateforme `normalized_records` et `enriched_signals`.
 
+## Repo baseline and coexistence
+
+Cette spec part de l'état réel de `integration/wave5`, pas d'un repo vide.
+
+Éléments déjà présents dans le code:
+
+- table legacy `source_registry`
+- tables plateforme `sources`, `source_sync_runs`, `raw_documents`, `normalized_records`, `enriched_signals`, `source_health_snapshots`
+- `core/connectors/base_connector.py`
+- `core/ingestion/orchestrator.py`
+- `core/ingestion/source_admin_service.py`
+- `core/normalization/normalizer_pipeline.py`
+
+Règle de coexistence figée:
+
+- `sources` est la source de vérité plateforme pour tout nouveau travail
+- `source_registry` reste un artefact legacy de compatibilité
+- aucun nouveau comportement ne doit être ajouté dans `source_registry`
+- aucune migration destructive n'est requise dans ce lot
+- si des données legacy doivent être lues, elles sont adaptées vers `sources`, pas l'inverse
+
+Règle de schéma:
+
+- la source de vérité SQL reste `core/database.py`
+- cette spec décrit les contrats et comportements, pas un DDL concurrent
+- toute implémentation doit s'aligner sur les tables déjà présentes dans `core/database.py`
+
 ## Data model
 
 ### Source of truth
@@ -106,6 +133,50 @@ Tous les connecteurs doivent respecter le même contrat logique:
 
 Le point d'entrée public reste `fetch_documents(...)`.
 
+### Python interface
+
+Le contrat Python cible est le suivant:
+
+```python
+class BaseConnector(ABC):
+    def validate_source_config(self, source: dict) -> None:
+        ...
+
+    def resolve_runtime_inputs(
+        self,
+        source: dict,
+        *,
+        credentials: dict | None = None,
+        **kwargs,
+    ) -> dict:
+        ...
+
+    @abstractmethod
+    def fetch_documents(
+        self,
+        source: dict,
+        *,
+        credentials: dict | None = None,
+        **kwargs,
+    ) -> list[dict]:
+        ...
+
+    def health_hints(
+        self,
+        source: dict,
+        *,
+        last_run: dict | None = None,
+    ) -> dict:
+        ...
+```
+
+Règles figées:
+
+- `fetch_documents()` retourne une `list[dict]`
+- un `fetch_mode` non supporté doit lever une erreur explicite, pas tomber en fallback silencieux
+- la pagination, le rate limiting et les retries restent de la responsabilité du connecteur ou de son backend collector
+- l'orchestrateur gère le cycle de vie du run et la persistance, pas la logique métier spécifique de la plateforme
+
 ### Canonical raw document format
 
 Chaque document retourné doit contenir:
@@ -140,6 +211,25 @@ Le premier lot impose `snapshot` et `collector`. Le mode `api` fait partie du co
 
 Le choix du mode appartient au connecteur à partir de la config source. L'orchestrateur ne doit pas contenir de branches métier spécifiques par plateforme.
 
+### Fetch mode semantics
+
+Définitions opérationnelles:
+
+- `snapshot`
+  - lecture d'un export local déterministe déposé par l'utilisateur ou par un job amont
+  - exemples: CSV/Parquet de posts Facebook, export reviews Google Maps, dump commentaires YouTube, export Instagram, import batch direct
+- `collector`
+  - appel d'un collecteur local ou d'un backend intermédiaire contrôlé par l'application
+  - exemples: script interne, job maison, backend Apify si configuré
+- `api`
+  - appel direct d'une API officielle ou d'un provider managé
+
+Règles:
+
+- le `fetch_mode` est choisi dans l'onboarding source via `config_json`
+- le connecteur peut refuser un mode qui n'est pas mature pour sa plateforme
+- `APIFY_API_KEY` est une dépendance optionnelle disponible dans `config.py` et peut être utilisée comme backend collector pour les plateformes où cela a du sens
+
 ## Source-specific expectations
 
 ### Import batch
@@ -154,6 +244,7 @@ Objectif:
 
 - ingestion déterministe depuis CSV/Parquet/Excel
 - propagation propre de la traçabilité vers les tables plateforme
+- réutilisation de `core/ingestion/import_engine.py` pour le parsing fichier, le mapping de colonnes et la déduplication avant insertion `raw_documents`
 
 ### Facebook
 
@@ -223,6 +314,49 @@ Le flux complet est figé comme suit:
 10. écriture `enriched_signals`
 11. calcul et persistance `source_health_snapshots`
 
+### Orchestrator contract
+
+Le point d'entrée cible de l'orchestrateur reste:
+
+```python
+class IngestionOrchestrator:
+    def create_source(self, payload: dict) -> dict:
+        ...
+
+    def get_source(self, source_id: str, *, client_id: str | None = None) -> dict | None:
+        ...
+
+    def run_source_sync(
+        self,
+        source_id: str,
+        *,
+        manual_file_path: str | None = None,
+        column_mapping: dict[str, str] | None = None,
+        run_mode: str = "manual",
+        credentials: dict | None = None,
+        client_id: str | None = None,
+    ) -> dict:
+        ...
+```
+
+Responsabilités figées:
+
+- sélectionner le connecteur
+- ouvrir et fermer `source_sync_runs`
+- insérer `raw_documents`
+- déclencher `normalizer_pipeline`
+- préserver les documents bruts si l'aval échoue
+- remonter un résumé de run exploitable par l'admin
+
+### Existing pipeline integration
+
+Le lot ne remplace pas le pipeline existant. Il le structure.
+
+- `core/ingestion/import_engine.py` reste la brique spécialisée pour les imports fichier
+- `core/ingestion/normalizer.py` reste la normalisation textuelle primaire
+- `core/normalization/normalizer_pipeline.py` orchestre `normalizer.py`, ABSA et entity resolution vers `normalized_records` et `enriched_signals`
+- aucun connecteur ne doit dupliquer la logique de normalisation ou d'ABSA
+
 ## Multi-tenant rules
 
 Règles non négociables:
@@ -253,6 +387,30 @@ La page `pages/09_admin_sources.py` devient le cockpit unique des cinq sources.
 - calculer un health snapshot
 - visualiser les derniers runs
 - visualiser la traçabilité de pipeline
+
+### Service contract
+
+La page admin ne parle pas directement à un registre legacy. Elle passe par `SourceAdminService`.
+
+Contrat de service cible:
+
+```python
+class SourceAdminService:
+    def list_sources(...) -> list[dict]:
+        ...
+
+    def list_sync_runs(...) -> list[dict]:
+        ...
+
+    def list_health_snapshots(...) -> list[dict]:
+        ...
+
+    def get_source_trace(...) -> dict:
+        ...
+
+    def update_source(...) -> dict:
+        ...
+```
 
 ## Error handling
 
