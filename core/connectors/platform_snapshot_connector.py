@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import importlib
-import json
 import logging
 from pathlib import Path
 
@@ -12,22 +11,10 @@ import pandas as pd
 import config
 from core.connectors.base_connector import BaseConnector
 from core.connectors.batch_import_connector import BatchImportConnector
+from core.connectors.source_config import parse_source_config
 from core.ingestion.import_engine import ImportEngine
 
 logger = logging.getLogger(__name__)
-
-
-def _parse_source_config(source: dict) -> dict:
-    raw_config = source.get("config_json") or {}
-    if isinstance(raw_config, dict):
-        return dict(raw_config)
-    if isinstance(raw_config, str):
-        try:
-            parsed = json.loads(raw_config)
-        except json.JSONDecodeError:
-            return {}
-        return parsed if isinstance(parsed, dict) else {}
-    return {}
 
 
 def _call_scraper_entrypoint(function, *, source: dict, credentials: dict | None):
@@ -64,7 +51,7 @@ class SnapshotPlatformConnector(BaseConnector):
         self._engine = ImportEngine()
 
     def _candidate_paths(self, source: dict, *, file_path: str | Path | None = None) -> list[Path]:
-        source_config = _parse_source_config(source)
+        source_config = parse_source_config(source)
         candidates: list[Path] = []
         for raw_path in (
             file_path,
@@ -157,7 +144,7 @@ class SnapshotPlatformConnector(BaseConnector):
         column_mapping: dict[str, str] | None = None,
         **kwargs,
     ) -> list[dict]:
-        source_config = _parse_source_config(source)
+        source_config = parse_source_config(source)
         resolved_mapping = column_mapping or source_config.get("column_mapping")
         mapping = resolved_mapping if isinstance(resolved_mapping, dict) else None
 
