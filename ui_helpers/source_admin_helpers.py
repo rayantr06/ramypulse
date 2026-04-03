@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import json
+
 import pandas as pd
+
+from core.connectors.source_config import materialize_secret_reference
 
 
 _SOURCE_COLUMNS = [
@@ -12,6 +16,8 @@ _SOURCE_COLUMNS = [
     "platform",
     "owner_type",
     "source_type",
+    "fetch_mode",
+    "credential_ref",
     "is_active",
     "last_sync_at",
     "last_sync_status",
@@ -20,6 +26,13 @@ _SOURCE_COLUMNS = [
     "normalized_count",
     "enriched_count",
 ]
+
+_PLATFORM_CONFIG_FIELDS = {
+    "facebook": "page_url",
+    "google_maps": "place_url",
+    "youtube": "channel_id",
+    "instagram": "profile_url",
+}
 
 _SYNC_RUN_COLUMNS = [
     "sync_run_id",
@@ -76,9 +89,74 @@ def _stable_frame(records: list[dict], columns: list[str]) -> pd.DataFrame:
     return frame[columns]
 
 
+def _parse_json_mapping(raw: str) -> dict[str, str] | None:
+    if not raw.strip():
+        return None
+    parsed = json.loads(raw)
+    if not isinstance(parsed, dict):
+        raise ValueError("Le mapping JSON doit etre un objet.")
+    return {str(key): str(value) for key, value in parsed.items()}
+
+
+def _config_from_record(record: dict) -> dict:
+    raw_config = record.get("config_json") or {}
+    if isinstance(raw_config, dict):
+        return dict(raw_config)
+    if isinstance(raw_config, str) and raw_config.strip():
+        try:
+            parsed = json.loads(raw_config)
+        except json.JSONDecodeError:
+            return {}
+        return parsed if isinstance(parsed, dict) else {}
+    return {}
+
+
+def build_source_config_json(
+    *,
+    platform: str,
+    fetch_mode: str,
+    snapshot_path: str,
+    mapping_raw: str,
+    secret_value: str,
+    secret_label: str,
+    platform_value: str = "",
+) -> dict[str, object]:
+    """Construit une config source PRD stable a partir des champs du formulaire admin."""
+    config_json: dict[str, object] = {
+        "fetch_mode": (fetch_mode or "snapshot").strip() or "snapshot",
+    }
+    if snapshot_path.strip():
+        config_json["snapshot_path"] = snapshot_path.strip()
+    parsed_mapping = _parse_json_mapping(mapping_raw)
+    if parsed_mapping:
+        config_json["column_mapping"] = parsed_mapping
+
+    platform_field = _PLATFORM_CONFIG_FIELDS.get(platform)
+    if platform_field and platform_value.strip():
+        config_json[platform_field] = platform_value.strip()
+
+    if secret_value.strip():
+        config_json = materialize_secret_reference(
+            config_json,
+            secret_value=secret_value.strip(),
+            label=secret_label,
+        )
+    return config_json
+
+
 def build_sources_frame(records: list[dict]) -> pd.DataFrame:
     """Construit le tableau principal des sources."""
-    frame = _stable_frame(records, _SOURCE_COLUMNS)
+    rows = []
+    for record in records:
+        config = _config_from_record(record)
+        rows.append(
+            {
+                **record,
+                "fetch_mode": config.get("fetch_mode", "snapshot"),
+                "credential_ref": config.get("credential_ref"),
+            }
+        )
+    frame = _stable_frame(rows, _SOURCE_COLUMNS)
     if frame.empty:
         return frame
     return frame.sort_values(
@@ -112,7 +190,7 @@ def compute_source_metrics(records: list[dict]) -> dict[str, int]:
     degraded = sum(
         1
         for row in records
-        if (row.get("last_sync_status") == "failed")
+        if (row.get("last_sync_status") in {"failed", "failed_downstream"})
         or (
             row.get("latest_health_score") is not None
             and float(row.get("latest_health_score")) < 60.0

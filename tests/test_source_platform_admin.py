@@ -928,3 +928,62 @@ def test_source_admin_helpers_construisent_les_frames_wave5() -> None:
     assert "latest_health_score" in sources_frame.columns
     assert list(runs_frame.columns)[:4] == ["sync_run_id", "source_id", "client_id", "status"]
     assert list(health_frame.columns)[:4] == ["snapshot_id", "source_id", "client_id", "health_score"]
+
+
+def test_build_sources_frame_affiche_fetch_mode_et_credential_ref() -> None:
+    """Le tableau sources doit rendre visibles fetch_mode et la reference de secret."""
+    from ui_helpers.source_admin_helpers import build_sources_frame
+
+    frame = build_sources_frame(
+        [
+            {
+                "source_id": "src-instagram-001",
+                "client_id": "client-a",
+                "source_name": "Instagram Ramy",
+                "platform": "instagram",
+                "owner_type": "owned",
+                "source_type": "instagram_profile",
+                "is_active": 1,
+                "config_json": {
+                    "fetch_mode": "collector",
+                    "credential_ref": "local:instagram-001",
+                },
+                "last_sync_status": "success",
+                "latest_health_score": 92.0,
+                "raw_document_count": 12,
+                "normalized_count": 12,
+                "enriched_count": 12,
+            }
+        ]
+    )
+
+    assert "fetch_mode" in frame.columns
+    assert "credential_ref" in frame.columns
+    assert frame.iloc[0]["fetch_mode"] == "collector"
+    assert frame.iloc[0]["credential_ref"] == "local:instagram-001"
+
+
+def test_build_source_config_json_ajoute_fetch_mode_secret_et_identifiant_plateforme(monkeypatch) -> None:
+    """Le helper UI doit construire une config exploitable pour une source collector."""
+    from ui_helpers.source_admin_helpers import build_source_config_json
+
+    monkeypatch.setattr(
+        "ui_helpers.source_admin_helpers.materialize_secret_reference",
+        lambda config, **kwargs: {**config, "credential_ref": "local:facebook-collector"},
+    )
+
+    config_payload = build_source_config_json(
+        platform="facebook",
+        fetch_mode="collector",
+        snapshot_path="data/raw/facebook_raw.parquet",
+        mapping_raw='{"review": "text"}',
+        secret_value="super-secret-token",
+        secret_label="facebook-collector",
+        platform_value="https://facebook.com/ramy",
+    )
+
+    assert config_payload["fetch_mode"] == "collector"
+    assert config_payload["snapshot_path"] == "data/raw/facebook_raw.parquet"
+    assert config_payload["column_mapping"] == {"review": "text"}
+    assert config_payload["page_url"] == "https://facebook.com/ramy"
+    assert config_payload["credential_ref"] == "local:facebook-collector"
