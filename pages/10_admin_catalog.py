@@ -11,7 +11,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from core.business_catalog import CompetitorCatalog, ProductCatalog, WilayaCatalog
 from core.database import DatabaseManager
-from pages.phase1_admin_helpers import (
+from ui_helpers.phase1_admin_helpers import (
     build_catalog_frame,
     compute_catalog_metrics,
     parse_keywords,

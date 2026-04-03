@@ -24,10 +24,22 @@ from config import (
 )
 from core.recommendation.agent_client import MODEL_CATALOG
 from core.security.secret_manager import is_secret_reference, resolve_secret, store_secret
+from ui_helpers.annotated_data import load_annotated_parquet
 
 logger = logging.getLogger(__name__)
 
 st.set_page_config(page_title="Recommendation Center — RamyPulse", layout="wide")
+
+
+def _default_model_for_provider(provider: str) -> str:
+    """Retourne le modèle recommandé pour un provider donné."""
+    catalog = MODEL_CATALOG.get(provider, [])
+    for entry in catalog:
+        if entry.get("recommended"):
+            return str(entry["id"])
+    if catalog:
+        return str(catalog[0]["id"])
+    return DEFAULT_AGENT_MODEL
 
 
 # ─── Chargement des données ───────────────────────────────────────────────────
@@ -39,15 +51,7 @@ def load_data() -> pd.DataFrame:
     Returns:
         DataFrame annote, ou DataFrame vide si le fichier est absent.
     """
-    try:
-        df = pd.read_parquet(ANNOTATED_PARQUET_PATH)
-        df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
-        df["aspect"] = df["aspect"].fillna("")
-        if "wilaya" in df.columns:
-            df["wilaya"] = df["wilaya"].fillna("").str.lower().str.strip()
-        return df
-    except FileNotFoundError:
-        return pd.DataFrame()
+    return load_annotated_parquet(ANNOTATED_PARQUET_PATH)
 
 
 df = load_data()
@@ -81,7 +85,12 @@ except Exception as exc:
 if "reco_provider" not in st.session_state:
     st.session_state["reco_provider"] = agent_config.get("provider") or DEFAULT_AGENT_PROVIDER
 if "reco_model" not in st.session_state:
-    st.session_state["reco_model"] = agent_config.get("model") or DEFAULT_AGENT_MODEL
+    initial_provider = st.session_state["reco_provider"]
+    initial_model = agent_config.get("model") or DEFAULT_AGENT_MODEL
+    catalog_ids = [item["id"] for item in MODEL_CATALOG.get(initial_provider, [])]
+    st.session_state["reco_model"] = (
+        initial_model if not catalog_ids or initial_model in catalog_ids else _default_model_for_provider(initial_provider)
+    )
 if "reco_api_key" not in st.session_state:
     st.session_state["reco_api_key"] = ""
 if "reco_api_key_reference" not in st.session_state:
@@ -390,7 +399,7 @@ with st.form("agent_config_form"):
     col_prov, col_mod = st.columns(2)
 
     with col_prov:
-        provider_options = ["ollama_local", "anthropic", "openai"]
+        provider_options = ["google_gemini", "anthropic", "openai", "ollama_local"]
         try:
             current_idx = provider_options.index(st.session_state["reco_provider"])
         except ValueError:
@@ -400,6 +409,7 @@ with st.form("agent_config_form"):
             options=provider_options,
             index=current_idx,
             format_func=lambda x: {
+                "google_gemini": "Google Gemini",
                 "ollama_local": "Ollama local",
                 "anthropic": "Anthropic (Claude)",
                 "openai": "OpenAI (GPT)",
@@ -471,7 +481,12 @@ with st.form("agent_config_form"):
             index=max(0, min(6, int(st.session_state.get("reco_weekly_day", 1)) - 1)),
         )
 
-    if selected_provider in ("anthropic", "openai"):
+    if selected_provider in ("anthropic", "openai", "google_gemini"):
+        provider_label = {
+            "anthropic": "Anthropic",
+            "openai": "OpenAI",
+            "google_gemini": "Google",
+        }.get(selected_provider, selected_provider)
         stored_reference = (
             st.session_state.get("reco_api_key_reference")
             or agent_config.get("api_key_encrypted")
@@ -480,7 +495,7 @@ with st.form("agent_config_form"):
         if stored_reference:
             st.caption(f"Reference secret actuellement stockee: {stored_reference}")
         api_key_input = st.text_input(
-            f"Cle API {selected_provider.capitalize()}",
+            f"Cle API {provider_label}",
             value=st.session_state.get("reco_api_key", ""),
             type="password",
             help="La cle ou reference est persistée pour l'auto-trigger.",
@@ -498,7 +513,7 @@ with st.form("agent_config_form"):
         st.session_state["reco_weekly_enabled"] = weekly_enabled
         st.session_state["reco_weekly_day"] = weekly_day
         try:
-            if selected_provider in ("anthropic", "openai"):
+            if selected_provider in ("anthropic", "openai", "google_gemini"):
                 if api_key_input.strip():
                     secret_reference = store_secret(api_key_input.strip(), label=selected_provider)
                 else:

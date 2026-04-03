@@ -8,6 +8,7 @@ import pandas as pd
 import streamlit as st
 
 from config import ANNOTATED_PARQUET_PATH, SQLITE_DB_PATH
+from ui_helpers.annotated_data import load_annotated_parquet
 
 st.set_page_config(page_title="Campagnes - RamyPulse", layout="wide")
 
@@ -15,18 +16,7 @@ st.set_page_config(page_title="Campagnes - RamyPulse", layout="wide")
 @st.cache_data(ttl=300)
 def load_data() -> pd.DataFrame:
     """Charge annotated.parquet avec normalisation minimale."""
-    try:
-        dataframe = pd.read_parquet(ANNOTATED_PARQUET_PATH)
-    except FileNotFoundError:
-        return pd.DataFrame()
-
-    if "timestamp" in dataframe.columns:
-        dataframe["timestamp"] = pd.to_datetime(dataframe["timestamp"], errors="coerce")
-    if "wilaya" in dataframe.columns:
-        dataframe["wilaya"] = dataframe["wilaya"].fillna("").str.lower().str.strip()
-    if "aspect" in dataframe.columns:
-        dataframe["aspect"] = dataframe["aspect"].fillna("")
-    return dataframe
+    return load_annotated_parquet(ANNOTATED_PARQUET_PATH)
 
 
 def load_campaign_snapshots(campaign_id: str) -> pd.DataFrame:

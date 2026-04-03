@@ -5,6 +5,7 @@ Embedder est mocké pour éviter le chargement du modèle (~1 GB).
 """
 
 import os
+import subprocess
 import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -131,3 +132,22 @@ def test_fichier_vide_ne_crashe_pas(tmp_path: Path) -> None:
 
     with patch("scripts.build_index_04.Embedder", return_value=_mock_embedder()):
         build_index(input_path=annotated, embeddings_dir=emb_dir)
+
+
+def test_wrapper_cli_bootstrap_repo_root() -> None:
+    """Le wrapper CLI doit se lancer depuis la racine du repo sans ModuleNotFoundError."""
+    repo_root = Path(__file__).resolve().parent.parent
+    env = os.environ.copy()
+    env["RAMYPULSE_BUILD_INDEX_DRY_RUN"] = "1"
+
+    result = subprocess.run(
+        [sys.executable, "scripts/04_build_index.py"],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        env=env,
+        timeout=30,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "DRY_RUN_OK" in result.stdout

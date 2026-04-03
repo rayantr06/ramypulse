@@ -66,10 +66,12 @@ def _load_runtime() -> dict:
         vector_store = VectorStore.load(str(index_path))
         retriever = Retriever(vector_store=vector_store, embedder=Embedder())
         generator = Generator()
+        backend_label = generator.describe_backend()
         return {
             "mode": "live",
             "retriever": retriever,
             "generator": generator,
+            "backend_label": backend_label,
             "reason": None,
         }
     except Exception as exc:  # pragma: no cover - dépend de l'environnement local
@@ -97,13 +99,14 @@ def _consume_question() -> str | None:
     return pending or typed
 
 
-def _render_header(mode: str, reason: str | None) -> None:
+def _render_header(mode: str, reason: str | None, backend_label: str | None = None) -> None:
     """Affiche l'en-tête principal de la page et l'état du backend."""
     st.title("Chat RAG RamyPulse")
     st.caption("Questions-réponses avec provenance à partir des avis et extraits collectés.")
 
     if mode == "live":
-        st.success("Mode réel activé : retrieval hybride + génération Ollama.")
+        label = backend_label or "backend RAG"
+        st.success(f"Mode réel activé : retrieval hybride + génération {label}.")
     else:
         message = "Mode DEMO activé : backend RAG indisponible ou index non construit."
         if reason:
@@ -311,7 +314,7 @@ def main() -> None:
     _ensure_session_state()
 
     runtime = _load_runtime()
-    _render_header(runtime["mode"], runtime.get("reason"))
+    _render_header(runtime["mode"], runtime.get("reason"), runtime.get("backend_label"))
     _render_example_questions()
     _render_history()
 

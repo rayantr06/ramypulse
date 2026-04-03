@@ -195,8 +195,9 @@ DEFAULT_CLIENT_ID: str = "ramy_client_001"
 
 ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
 OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
-DEFAULT_AGENT_PROVIDER: str = os.getenv("AGENT_PROVIDER", "ollama_local")
-DEFAULT_AGENT_MODEL: str = os.getenv("AGENT_MODEL", "qwen2.5:14b")
+GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")
+DEFAULT_AGENT_PROVIDER: str = os.getenv("AGENT_PROVIDER", "google_gemini")
+DEFAULT_AGENT_MODEL: str = os.getenv("AGENT_MODEL", "gemini-2.5-flash")
 RECOMMENDATION_AGENT_PROMPT_VERSION: str = "1.1"
 WEEKLY_REPORT_EMAIL_TO: str = os.getenv("WEEKLY_REPORT_EMAIL_TO", "")
 WEEKLY_REPORT_SLACK_WEBHOOK_REFERENCE: str = os.getenv("WEEKLY_REPORT_SLACK_WEBHOOK_REFERENCE", "")

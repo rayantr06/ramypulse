@@ -41,9 +41,9 @@ def test_config_openai_api_key_existe() -> None:
 
 
 def test_config_default_agent_provider_valide() -> None:
-    """DEFAULT_AGENT_PROVIDER doit être l'un des trois providers supportés."""
+    """DEFAULT_AGENT_PROVIDER doit être l'un des providers supportés."""
     from config import DEFAULT_AGENT_PROVIDER
-    assert DEFAULT_AGENT_PROVIDER in ("anthropic", "openai", "ollama_local")
+    assert DEFAULT_AGENT_PROVIDER in ("anthropic", "openai", "google_gemini", "ollama_local")
 
 
 def test_config_default_agent_model_est_string() -> None:

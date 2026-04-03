@@ -7,7 +7,7 @@ import pandas as pd
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from pages.phase1_admin_helpers import (  # noqa: E402
+from ui_helpers.phase1_admin_helpers import (  # noqa: E402
     build_catalog_frame,
     compute_catalog_metrics,
     parse_keywords,

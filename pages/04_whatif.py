@@ -16,7 +16,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from core.analysis.nss_calculator import calculate_nss_by_channel
 from core.whatif.simulator import simulate_whatif
-from pages.whatif_helpers import (
+from ui_helpers.annotated_data import load_annotated_parquet, normalize_annotated_dataframe
+from ui_helpers.whatif_helpers import (
     build_comparison_chart_data,
     build_mock_df,
     delta_arrow,
@@ -73,10 +74,10 @@ def _load_data() -> pd.DataFrame:
             if parquets:
                 path = os.path.join(directory, parquets[0])
                 logger.info("Données chargées : %s", path)
-                return pd.read_parquet(path)
+                return load_annotated_parquet(path)
 
     logger.warning("Aucune donnée trouvée — mode démo avec données synthétiques.")
-    return build_mock_df()
+    return normalize_annotated_dataframe(build_mock_df())
 
 
 # ---------------------------------------------------------------------------

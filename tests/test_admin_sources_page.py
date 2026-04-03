@@ -5,7 +5,7 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from pages.phase1_admin_helpers import (  # noqa: E402
+from ui_helpers.phase1_admin_helpers import (  # noqa: E402
     build_sources_frame,
     compute_source_metrics,
     filter_source_records,

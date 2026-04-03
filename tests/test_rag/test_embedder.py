@@ -112,3 +112,31 @@ def test_embed_documents_dtype_float32() -> None:
     with patch.object(Embedder, "_get_model", return_value=_fake_model(2)):
         result = Embedder().embed_documents(["a", "b"])
     assert result.dtype == np.float32
+
+
+def test_get_model_bascule_sur_transformers_si_sentence_transformers_echoue() -> None:
+    """Le loader doit fallback sur transformers si sentence-transformers casse."""
+    Embedder._model = None
+    with patch.object(
+        Embedder,
+        "_load_sentence_transformer_model",
+        side_effect=RuntimeError("sentence-transformers indisponible"),
+    ), patch.object(Embedder, "_load_transformers_model", return_value="fallback-transformers"):
+        result = Embedder()._get_model()
+    assert result == "fallback-transformers"
+
+
+def test_get_model_bascule_sur_hashing_si_transformers_echoue_aussi() -> None:
+    """Le loader doit garder un dernier fallback local si HF casse entierement."""
+    Embedder._model = None
+    with patch.object(
+        Embedder,
+        "_load_sentence_transformer_model",
+        side_effect=RuntimeError("sentence-transformers indisponible"),
+    ), patch.object(
+        Embedder,
+        "_load_transformers_model",
+        side_effect=RuntimeError("transformers indisponible"),
+    ), patch.object(Embedder, "_load_hashing_model", return_value="fallback-hashing"):
+        result = Embedder()._get_model()
+    assert result == "fallback-hashing"

@@ -17,6 +17,7 @@ from core.watchlists.watchlist_manager import (
     deactivate_watchlist,
     list_watchlists,
 )
+from ui_helpers.annotated_data import load_annotated_parquet
 
 logger = logging.getLogger(__name__)
 
@@ -26,12 +27,7 @@ st.set_page_config(page_title="Watchlists — RamyPulse", layout="wide")
 @st.cache_data(ttl=300)
 def load_data() -> pd.DataFrame:
     """Charge les donnees annotees ou retourne un DataFrame vide."""
-    try:
-        dataframe = pd.read_parquet(ANNOTATED_PARQUET_PATH)
-        dataframe["timestamp"] = pd.to_datetime(dataframe["timestamp"], errors="coerce")
-        return dataframe
-    except FileNotFoundError:
-        return pd.DataFrame()
+    return load_annotated_parquet(ANNOTATED_PARQUET_PATH)
 
 
 def _options_from_column(dataframe: pd.DataFrame, column: str) -> list[str]:

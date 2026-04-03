@@ -7,7 +7,7 @@ import pandas as pd
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from pages.phase1_dashboard_helpers import (  # noqa: E402
+from ui_helpers.phase1_dashboard_helpers import (  # noqa: E402
     apply_dataframe_filters,
     build_explorer_display_columns,
 )

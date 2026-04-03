@@ -24,6 +24,13 @@ CHUNKS = [
 ]
 
 
+@pytest.fixture(autouse=True)
+def _force_ollama_backend(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Isole les tests du backend réel configuré localement."""
+    monkeypatch.setenv("RAG_GENERATOR_PROVIDER", "ollama_local")
+    monkeypatch.delenv("RAG_GENERATOR_MODEL", raising=False)
+
+
 def _ollama_resp(answer: str, sources: list, confidence: str) -> dict:
     """Construit une réponse Ollama simulée contenant du JSON valide."""
     return {
@@ -57,6 +64,42 @@ def test_confidence_est_une_valeur_valide(mock_ollama: MagicMock) -> None:
     mock_ollama.chat.return_value = _ollama_resp("Réponse.", [1], "medium")
     result = Generator().generate("question", CHUNKS)
     assert result["confidence"] in ("high", "medium", "low")
+
+
+@patch("core.rag.generator.requests.post")
+def test_generate_gemini_provider_retourne_reponse(
+    mock_post: MagicMock,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Le générateur doit aussi pouvoir utiliser Gemini via API."""
+    monkeypatch.setenv("RAG_GENERATOR_PROVIDER", "google_gemini")
+    monkeypatch.setenv("RAG_GENERATOR_MODEL", "gemini-2.5-flash-preview-05-20")
+    monkeypatch.setenv("GOOGLE_API_KEY", "test-key")
+
+    response = MagicMock()
+    response.raise_for_status.return_value = None
+    response.json.return_value = {
+        "candidates": [
+            {
+                "content": {
+                    "parts": [
+                        {
+                            "text": json.dumps(
+                                {"answer": "Analyse [Source 1].", "sources": [1], "confidence": "high"}
+                            )
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+    mock_post.return_value = response
+
+    result = Generator().generate("question", CHUNKS)
+
+    assert result["answer"] == "Analyse [Source 1]."
+    assert result["sources"][0]["text"] == CHUNKS[0]["text"]
+    assert mock_post.called
 
 
 # ---------------------------------------------------------------------------

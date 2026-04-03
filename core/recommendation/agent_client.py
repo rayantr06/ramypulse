@@ -1,6 +1,6 @@
 """Client LLM multi-provider pour la generation de recommandations marketing.
 
-Supporte : anthropic, openai, ollama_local.
+Supporte : anthropic, openai, google_gemini, ollama_local.
 Utilise requests (synchrone) compatible avec Streamlit.
 Parse JSON robuste avec fallback si le LLM retourne du texte libre.
 La cle API n'est jamais loggee.
@@ -24,8 +24,16 @@ from core.recommendation.prompt_manager import get_system_prompt
 
 logger = logging.getLogger(__name__)
 
+# Clé Gemini chargée depuis config/env
+try:
+    from config import GOOGLE_API_KEY as _GOOGLE_API_KEY
+except ImportError:
+    import os as _os
+    _GOOGLE_API_KEY = _os.getenv("GOOGLE_API_KEY", "")
+
 _ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
 _OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
+_GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 _ANTHROPIC_VERSION_HEADER = "2023-06-01"
 _DEFAULT_MAX_TOKENS = 4096
 _TIMEOUT_SECONDS = 180
@@ -42,6 +50,11 @@ MODEL_CATALOG: dict[str, list[dict]] = {
         {"id": "gpt-4-turbo", "label": "GPT-4 Turbo", "recommended": False},
         {"id": "o1-preview", "label": "o1 Preview (raisonnement avancé)", "recommended": False},
     ],
+    "google_gemini": [
+        {"id": "gemini-2.5-flash", "label": "Gemini 2.5 Flash (recommande)", "recommended": True},
+        {"id": "gemini-2.5-pro", "label": "Gemini 2.5 Pro (plus puissant, quota dependant)", "recommended": False},
+        {"id": "gemini-2.0-flash", "label": "Gemini 2.0 Flash (économique)", "recommended": False},
+    ],
     "ollama_local": [
         {"id": "qwen2.5:14b", "label": "Qwen 2.5 14B (recommandé local)", "recommended": True},
         {"id": "llama3.2:3b", "label": "Llama 3.2 3B (léger)", "recommended": False},
@@ -53,6 +66,7 @@ MODEL_CATALOG: dict[str, list[dict]] = {
 _DEFAULT_MODELS: dict[str, str] = {
     "anthropic": "claude-opus-4-6",
     "openai": "gpt-4o",
+    "google_gemini": "gemini-2.5-flash",
     "ollama_local": "qwen2.5:14b",
 }
 
@@ -226,6 +240,44 @@ def _call_openai(api_key: str, model: str, user_prompt: str, system_prompt: str)
     return _parse_json_response(raw_text)
 
 
+def _call_gemini(api_key: str, model: str, user_prompt: str, system_prompt: str) -> dict:
+    """Appelle l'API Google Gemini et parse la reponse JSON.
+
+    Args:
+        api_key: Cle API Google (jamais loggee).
+        model: Nom du modele Gemini.
+        user_prompt: Prompt utilisateur.
+        system_prompt: Prompt systeme.
+
+    Returns:
+        Dict parse de la reponse LLM.
+
+    Raises:
+        requests.HTTPError: Si l'API retourne une erreur HTTP.
+    """
+    url = f"{_GEMINI_API_URL}/{model}:generateContent"
+    headers = {"Content-Type": "application/json"}
+    payload = {
+        "system_instruction": {"parts": [{"text": system_prompt}]},
+        "contents": [{"parts": [{"text": user_prompt}]}],
+        "generationConfig": {
+            "maxOutputTokens": _DEFAULT_MAX_TOKENS,
+            "responseMimeType": "application/json",
+            "thinkingConfig": {"thinkingBudget": 0},
+        },
+    }
+    logger.info("Appel Gemini API — modele : %s", model)
+    response = requests.post(
+        url, headers=headers, json=payload,
+        params={"key": api_key},
+        timeout=_TIMEOUT_SECONDS,
+    )
+    response.raise_for_status()
+    data = response.json()
+    raw_text = data["candidates"][0]["content"]["parts"][0]["text"]
+    return _parse_json_response(raw_text)
+
+
 def _call_ollama(model: str, user_prompt: str, system_prompt: str) -> dict:
     """Appelle Ollama local et parse la reponse JSON.
 
@@ -300,13 +352,17 @@ def generate_recommendations(
         resolved_model = model or _DEFAULT_MODELS["openai"]
         resolved_key = api_key or OPENAI_API_KEY
         result = _call_openai(resolved_key, resolved_model, user_prompt, system_prompt)
+    elif provider == "google_gemini":
+        resolved_model = model or _DEFAULT_MODELS["google_gemini"]
+        resolved_key = api_key or _GOOGLE_API_KEY
+        result = _call_gemini(resolved_key, resolved_model, user_prompt, system_prompt)
     elif provider == "ollama_local":
         resolved_model = model or _DEFAULT_MODELS.get("ollama_local", DEFAULT_AGENT_MODEL)
         result = _call_ollama(resolved_model, user_prompt, system_prompt)
     else:
         raise ValueError(
             f"Provider non supporte : {provider!r}. "
-            "Valeurs valides : anthropic, openai, ollama_local"
+            "Valeurs valides : anthropic, openai, google_gemini, ollama_local"
         )
 
     generation_ms = int((time.monotonic() - t_start) * 1000)

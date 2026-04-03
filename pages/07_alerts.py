@@ -12,6 +12,7 @@ import streamlit as st
 from config import ANNOTATED_PARQUET_PATH, DEFAULT_CLIENT_ID
 from core.alerts.alert_detector import run_alert_detection
 from core.alerts.alert_manager import list_alerts, update_alert_status
+from ui_helpers.annotated_data import load_annotated_parquet
 
 logger = logging.getLogger(__name__)
 
@@ -21,14 +22,7 @@ st.set_page_config(page_title="Alertes - RamyPulse", layout="wide")
 @st.cache_data(ttl=300)
 def load_data() -> pd.DataFrame:
     """Charge les donnees annotees ou retourne un DataFrame vide."""
-    try:
-        dataframe = pd.read_parquet(ANNOTATED_PARQUET_PATH)
-    except FileNotFoundError:
-        return pd.DataFrame()
-
-    if "timestamp" in dataframe.columns:
-        dataframe["timestamp"] = pd.to_datetime(dataframe["timestamp"], errors="coerce")
-    return dataframe
+    return load_annotated_parquet(ANNOTATED_PARQUET_PATH)
 
 
 def _status_options() -> list[str]:

@@ -11,7 +11,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from core.database import DatabaseManager
 from core.source_registry import SourceRegistry
-from pages.phase1_admin_helpers import (
+from ui_helpers.phase1_admin_helpers import (
     build_sources_frame,
     compute_source_metrics,
     filter_source_records,
