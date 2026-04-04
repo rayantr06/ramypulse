@@ -6,6 +6,12 @@ interface NavItem {
   icon: string;
 }
 
+interface SidebarProps {
+  footerAvatarSrc?: string;
+  footerAvatarAlt?: string;
+  footerSubtitle?: string;
+}
+
 const navItems: NavItem[] = [
   { href: "/", label: "Tableau de bord", icon: "dashboard" },
   { href: "/explorateur", label: "Explorateur", icon: "explore" },
@@ -16,7 +22,11 @@ const navItems: NavItem[] = [
   { href: "/admin-sources", label: "Admin Sources", icon: "settings_input_component" },
 ];
 
-export function Sidebar() {
+export function Sidebar({
+  footerAvatarSrc,
+  footerAvatarAlt = "Sidebar profile",
+  footerSubtitle,
+}: SidebarProps) {
   const [location] = useLocation();
 
   return (
@@ -55,11 +65,24 @@ export function Sidebar() {
 
       <div className="mt-auto pt-6 border-t border-gray-800/50">
         <div className="flex items-center gap-3 px-3 py-2">
-          <span className="material-symbols-outlined text-gray-400">account_circle</span>
+          <div className="w-8 h-8 rounded-full overflow-hidden shrink-0">
+            {footerAvatarSrc ? (
+              <img
+                alt={footerAvatarAlt}
+                className="w-full h-full object-cover"
+                src={footerAvatarSrc}
+              />
+            ) : (
+              <span className="material-symbols-outlined text-gray-400">account_circle</span>
+            )}
+          </div>
           <div className="overflow-hidden">
             <p className="font-headline text-xs font-bold text-on-surface truncate">
               Ammar, Brand Manager
             </p>
+            {footerSubtitle ? (
+              <p className="text-[10px] text-on-surface-variant">{footerSubtitle}</p>
+            ) : null}
           </div>
         </div>
       </div>

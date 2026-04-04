@@ -49,6 +49,45 @@ function toTriggerLabel(trigger: string | undefined | null): string {
   return "Manuel";
 }
 
+function prettyProviderName(providerId: string | undefined | null): string {
+  switch ((providerId || "").toLowerCase()) {
+    case "ollama":
+    case "ollama_local":
+      return "Ollama Local";
+    case "anthropic":
+      return "Anthropic Claude";
+    case "openai":
+      return "OpenAI GPT";
+    case "google":
+    case "gemini":
+      return "Google Gemini";
+    default:
+      return providerId || "-";
+  }
+}
+
+function providerBadgeLabel(providerId: string, model: string): string {
+  const base = prettyProviderName(providerId);
+  return model ? `${base} ${model}` : base;
+}
+
+function formatRelativeRunLabel(value: string | undefined | null): string {
+  if (!value || value === "-") return "Jamais";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  const diffMs = Date.now() - parsed.getTime();
+  if (diffMs < 60 * 60 * 1000) {
+    const minutes = Math.max(1, Math.round(diffMs / (60 * 1000)));
+    return `Il y a ${minutes} min`;
+  }
+  if (diffMs < 24 * 60 * 60 * 1000) {
+    const hours = Math.max(1, Math.round(diffMs / (60 * 60 * 1000)));
+    return `Il y a ${hours}h`;
+  }
+  const days = Math.max(1, Math.round(diffMs / (24 * 60 * 60 * 1000)));
+  return `Il y a ${days}j`;
+}
+
 function normalizePriority(value: string | undefined | null, confidence: number): string {
   const raw = (value || "").toUpperCase();
   if (raw.includes("HIGH") || raw.includes("URGENT")) return "URGENT";
@@ -106,7 +145,7 @@ function buildProviderGroups(value: unknown): ProviderGroup[] {
   flat.forEach((provider) => {
     const current = grouped.get(provider.provider_id) || {
       id: provider.provider_id,
-      name: provider.provider_id,
+      name: prettyProviderName(provider.provider_id),
       models: [],
     };
     current.models.push(provider.model_id);
@@ -141,12 +180,12 @@ function PriorityBadge({ priority }: { priority: string }) {
 
 function statusLabel(status: string): { label: string; color: string; dotColor: string } {
   if (status === "active") {
-    return { label: "ACTIVE", color: "text-tertiary", dotColor: "bg-tertiary" };
+    return { label: "COMPLÉTÉ", color: "text-tertiary", dotColor: "bg-tertiary" };
   }
   if (status === "archived") {
-    return { label: "ARCHIVE", color: "text-gray-500", dotColor: "bg-gray-500" };
+    return { label: "ARCHIVÉ", color: "text-gray-500", dotColor: "bg-gray-500" };
   }
-  return { label: "DISMISS", color: "text-error", dotColor: "bg-error" };
+  return { label: "ÉCHOUÉ", color: "text-error", dotColor: "bg-error" };
 }
 
 export default function Recommandations() {
@@ -231,6 +270,13 @@ export default function Recommandations() {
 
   const recos = recommendations ?? [];
   const activeRecos = recos.filter((recommendation) => recommendation.status === "active");
+  const latestRecommendation = recos[0] ?? null;
+  const lastRunLabel = formatRelativeRunLabel(latestRecommendation?.created_at);
+  const activeConfidence = activeRecos[0]?.confidence ?? latestRecommendation?.confidence ?? 0;
+  const activeProviderBadge = providerBadgeLabel(
+    activeRecos[0]?.provider || latestRecommendation?.provider || "",
+    activeRecos[0]?.model || latestRecommendation?.model || "",
+  );
 
   const runHistory = useMemo(() => {
     return recos.map((recommendation) => ({
@@ -376,7 +422,7 @@ export default function Recommandations() {
                       contextData.volume >= 1000
                         ? `${(contextData.volume / 1000).toFixed(1)}k`
                         : contextData.volume,
-                    label: "Volume",
+                    label: "Volume (m³)",
                   },
                   {
                     icon: "warning",
@@ -389,26 +435,28 @@ export default function Recommandations() {
                     icon: "history",
                     color: "text-gray-500",
                     borderColor: "border-white/5",
-                    value: contextData.active_watchlists,
-                    label: "Watchlists actives",
-                    subValue: contextData.last_run,
+                    value: "Dernière run",
+                    label: lastRunLabel,
                   },
-                ].map(({ icon, color, borderColor, value, label, subValue }) => (
+                ].map(({ icon, color, borderColor, value, label }) => (
                   <div
                     key={label}
                     className={`bg-surface-container p-4 rounded-lg flex flex-col justify-between border-l-2 ${borderColor}`}
                   >
                     <span className={`material-symbols-outlined text-xl ${color}`}>{icon}</span>
                     <div>
-                      <p className="text-2xl font-black font-headline tracking-tighter">
+                      <p
+                        className={`font-headline tracking-tighter ${
+                          value === "Dernière run"
+                            ? "text-lg font-bold leading-tight"
+                            : "text-2xl font-black"
+                        }`}
+                      >
                         {value}
                       </p>
                       <p className="text-[10px] font-bold uppercase text-gray-500">
                         {label}
                       </p>
-                      {subValue ? (
-                        <p className="text-[10px] text-on-surface-variant mt-1">{subValue}</p>
-                      ) : null}
                     </div>
                   </div>
                 ))}
@@ -427,6 +475,23 @@ export default function Recommandations() {
                 Recommandations actives
               </h2>
             </header>
+            <div className="flex gap-2">
+              <button
+                className="bg-surface-container-high px-4 py-2 rounded-sm text-xs font-bold hover:bg-surface-bright transition-colors disabled:opacity-50"
+                disabled={!activeRecos.length || updateStatusMutation.isPending}
+                onClick={() => {
+                  activeRecos.forEach((recommendation) => {
+                    updateStatusMutation.mutate({
+                      id: recommendation.id,
+                      status: "archived",
+                    });
+                  });
+                }}
+                type="button"
+              >
+                Tout Archiver
+              </button>
+            </div>
           </div>
 
           {recoLoading ? (
@@ -446,7 +511,7 @@ export default function Recommandations() {
                     <span className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
                       {activeRecos.length}
                     </span>
-                    <span className="text-sm font-bold">Actions recommandees</span>
+                    <span className="text-sm font-bold">Actions recommandées</span>
                   </div>
                   <div className="h-4 w-px bg-white/10"></div>
                   <div className="flex items-center gap-2">
@@ -454,16 +519,16 @@ export default function Recommandations() {
                       verified
                     </span>
                     <span className="text-sm font-bold">
-                      {activeRecos[0]?.confidence}% Confiance
+                      {activeConfidence}% Confiance
                     </span>
                   </div>
                 </div>
                 <div className="flex items-center gap-4 text-[10px] font-bold uppercase text-gray-500">
                   <div className="flex items-center gap-1.5 bg-surface-dim px-2 py-1 rounded-sm">
                     <span className="material-symbols-outlined text-xs">memory</span>
-                    <span>{activeRecos[0]?.provider || "-"}</span>
+                    <span>{activeProviderBadge}</span>
                   </div>
-                  <span>{activeRecos[0]?.created_at || "-"}</span>
+                  <span>{latestRecommendation?.created_at || "-"}</span>
                 </div>
               </div>
 

@@ -40,11 +40,20 @@ test("Recommandations keeps Stitch form labels and stats copy", () => {
   const source = readPage("Recommandations.tsx");
   contains(source, "Générer des recommandations");
   contains(source, "Type de Déclencheur");
+  contains(source, "Nom du Modèle / Endpoint");
   contains(source, "Coût est.");
   contains(source, "Historique des runs");
   lacks(source, "Generer des recommandations");
   lacks(source, "Type de Declencheur");
   lacks(source, "Provider actif");
+});
+
+test("Recommandations keeps Stitch active analysis cards and actions", () => {
+  const source = readPage("Recommandations.tsx");
+  contains(source, "Volume (m³)");
+  contains(source, "Dernière run");
+  contains(source, "Tout Archiver");
+  contains(source, "Actions recommandées");
 });
 
 test("Watchlists keeps Stitch CTA copy", () => {
@@ -62,12 +71,36 @@ test("Alertes keeps Stitch real-time excerpt label", () => {
   lacks(source, "Extraits Sociaux (Temps Reel)");
 });
 
+test("Alertes keeps Stitch console labels and actions", () => {
+  const source = readPage("Alertes.tsx");
+  contains(source, "Système en ligne");
+  contains(source, "Sévérité");
+  contains(source, "Détails de l'Alerte");
+  contains(source, "Impact Estimé");
+  contains(source, "Reconnaître");
+  contains(source, "Résoudre");
+});
+
 test("Campagnes keeps Stitch capitalization and accents", () => {
   const source = readPage("Campagnes.tsx");
   contains(source, "Gestion Opérationnelle");
   contains(source, "CRÉER UNE CAMPAGNE");
+  contains(source, "Début");
+  contains(source, "Mots-clés");
   lacks(source, "Gestion Operationnelle");
   lacks(source, "CREER UNE CAMPAGNE");
+});
+
+test("Campagnes keeps Stitch structure for table and performance cards", () => {
+  const source = readPage("Campagnes.tsx");
+  contains(source, "Top Performeur (Mois)");
+  contains(source, "Budget Total Engagé");
+  contains(source, "Campagne / Influenceur");
+  contains(source, "Impact NSS");
+  contains(source, "Page ${safeCurrentPage} de ${totalPages}");
+  contains(source, "Ramy Pulse Pro");
+  contains(source, "Influenceur Algerien");
+  contains(source, "allocation trimestrielle");
 });
 
 test("Explorateur keeps Stitch search copy", () => {

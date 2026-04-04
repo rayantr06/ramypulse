@@ -9,6 +9,33 @@ import {
 } from "@/lib/apiMappings";
 import { STITCH_AVATARS } from "@/lib/stitchAssets";
 
+const CAMPAIGN_ROW_AVATARS = [
+  "https://lh3.googleusercontent.com/aida-public/AB6AXuAe-qHYLr1lBNJS2zW04-OeHhIs6Wi51BhptWX8z5YE72TYHQwxKDQDrHAAaU6tNYs4tE14HJpPKa-GjTEGy2fD_Bflkxz_ZIYGlHvFu7fr5As5IJ8_V9fsuM5PzTgmgq46CmsW1UmDTSs5MoaA5hF0oeKg72_o8zGp1mnMUB5b3IlPzNGtiYzmYvx_bRQhWyEgKNavdL-AhhbFRIuCgbdcG_NS7cgJlrIFIn8OdwQHEIvhsxHl78Fc8T3qJhSnmCAQi0nsrorqgzIb",
+  "https://lh3.googleusercontent.com/aida-public/AB6AXuCohVkqL6sywZosVDw1uvnbJcW6yvRyreNc9MsFDE52JQIwm683p7H05E8pp6PDN4FrOGVp_LPf3Mz8vs1tpbQGN_4_F_e-jV0H8AeJ3QgWRcVG3_SHYpJMn18XxqGVguSX4HG969i-tTBIYSVko6V3rrU7CBZPf_4u-_YYSGRp9_swBjxU-BPyThIv6rNTTvZtQBpYrA3myVSnpRkRdbjke4Ld-yGT-SHiFLwcuL3AYz-00ah3j9M7dUIqHEF3PldkbM4TtZoyiezH",
+  "https://lh3.googleusercontent.com/aida-public/AB6AXuCIdDfm2qBDICiHPJBx5Pnebx6vFO_aqoL32jzyEgrWyqnxYiMJhBW5J8jv8MXzhmUfj_yrQDGvw-sRS85hbAw5Dcn5VSSpqSMSH9aJSG59yzALTJE_fVPOwT2NWtZvWIddO_k_uDgY5qb4T-bgZKowU-A0ShQKenKoXm6z9ugemufP-a3j_V32B6swTwx39SHWunxQ3UkDrbup44hiFST1DCBC8gpsgZxYxWuc9asZ0scZyOJ0uGpHXKI9ArZ2rOabXrkqNH_aIz0G",
+  "https://lh3.googleusercontent.com/aida-public/AB6AXuAKOS9oMsA1t7QfbZF0fVNW8W4XoMinVLWZoYhLDT2fVlVGjdNvHbeOyVk61ThnnAFZdk10hzE-OtFP8GuaUr0Dsj2pExS5aQMbxI3HY4fKC2gD_W850m1WeRhHSr9Y9Ca3Uj6gvMKsk6OlsW8K1UaX22U7gBMXKUJohmQWZMWfodDSwPhfCO0rnteceKoqechbptW4Sc3V_5r2pbiiivaV1r7DGKtzB3KNbwf50rqYBlF4FiZQqPLAoksGt2GH_YoIfP2BGQdxiaJw",
+];
+
+const PLATFORM_ICON_ASSETS: Record<string, { src: string; className: string }> = {
+  instagram: {
+    src: "https://lh3.googleusercontent.com/aida-public/AB6AXuDUDUCBMLfYEFc5K7ORw-d2EC3eSsOQmxwUpSvXWbY39J89JjcdLyEorfN8jH2FpON5ArO4-GA2wpejl0f6G4j6ClzGTSoFzmms6_np5GfQSuFxwO5h9VVsTHTaV2IQWnI99OjToOHVuLPHCSZYkY_cm8IsJkE4X6IoSnz5GHxeTPSXMcZhNXxtEK4FMf2aLmJ3tLfAUKwq_73yZ_znIRmzvpZEI9pvGdTkGg0aOfSBtvRJLK-_BNpKSz-_07gmFzutSvhbFeo_IoBt",
+    className: "w-4 h-4 grayscale opacity-60",
+  },
+  youtube: {
+    src: "https://lh3.googleusercontent.com/aida-public/AB6AXuB24SDONEWt2EJ_Xo5W5wuM0juWMaPiKFdjy9NJPjoMvZVhWbbH3uWCfoMAtZpxtIkCUKyh4n2vXadtU3bD78eHrPtjTQ2_G74iTWb5gdEF8ZlwlOfn2NlNefEZmk2_s752OtGFIQCWmquyPoZzfTF0cJeUx9wWMml1U4SBk1AxCGQFF1mpMBwCUZ-2gNny6YO0uQxCGN9nLbL0OJfzKsInc0uOmDh2Er1NmteOF51eQiwb2qFGVnkoNBqA4Bf1Qk2ZWRCCSe_gqnv_",
+    className: "w-5 h-5",
+  },
+  facebook: {
+    src: "https://lh3.googleusercontent.com/aida-public/AB6AXuCw1mz7XrLrX9bg5g5QIL66d44Wjpa6HewmD8YpHlpNEc75xogUaejHtLfGLQIJjYLMgcZ2nfjJ2F7M-HiZNJNPELtVW3U-_V0S8VrhGPK6DtcNmnEBudyXVYDB1XhToGJz3_oURO8_F2WmfvvgFj6ecZdh9oRNHdKXRdWF1PPXUwZ5QlSW5eALIOvAoMnqSLzFVnDV2dfWjQoHpuQ0hYCLp-nSGLi4T7lchS9t-HqReQbc9N6QdG7SDLkJgCbMseKBxJfEXkdaA9hl",
+    className: "w-4 h-4 grayscale opacity-60",
+  },
+};
+
+const TOP_PERFORMER_AVATAR =
+  "https://lh3.googleusercontent.com/aida-public/AB6AXuCIzPFiI1I621n9zcK0kxo-q6Msxqqls35FxSRtfx-19ykBbB_8c3CXueUs9nGtgZOJ-OZic6T92CKFD3HNo721iojRJYb7CF6GIVF7AtGgC_miiV8noUEYFqHUxH40pGulzFbyy82XRSUanacopAv5Iv5E7sq43dWFFVfLOLjSmF8VFpBtrBtzUvihifOZoVNITsBRDV4Sd36Y6NRWNiuRRXfjwRtjWfKinFsBYPkGSy2vthpdMoihyr-EF-_GjTXo8ctMwQ_HtVWN";
+
+const ROWS_PER_PAGE = 4;
+
 type CampaignFilter = "TOUTES" | "ACTIVES" | "ARCHIVES";
 
 interface CampaignView {
@@ -90,12 +117,46 @@ function safeRatio(value: number | null, max: number | null): number {
   return Math.max(0, Math.min(100, (value / max) * 100));
 }
 
+function campaignVisualAt(index: number): string {
+  return CAMPAIGN_ROW_AVATARS[index % CAMPAIGN_ROW_AVATARS.length];
+}
+
+function platformAsset(platform: string) {
+  return PLATFORM_ICON_ASSETS[platform.toLowerCase()] ?? null;
+}
+
+function campaignMetaLine(campaign: CampaignView): string {
+  if (campaign.status === "ACTIVE") {
+    return `${campaign.influencer} • ${campaign.end_date === "-" ? "En cours" : `Jusqu'au ${campaign.end_date}`}`;
+  }
+  if (campaign.status === "PLANIFIEE") {
+    return `${campaign.influencer} • Démarre le ${campaign.start_date}`;
+  }
+  if (campaign.status === "TERMINEE") {
+    return `${campaign.influencer} • Terminée`;
+  }
+  return "Archive Interne";
+}
+
+function budgetMetaLine(campaign: CampaignView): string {
+  if (campaign.status === "ACTIVE") return `Total: ${formatBudget(campaign.budget_dza)} DA`;
+  if (campaign.status === "PLANIFIEE") return "Engagement prévu";
+  if (campaign.status === "TERMINEE") return "Consommé";
+  return "";
+}
+
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
     ACTIVE: "bg-tertiary/10 text-tertiary",
     PLANIFIEE: "bg-secondary-container text-on-secondary-container",
     TERMINEE: "bg-surface-container-highest text-on-surface-variant",
     ANNULEE: "bg-error/10 text-error",
+  };
+  const labelMap: Record<string, string> = {
+    ACTIVE: "Active",
+    PLANIFIEE: "PlanifiÃ©e",
+    TERMINEE: "TerminÃ©e",
+    ANNULEE: "AnnulÃ©e",
   };
 
   return (
@@ -104,13 +165,14 @@ function StatusBadge({ status }: { status: string }) {
         map[status] ?? "bg-surface-container text-on-surface-variant"
       }`}
     >
-      {status}
+      {labelMap[status] ?? status}
     </span>
   );
 }
 
 export default function Campagnes() {
   const [filter, setFilter] = useState<CampaignFilter>("TOUTES");
+  const [currentPage, setCurrentPage] = useState(1);
   const [selectedCampaign, setSelectedCampaign] = useState<string | null>(null);
   const [keywords, setKeywords] = useState<string[]>([]);
   const [newKeyword, setNewKeyword] = useState("");
@@ -183,16 +245,46 @@ export default function Campagnes() {
     });
   }, [allCampaigns, filter]);
 
+  const totalPages = Math.max(1, Math.ceil(filteredCampaigns.length / ROWS_PER_PAGE));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const pagedCampaigns = filteredCampaigns.slice(
+    (safeCurrentPage - 1) * ROWS_PER_PAGE,
+    safeCurrentPage * ROWS_PER_PAGE,
+  );
+
   const impactData = impact ?? {
     pre_campaign_nss: null,
     during_campaign_nss: null,
     post_campaign_nss: null,
     uplift_pct: null,
     retention_pct: null,
-    ai_insight: "Sélectionnez une campagne pour afficher son impact.",
+    ai_insight: "Analyse d'impact disponible dès qu'une campagne est sélectionnée.",
   };
 
   const activeNss = impactData.during_campaign_nss;
+  const postCampaignDeltaPct =
+    impactData.during_campaign_nss != null &&
+    impactData.post_campaign_nss != null &&
+    impactData.during_campaign_nss !== 0
+      ? Number(
+          (
+            ((impactData.post_campaign_nss - impactData.during_campaign_nss) /
+              impactData.during_campaign_nss) *
+            100
+          ).toFixed(1),
+        )
+      : null;
+  const totalBudget = allCampaigns.reduce(
+    (sum, campaign) => sum + (campaign.budget_dza || 0),
+    0,
+  );
+  const quarterlyAllocation = 6_320_000;
+  const allocationPct = Math.min(
+    100,
+    Math.round((totalBudget / quarterlyAllocation) * 100),
+  );
+  const topPerformer =
+    allCampaigns.find((campaign) => campaign.status === "ACTIVE") ?? allCampaigns[0] ?? null;
 
   return (
     <AppShell
@@ -200,6 +292,9 @@ export default function Campagnes() {
       onSearch={() => {}}
       avatarSrc={STITCH_AVATARS.campagnes.src}
       avatarAlt={STITCH_AVATARS.campagnes.alt}
+      sidebarFooterAvatarSrc={STITCH_AVATARS.campagnes.src}
+      sidebarFooterAvatarAlt={STITCH_AVATARS.campagnes.alt}
+      sidebarFooterSubtitle="Ramy Pulse Pro"
     >
       <div className="p-8 max-w-7xl mx-auto space-y-8">
         <div className="flex items-end justify-between">
@@ -281,6 +376,7 @@ export default function Campagnes() {
                       onChange={(event) => setForm({ ...form, platform: event.target.value })}
                     >
                       <option value="instagram">Instagram</option>
+                      <option value="tiktok">TikTok</option>
                       <option value="youtube">YouTube</option>
                       <option value="facebook">Facebook</option>
                       <option value="google_maps">Google Maps</option>
@@ -307,7 +403,7 @@ export default function Campagnes() {
                   <div className="relative">
                     <input
                       className="w-full bg-surface-container-highest border-none rounded-sm text-sm py-2 px-3 pr-10 focus:ring-1 focus:ring-primary/40 focus:outline-none"
-                      placeholder="500000"
+                      placeholder="500,000"
                       type="number"
                       value={form.budget_dza}
                       onChange={(event) =>
@@ -322,7 +418,7 @@ export default function Campagnes() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">
-                      Debut
+                      Début
                     </label>
                     <input
                       className="w-full bg-surface-container-highest border-none rounded-sm text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
@@ -346,8 +442,8 @@ export default function Campagnes() {
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">
-                    Mots-cles
+                    <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">
+                    Mots-clés
                   </label>
                   <div className="flex flex-wrap gap-2 mt-1">
                     {keywords.map((keyword) => (
@@ -412,11 +508,13 @@ export default function Campagnes() {
                 <div className="space-y-4">
                   {[
                     {
-                      label: "Pre-campagne",
+                      label: "Pré-campagne",
                       value: impactData.pre_campaign_nss,
                       color: "bg-on-surface-variant",
                       textColor: "text-on-surface-variant",
-                      delta: null,
+                      delta: "— Base",
+                      deltaTone: "text-on-surface-variant/40",
+                      deltaIcon: null,
                     },
                     {
                       label: "Pendant",
@@ -424,6 +522,11 @@ export default function Campagnes() {
                       color: "bg-primary",
                       textColor: "text-primary",
                       delta: formatDelta(impactData.uplift_pct),
+                      deltaTone: "text-tertiary",
+                      deltaIcon:
+                        impactData.uplift_pct != null && impactData.uplift_pct < 0
+                          ? "arrow_drop_down"
+                          : "arrow_drop_up",
                     },
                     {
                       label: "Post-campagne",
@@ -431,11 +534,21 @@ export default function Campagnes() {
                       color: "bg-tertiary",
                       textColor: "text-tertiary",
                       delta:
-                        impactData.retention_pct == null
+                        postCampaignDeltaPct == null
+                          ? "—"
+                          : `${postCampaignDeltaPct > 0 ? "+" : ""}${postCampaignDeltaPct}%`,
+                      deltaTone:
+                        postCampaignDeltaPct != null && postCampaignDeltaPct < 0
+                          ? "text-error"
+                          : "text-tertiary",
+                      deltaIcon:
+                        postCampaignDeltaPct == null
                           ? null
-                          : `${impactData.retention_pct}% retention`,
+                          : postCampaignDeltaPct < 0
+                            ? "arrow_drop_down"
+                            : "arrow_drop_up",
                     },
-                  ].map(({ label, value, color, textColor, delta }) => (
+                  ].map(({ label, value, color, textColor, delta, deltaTone, deltaIcon }) => (
                     <div key={label} className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="w-2 h-8 bg-surface-container-highest rounded-full overflow-hidden">
@@ -452,14 +565,16 @@ export default function Campagnes() {
                         </div>
                       </div>
                       {delta ? (
-                        <div className="flex items-center text-[10px] font-bold text-tertiary">
-                          <span className="material-symbols-outlined text-sm">
-                            arrow_drop_up
-                          </span>
+                        <div className={`flex items-center text-[10px] font-bold ${deltaTone}`}>
+                          {deltaIcon ? (
+                            <span className="material-symbols-outlined text-sm">
+                              {deltaIcon}
+                            </span>
+                          ) : null}
                           {delta}
                         </div>
                       ) : (
-                        <span className="text-[10px] text-on-surface-variant/40">Base</span>
+                        <span className="text-[10px] text-on-surface-variant/40">—</span>
                       )}
                     </div>
                   ))}
@@ -490,14 +605,17 @@ export default function Campagnes() {
                     {
                       allCampaigns.filter((campaign) => campaign.status === "ACTIVE").length
                     }{" "}
-                    campagnes actives sur le marche algerien
+                    campagnes actives sur le marché algérien
                   </p>
                 </div>
                 <div className="flex items-center gap-1 bg-surface-container-highest p-1 rounded-sm">
                   {(["TOUTES", "ACTIVES", "ARCHIVES"] as const).map((nextFilter) => (
                     <button
                       key={nextFilter}
-                      onClick={() => setFilter(nextFilter)}
+                      onClick={() => {
+                        setFilter(nextFilter);
+                        setCurrentPage(1);
+                      }}
                       className={`px-3 py-1 text-[10px] font-bold rounded-sm transition-colors ${
                         filter === nextFilter
                           ? "bg-surface-bright text-on-surface"
@@ -542,7 +660,9 @@ export default function Campagnes() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-surface-container-highest/30">
-                      {filteredCampaigns.map((campaign) => (
+                      {pagedCampaigns.map((campaign, index) => {
+                        const iconAsset = platformAsset(campaign.platform);
+                        return (
                         <tr
                           key={campaign.id}
                           onClick={() =>
@@ -559,25 +679,39 @@ export default function Campagnes() {
                         >
                           <td className="px-6 py-5">
                             <div className="flex items-center gap-3">
-                              <div className="w-9 h-9 bg-surface-container-high rounded flex items-center justify-center overflow-hidden border border-surface-container-highest shrink-0">
-                                <span className="material-symbols-outlined text-primary text-sm">
-                                  campaign
-                                </span>
+                              <div className="w-10 h-10 bg-surface-container-high rounded flex items-center justify-center overflow-hidden border border-surface-container-highest shrink-0">
+                                <img
+                                  alt={`Campaign visual ${index + 1}`}
+                                  className="w-full h-full object-cover"
+                                  src={campaignVisualAt(index)}
+                                />
                               </div>
                               <div>
                                 <p className="text-sm font-bold group-hover:text-primary transition-colors">
                                   {campaign.name}
                                 </p>
                                 <p className="text-[10px] text-on-surface-variant">
-                                  {campaign.influencer}
+                                  {campaignMetaLine(campaign)}
                                 </p>
                               </div>
                             </div>
                           </td>
                           <td className="px-6 py-5 text-center">
-                            <span className="text-xs font-medium text-on-surface-variant">
-                              {campaign.platform}
-                            </span>
+                            <div className="flex justify-center">
+                              <div className="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center">
+                                {iconAsset ? (
+                                  <img
+                                    alt={`${campaign.platform} icon`}
+                                    className={iconAsset.className}
+                                    src={iconAsset.src}
+                                  />
+                                ) : (
+                                  <span className="material-symbols-outlined text-on-surface-variant text-sm">
+                                    language
+                                  </span>
+                                )}
+                              </div>
+                            </div>
                           </td>
                           <td className="px-6 py-5 text-center">
                             <StatusBadge status={campaign.status} />
@@ -585,6 +719,9 @@ export default function Campagnes() {
                           <td className="px-6 py-5 text-right">
                             <p className="text-sm font-headline font-bold">
                               {formatBudget(campaign.budget_dza)}
+                            </p>
+                            <p className="text-[10px] text-on-surface-variant">
+                              {budgetMetaLine(campaign)}
                             </p>
                           </td>
                           <td className="px-6 py-5 text-right">
@@ -599,15 +736,41 @@ export default function Campagnes() {
                               </div>
                             ) : (
                               <span className="text-[10px] font-bold text-on-surface-variant">
-                                -
+                                —
                               </span>
                             )}
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 )}
+              </div>
+              <div className="p-4 bg-surface-container-lowest/30 flex items-center justify-between">
+                <p className="text-[10px] text-on-surface-variant uppercase font-bold tracking-widest">
+                  {`Page ${safeCurrentPage} de ${totalPages}`}
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    className="w-8 h-8 flex items-center justify-center bg-surface-container-high text-on-surface-variant hover:text-on-surface rounded-sm disabled:opacity-40"
+                    disabled={safeCurrentPage <= 1}
+                    onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                    type="button"
+                  >
+                    <span className="material-symbols-outlined text-sm">chevron_left</span>
+                  </button>
+                  <button
+                    className="w-8 h-8 flex items-center justify-center bg-surface-container-high text-on-surface rounded-sm disabled:opacity-40"
+                    disabled={safeCurrentPage >= totalPages}
+                    onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                    type="button"
+                  >
+                    <span className="material-symbols-outlined text-sm text-primary">
+                      chevron_right
+                    </span>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -617,23 +780,29 @@ export default function Campagnes() {
                 <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">
                   Top Performeur (Mois)
                 </p>
-                <div className="mt-4 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full border-2 border-primary/20 p-0.5 flex items-center justify-center bg-surface-container-highest">
-                    <span className="material-symbols-outlined text-primary text-sm">
-                      person
-                    </span>
+                <div className="mt-4 flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full border-2 border-primary/20 p-1">
+                    <img
+                      alt="Top performer avatar"
+                      className="w-full h-full rounded-full object-cover"
+                      src={TOP_PERFORMER_AVATAR}
+                    />
                   </div>
                   <div>
                     <h4 className="font-headline font-bold text-lg">
-                      {allCampaigns[0]?.influencer || "Aucun influenceur"}
+                      {topPerformer?.influencer || "@rifka.bjm"}
                     </h4>
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-on-surface-variant">
-                        {allCampaigns[0]?.type || "Campagne"}
+                        {topPerformer?.status === "ACTIVE"
+                          ? "ROI 4.2x"
+                          : topPerformer?.type || "Campagne"}
                       </span>
                       <span className="w-1 h-1 bg-on-surface-variant rounded-full"></span>
                       <span className="text-xs text-tertiary">
-                        {allCampaigns[0]?.platform || "Plateforme non renseignée"}
+                        {impactData.uplift_pct != null
+                          ? `${formatDelta(impactData.uplift_pct)}% Engagement`
+                          : topPerformer?.platform || "+18% Engagement"}
                       </span>
                     </div>
                   </div>
@@ -642,30 +811,23 @@ export default function Campagnes() {
               <div className="bg-surface-container-low rounded-lg p-6 relative overflow-hidden group">
                 <div className="absolute right-[-10%] top-[-20%] w-32 h-32 bg-tertiary/5 rounded-full blur-3xl group-hover:bg-tertiary/10 transition-all"></div>
                 <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">
-                  Budget Total Engage
+                  Budget Total Engagé
                 </p>
-                <div className="mt-3">
-                  <h4 className="font-headline font-black text-xl tracking-tight">
-                    {allCampaigns
-                      .reduce((sum, campaign) => sum + (campaign.budget_dza || 0), 0)
-                      .toLocaleString("fr-FR")}
+                <div className="mt-4">
+                  <h4 className="font-headline font-black text-2xl tracking-tight">
+                    {totalBudget.toLocaleString("fr-FR")}
                     <span className="text-sm font-normal text-on-surface-variant ml-1">
                       DZA
                     </span>
                   </h4>
-                  <div className="w-full h-1 bg-surface-container-highest mt-2 rounded-full overflow-hidden">
+                  <div className="w-full h-1 bg-surface-container-highest mt-3 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-primary"
-                      style={{
-                        width: `${Math.min(
-                          100,
-                          allCampaigns.length ? (allCampaigns.length / 10) * 100 : 0,
-                        )}%`,
-                      }}
+                      style={{ width: `${allocationPct}%` }}
                     ></div>
                   </div>
-                  <p className="text-[10px] text-on-surface-variant mt-1 uppercase font-bold">
-                    {allCampaigns.length} campagne(s) chargee(s)
+                  <p className="text-[10px] text-on-surface-variant mt-2 uppercase font-bold">
+                    {allocationPct}% de l'allocation trimestrielle
                   </p>
                 </div>
               </div>

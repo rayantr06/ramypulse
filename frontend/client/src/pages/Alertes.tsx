@@ -262,7 +262,7 @@ export default function Alertes() {
           <div className="w-px h-6 bg-outline-variant/30"></div>
           <div className="flex items-center gap-3">
             <span className="text-[10px] font-bold uppercase text-on-surface-variant tracking-wider">
-              Severite
+              Sévérité
             </span>
             <div className="flex gap-2">
               {[
@@ -365,10 +365,10 @@ export default function Alertes() {
                     </div>
                     <div>
                       <h2 className="text-xl font-headline font-extrabold tracking-tight">
-                        Details de l'Alerte
+                        Détails de l'Alerte
                       </h2>
                       <p className="text-on-surface-variant text-xs">
-                        ID: {selectedAlert.id} | Severite: {selectedAlert.severity}
+                        ID: {selectedAlert.id} | Sévérité: {selectedAlert.severity}
                       </p>
                     </div>
                   </div>
@@ -420,7 +420,7 @@ export default function Alertes() {
                       </div>
                       <div className="bg-surface-container p-4 rounded-sm">
                         <span className="text-[10px] text-on-surface-variant uppercase block mb-1">
-                          Impact Estime
+                          Impact Estimé
                         </span>
                         <span className="text-sm font-bold flex items-center gap-2 text-tertiary">
                           <span className="material-symbols-outlined text-sm">analytics</span>
@@ -440,7 +440,7 @@ export default function Alertes() {
                         className="flex-1 bg-surface-container-high hover:bg-surface-bright text-on-surface font-bold py-3 px-4 rounded-sm text-xs transition-colors border border-outline-variant/30 uppercase tracking-widest"
                         data-testid="btn-acknowledge"
                       >
-                        Reconnaitre
+                        Reconnaître
                       </button>
                       <button
                         onClick={() =>
@@ -464,7 +464,7 @@ export default function Alertes() {
                         className="flex-1 bg-gradient-to-r from-primary to-primary-container text-on-primary-fixed font-bold py-3 px-4 rounded-sm text-xs hover:opacity-90 transition-opacity uppercase tracking-widest"
                         data-testid="btn-resolve"
                       >
-                        Resoudre
+                        Résoudre
                       </button>
                     </div>
                   </div>

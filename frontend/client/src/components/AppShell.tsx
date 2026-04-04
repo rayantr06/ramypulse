@@ -11,6 +11,9 @@ interface AppShellProps {
   onSearch?: (query: string) => void;
   avatarSrc?: string;
   avatarAlt?: string;
+  sidebarFooterAvatarSrc?: string;
+  sidebarFooterAvatarAlt?: string;
+  sidebarFooterSubtitle?: string;
 }
 
 export function AppShell({
@@ -20,12 +23,19 @@ export function AppShell({
   onSearch,
   avatarSrc = STITCH_AVATARS.dashboard.src,
   avatarAlt = STITCH_AVATARS.dashboard.alt,
+  sidebarFooterAvatarSrc,
+  sidebarFooterAvatarAlt,
+  sidebarFooterSubtitle,
 }: AppShellProps) {
   const hasSearch = Boolean(onSearch);
 
   return (
     <div className="bg-surface-container-lowest text-on-surface min-h-screen">
-      <Sidebar />
+      <Sidebar
+        footerAvatarSrc={sidebarFooterAvatarSrc}
+        footerAvatarAlt={sidebarFooterAvatarAlt}
+        footerSubtitle={sidebarFooterSubtitle}
+      />
       <main className="pl-64 min-h-screen flex flex-col">
         <header
           className={`sticky top-0 z-40 bg-[#121315]/80 backdrop-blur-xl h-16 flex items-center pl-8 pr-8 shadow-[0px_24px_24px_0px_rgba(255,255,255,0.06)] ${
