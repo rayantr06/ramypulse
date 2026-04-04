@@ -18,6 +18,12 @@ class HealthResponse(BaseModel):
     db_status: str
 
 
+class ApiStatusResponse(BaseModel):
+    api_status: str
+    db_status: str
+    latency_ms: int
+
+
 # ---------------------------------------------------------------------------
 # Dashboard
 # ---------------------------------------------------------------------------
@@ -137,6 +143,12 @@ class CampaignResponse(BaseModel):
     updated_at: str | None = None
 
 
+class CampaignStats(BaseModel):
+    quarterly_budget_committed: int = 0
+    quarterly_budget_allocation: int = 0
+    quarter_label: str
+
+
 # ---------------------------------------------------------------------------
 # Recommendations
 # ---------------------------------------------------------------------------
@@ -183,11 +195,16 @@ class RecommendationResponse(BaseModel):
 
 class ContextPreview(BaseModel):
     estimated_tokens: int = 0
+    estimated_cost_usd: float | None = None
     nss_global: float | None = None
     volume_total: int = 0
     active_alerts_count: int = 0
     active_watchlists_count: int = 0
     recent_campaigns_count: int = 0
+    provider_used: str | None = None
+    model_used: str | None = None
+    pricing_basis: str | None = None
+    trigger: str | None = None
 
 
 # ---------------------------------------------------------------------------

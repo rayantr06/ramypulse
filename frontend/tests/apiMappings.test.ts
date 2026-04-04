@@ -203,11 +203,13 @@ test("provider catalog and context preview follow the recommendations API", () =
     active_watchlists_count: 4,
     recent_campaigns_count: 1,
     trigger: "manual",
+    estimated_cost_usd: 0.36,
   });
 
   assert.equal(providers.length, 2);
   assert.equal(providers[0]?.provider_id, "ollama_local");
   assert.equal(context.volume_total, 340);
+  assert.equal(context.estimated_cost_usd, 0.36);
 });
 
 test("mapRecommendation preserves nested recommendation items and provider metadata", () => {

@@ -25,13 +25,19 @@ function lacks(source, text) {
   assert.ok(!source.includes(text), `Expected source not to contain: ${text}`);
 }
 
-test("Dashboard keeps Stitch headline copy", () => {
+test("Dashboard keeps Stitch headline copy without hardcoded fake monitoring values", () => {
   const source = readPage("Dashboard.tsx");
   contains(source, "Direct Temps Réel");
   contains(source, "Algérie (Toutes régions)");
   contains(source, "ACTIONS RECOMMANDÉES PAR L'IA");
   contains(source, "VENTES PAR PRODUIT (7 JOURS)");
   contains(source, "DISTRIBUTION RÉGIONALE");
+  contains(source, "/api/status");
+  contains(source, "API Status:");
+  contains(source, "Latency:");
+  contains(source, "© 2024 RamyPulse Intelligence Unit");
+  lacks(source, "API Status: Normal");
+  lacks(source, "Latency: 42ms");
   lacks(source, "Direct Temps Reel");
   lacks(source, "Algerie (Toutes regions)");
 });
@@ -91,7 +97,7 @@ test("Campagnes keeps Stitch capitalization and accents", () => {
   lacks(source, "CREER UNE CAMPAGNE");
 });
 
-test("Campagnes keeps Stitch structure for table and performance cards", () => {
+test("Campagnes keeps Stitch structure while dropping fake performance numbers", () => {
   const source = readPage("Campagnes.tsx");
   contains(source, "Top Performeur (Mois)");
   contains(source, "Budget Total Engagé");
@@ -101,6 +107,10 @@ test("Campagnes keeps Stitch structure for table and performance cards", () => {
   contains(source, "Ramy Pulse Pro");
   contains(source, "Influenceur Algerien");
   contains(source, "allocation trimestrielle");
+  contains(source, "/api/campaigns/stats");
+  lacks(source, "6_320_000");
+  lacks(source, "ROI 4.2x");
+  lacks(source, "+18% Engagement");
 });
 
 test("Explorateur keeps Stitch search copy", () => {
@@ -108,6 +118,14 @@ test("Explorateur keeps Stitch search copy", () => {
   contains(source, "Recherche sémantique et verbatims à travers l'écosystème digital");
   contains(source, "Que pensent les clients du goût à Alger ?");
   contains(source, "Base de données complète des interactions clients");
+});
+
+test("Explorateur keeps Stitch relative date and sentiment labels", () => {
+  const source = readPage("Explorateur.tsx");
+  contains(source, "Aujourd'hui");
+  contains(source, "Hier");
+  contains(source, "Très Positif");
+  contains(source, "Négatif");
 });
 
 test("AdminSources keeps Stitch labels and dedicated admin shell", () => {

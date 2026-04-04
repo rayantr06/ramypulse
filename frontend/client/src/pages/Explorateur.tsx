@@ -47,21 +47,31 @@ interface VerbatimsView {
 
 function getSentimentClass(sentiment: string) {
   const normalized = sentiment.toLowerCase();
-  if (normalized.includes("tres_positif") || normalized.includes("tres positif")) {
+  if (
+    normalized.includes("tres_positif") ||
+    normalized.includes("tres positif") ||
+    normalized.includes("très positif")
+  ) {
     return "text-emerald-400";
   }
   if (normalized.includes("positif")) return "text-emerald-500";
-  if (normalized.includes("negatif")) return "text-red-400";
+  if (normalized.includes("negatif") || normalized.includes("négatif")) {
+    return "text-red-400";
+  }
   return "text-gray-400";
 }
 
 function getSentimentDot(sentiment: string) {
   const normalized = sentiment.toLowerCase();
-  if (normalized.includes("tres_positif") || normalized.includes("tres positif")) {
+  if (
+    normalized.includes("tres_positif") ||
+    normalized.includes("tres positif") ||
+    normalized.includes("très positif")
+  ) {
     return "bg-emerald-400";
   }
   if (normalized.includes("positif")) return "bg-emerald-500";
-  if (normalized.includes("negatif")) return "bg-red-500";
+  if (normalized.includes("negatif") || normalized.includes("négatif")) return "bg-red-500";
   return "bg-gray-400";
 }
 
@@ -75,12 +85,45 @@ function getSourceIcon(source: string) {
   return found?.icon ?? "public";
 }
 
+function getSourceLabel(source: string) {
+  const found = SOURCES.find((item) => item.id === source.toLowerCase());
+  return found?.label ?? source;
+}
+
+function formatSentimentLabel(sentiment: string) {
+  const normalized = sentiment.toLowerCase();
+  if (normalized.includes("tres_positif") || normalized.includes("tres positif")) {
+    return "Très Positif";
+  }
+  if (normalized.includes("positif")) return "Positif";
+  if (normalized.includes("negatif")) return "Négatif";
+  return "Neutre";
+}
+
 function formatDateParts(timestamp: string): { date: string; time: string } {
   if (!timestamp) return { date: "-", time: "-" };
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) return { date: timestamp, time: "-" };
+
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfInputDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const diffDays = Math.round(
+    (startOfToday.getTime() - startOfInputDay.getTime()) / (24 * 60 * 60 * 1000),
+  );
+
+  const relativeDateLabel =
+    diffDays === 0
+      ? "Aujourd'hui"
+      : diffDays === 1
+        ? "Hier"
+        : date.toLocaleDateString("fr-FR", {
+            day: "numeric",
+            month: "short",
+          });
+
   return {
-    date: date.toLocaleDateString("fr-FR"),
+    date: relativeDateLabel,
     time: date.toLocaleTimeString("fr-FR", {
       hour: "2-digit",
       minute: "2-digit",
@@ -94,7 +137,7 @@ function mapSearchView(value: unknown): SearchResultView[] {
     source: result.channel || "import",
     content: result.text,
     relevance_score: Math.round(result.score),
-    sentiment: result.sentiment_label || "neutre",
+    sentiment: formatSentimentLabel(result.sentiment_label || "neutre"),
     wilaya: "n/a",
     created_at: "",
   }));
@@ -111,7 +154,7 @@ function mapVerbatimsView(value: unknown): VerbatimsView {
         time: parts.time,
         source: item.channel,
         aspect: item.aspect || "n/a",
-        sentiment: item.sentiment_label || "neutre",
+        sentiment: formatSentimentLabel(item.sentiment_label || "neutre"),
         wilaya: item.wilaya || "n/a",
         text: item.text,
       };
@@ -140,7 +183,7 @@ export default function Explorateur() {
       params.set("limit", "10");
       if (channelFilter) params.set("channel", channelFilter);
       const res = await apiRequest("GET", `/api/explorer/search?${params.toString()}`);
-      return mapSearchView(await res.json());
+  return mapSearchView(await res.json());
     },
     enabled: Boolean(activeSearch.trim()),
   });
@@ -293,7 +336,7 @@ export default function Explorateur() {
                         </span>
                       </div>
                       <span className="text-[10px] font-bold text-on-surface-variant uppercase">
-                        {result.source}
+                        {getSourceLabel(result.source)}
                       </span>
                     </div>
                     <span className="text-[10px] font-black text-tertiary bg-tertiary/10 px-2 py-1 rounded">
@@ -395,7 +438,7 @@ export default function Explorateur() {
                             {getSourceIcon(verbatim.source)}
                           </span>
                           <span className="text-xs font-medium text-on-surface">
-                            {verbatim.source}
+                            {getSourceLabel(verbatim.source)}
                           </span>
                         </div>
                       </td>

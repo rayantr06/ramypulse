@@ -203,6 +203,31 @@ RECOMMENDATION_AGENT_PROMPT_VERSION: str = "1.1"
 WEEKLY_REPORT_EMAIL_TO: str = os.getenv("WEEKLY_REPORT_EMAIL_TO", "")
 WEEKLY_REPORT_SLACK_WEBHOOK_REFERENCE: str = os.getenv("WEEKLY_REPORT_SLACK_WEBHOOK_REFERENCE", "")
 
+# Estimated prompt input pricing, expressed in USD per 1K input tokens.
+# Used only for pre-generation cost previews in the UI.
+LLM_INPUT_PRICING_USD_PER_1K_TOKENS: dict[str, dict[str, float]] = {
+    "anthropic": {
+        "claude-opus-4-6": 0.015,
+        "claude-sonnet-4-6": 0.003,
+        "claude-haiku-4-5-20251001": 0.0008,
+    },
+    "openai": {
+        "gpt-4o": 0.0025,
+        "gpt-4-turbo": 0.01,
+        "o1-preview": 0.015,
+    },
+    "google_gemini": {
+        "gemini-2.5-flash": 0.0003,
+        "gemini-2.5-pro": 0.00125,
+        "gemini-2.0-flash": 0.0001,
+    },
+    "ollama_local": {
+        "qwen2.5:14b": 0.0,
+        "llama3.2:3b": 0.0,
+        "mistral:7b": 0.0,
+    },
+}
+
 # ---------------------------------------------------------------------------
 # Notifications / delivery
 # ---------------------------------------------------------------------------

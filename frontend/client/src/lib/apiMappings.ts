@@ -1,7 +1,9 @@
 import type {
+  ApiStatus,
   Alert,
   Campaign,
   CampaignImpact,
+  CampaignStats,
   ContextPreview,
   DashboardAction,
   DashboardAlert,
@@ -88,6 +90,15 @@ export function mapDashboardSummary(value: unknown): DashboardSummary {
       trend_pct: asNumber(item.trend_pct),
       relative_volume: asNumber(item.relative_volume),
     })),
+  };
+}
+
+export function mapApiStatus(value: unknown): ApiStatus {
+  const record = asRecord(value);
+  return {
+    api_status: asString(record.api_status),
+    db_status: asString(record.db_status),
+    latency_ms: asNumber(record.latency_ms),
   };
 }
 
@@ -192,6 +203,15 @@ export function mapCampaignImpact(value: unknown): CampaignImpact {
   };
 }
 
+export function mapCampaignStats(value: unknown): CampaignStats {
+  const record = asRecord(value);
+  return {
+    quarterly_budget_committed: asNumber(record.quarterly_budget_committed),
+    quarterly_budget_allocation: asNumber(record.quarterly_budget_allocation),
+    quarter_label: asString(record.quarter_label),
+  };
+}
+
 export function mapAlert(value: unknown): Alert {
   const record = asRecord(value);
   const payload = asRecord(record.alert_payload);
@@ -265,11 +285,16 @@ export function mapContextPreview(value: unknown): ContextPreview {
   const record = asRecord(value);
   return {
     estimated_tokens: asNumber(record.estimated_tokens),
+    estimated_cost_usd:
+      record.estimated_cost_usd == null ? null : asNumber(record.estimated_cost_usd),
     nss_global: record.nss_global == null ? null : asNumber(record.nss_global),
     volume_total: asNumber(record.volume_total),
     active_alerts_count: asNumber(record.active_alerts_count),
     active_watchlists_count: asNumber(record.active_watchlists_count),
     recent_campaigns_count: asNumber(record.recent_campaigns_count),
+    provider_used: asString(record.provider_used) || null,
+    model_used: asString(record.model_used) || null,
+    pricing_basis: asString(record.pricing_basis) || null,
     trigger: asString(record.trigger) || null,
   };
 }

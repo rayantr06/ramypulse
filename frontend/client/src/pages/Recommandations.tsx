@@ -17,6 +17,7 @@ interface RecommendationContextView {
   active_watchlists: number;
   last_run: string;
   estimated_tokens: number;
+  estimated_cost_usd: number | null;
 }
 
 interface RecommendationView {
@@ -136,6 +137,7 @@ function buildContextView(value: unknown): RecommendationContextView {
     active_watchlists: context.active_watchlists_count,
     last_run: context.trigger ? toTriggerLabel(context.trigger) : "n/a",
     estimated_tokens: context.estimated_tokens,
+    estimated_cost_usd: context.estimated_cost_usd ?? null,
   };
 }
 
@@ -154,11 +156,19 @@ function buildProviderGroups(value: unknown): ProviderGroup[] {
   return Array.from(grouped.values());
 }
 
-function estimateCost(providerId: string, estimatedTokens: number): string {
-  if (!providerId || providerId === "ollama_local") return "0.00$";
-  if (estimatedTokens <= 0) return "0.00$";
-  const roughDollars = Math.max(0.01, (estimatedTokens / 1000) * 0.003);
-  return `${roughDollars.toFixed(2)}$`;
+function estimatedCostLabel(value: number | null): string {
+  if (value == null) return "Non disponible";
+  if (value === 0) return "$0.00";
+  if (value >= 0.01) return `$${value.toFixed(2)}`;
+  if (value >= 0.001) return `$${value.toFixed(3)}`;
+  return `$${value.toFixed(4)}`;
+}
+
+function buildContextPreviewUrl(triggerType: string, provider: string, model: string): string {
+  const params = new URLSearchParams({ trigger_type: triggerType });
+  if (provider) params.set("provider", provider);
+  if (model) params.set("model", model);
+  return `/api/recommendations/context-preview?${params.toString()}`;
 }
 
 function PriorityBadge({ priority }: { priority: string }) {
@@ -212,11 +222,16 @@ export default function Recommandations() {
   const activeModel = genForm.model || availableModels[0] || "";
 
   const { data: context, isLoading: contextLoading } = useQuery<RecommendationContextView>({
-    queryKey: ["/api/recommendations/context-preview", genForm.trigger_type],
+    queryKey: [
+      "/api/recommendations/context-preview",
+      genForm.trigger_type,
+      activeProvider,
+      activeModel,
+    ],
     queryFn: async () => {
       const res = await apiRequest(
         "GET",
-        `/api/recommendations/context-preview?trigger_type=${genForm.trigger_type}`,
+        buildContextPreviewUrl(genForm.trigger_type, activeProvider, activeModel),
       );
       return buildContextView(await res.json());
     },
@@ -244,7 +259,12 @@ export default function Recommandations() {
     onSuccess: () => {
       queryClientHook.invalidateQueries({ queryKey: ["/api/recommendations"] });
       queryClientHook.invalidateQueries({
-        queryKey: ["/api/recommendations/context-preview", genForm.trigger_type],
+        queryKey: [
+          "/api/recommendations/context-preview",
+          genForm.trigger_type,
+          activeProvider,
+          activeModel,
+        ],
       });
     },
   });
@@ -266,6 +286,7 @@ export default function Recommandations() {
     active_watchlists: 0,
     last_run: "n/a",
     estimated_tokens: 0,
+    estimated_cost_usd: null,
   };
 
   const recos = recommendations ?? [];
@@ -379,7 +400,7 @@ export default function Recommandations() {
                       Coût est.
                     </span>
                     <span className="text-sm font-bold text-white">
-                      {estimateCost(activeProvider, contextData.estimated_tokens)}
+                      {estimatedCostLabel(contextData.estimated_cost_usd)}
                     </span>
                   </div>
                 </div>
