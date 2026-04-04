@@ -33,6 +33,20 @@ const STATUS_TO_API: Record<StatusFilter, string> = {
   ECARTE: "dismissed",
 };
 
+const STATUS_LABELS: Record<StatusFilter, string> = {
+  NOUVEAU: "Nouveau",
+  RECONNU: "Reconnu",
+  RESOLU: "Résolu",
+  ECARTE: "Écarté",
+};
+
+const SEVERITY_LABELS: Record<SeverityFilter, string> = {
+  CRITIQUE: "Critique",
+  HAUTE: "Haute",
+  MOYENNE: "Moyenne",
+  BASSE: "Basse",
+};
+
 function mapSeverity(value: string | undefined | null): SeverityFilter {
   if (value === "critical") return "CRITIQUE";
   if (value === "high") return "HAUTE";
@@ -66,7 +80,7 @@ function buildImpactLabel(payload: Record<string, unknown>): string {
   if (typeof payload.metric === "string") {
     return String(payload.metric).toUpperCase();
   }
-  return "Impact non chiffre";
+  return "Impact non chiffré";
 }
 
 function buildLocation(payload: Record<string, unknown>, navigationUrl: string | null | undefined): string {
@@ -128,7 +142,7 @@ function StatusBadge({ status }: { status: StatusFilter }) {
       ) : (
         <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
       )}
-      {status}
+      {STATUS_LABELS[status] ?? status}
     </span>
   );
 }
