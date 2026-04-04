@@ -10,13 +10,16 @@ from datetime import datetime, timezone
 
 from config import DEFAULT_CLIENT_ID, SQLITE_DB_PATH
 from core.connectors.batch_import_connector import BatchImportConnector
+from core.connectors.source_config import parse_source_config, resolve_credentials
 from core.connectors.facebook_connector import FacebookConnector
 from core.connectors.google_maps_connector import GoogleMapsConnector
+from core.connectors.instagram_connector import InstagramConnector
 from core.connectors.youtube_connector import YouTubeConnector
 from core.database import DatabaseManager
 from core.normalization.normalizer_pipeline import run_normalization_job
 
 logger = logging.getLogger(__name__)
+SUPPORTED_PLATFORMS = frozenset({"facebook", "google_maps", "youtube", "instagram", "import"})
 
 
 def _now() -> str:
@@ -36,6 +39,7 @@ class IngestionOrchestrator:
             "import": BatchImportConnector(),
             "facebook": FacebookConnector(),
             "google_maps": GoogleMapsConnector(),
+            "instagram": InstagramConnector(),
             "youtube": YouTubeConnector(),
         }
         database = DatabaseManager(self.db_path)
@@ -49,6 +53,13 @@ class IngestionOrchestrator:
 
     def create_source(self, payload: dict) -> dict:
         """Crée une source PRD dans la table sources."""
+        raw_config_json = payload.get("config_json")
+        if isinstance(raw_config_json, str) and raw_config_json.strip():
+            stored_config_json = raw_config_json
+        elif isinstance(raw_config_json, dict):
+            stored_config_json = json.dumps(raw_config_json, ensure_ascii=False)
+        else:
+            stored_config_json = "{}"
         source = {
             "source_id": payload.get("source_id") or _new_id("src"),
             "client_id": payload.get("client_id") or DEFAULT_CLIENT_ID,
@@ -57,7 +68,7 @@ class IngestionOrchestrator:
             "source_type": str(payload.get("source_type") or "").strip(),
             "owner_type": str(payload.get("owner_type") or "").strip(),
             "auth_mode": payload.get("auth_mode"),
-            "config_json": json.dumps(payload.get("config_json") or {}, ensure_ascii=False),
+            "config_json": stored_config_json,
             "is_active": 1 if bool(payload.get("is_active", True)) else 0,
             "sync_frequency_minutes": int(payload.get("sync_frequency_minutes") or 60),
             "freshness_sla_hours": int(payload.get("freshness_sla_hours") or 24),
@@ -69,6 +80,8 @@ class IngestionOrchestrator:
             raise ValueError("source_name est requis")
         if not source["platform"] or not source["source_type"] or not source["owner_type"]:
             raise ValueError("platform, source_type et owner_type sont requis")
+        if source["platform"] not in SUPPORTED_PLATFORMS:
+            raise ValueError(f"Plateforme non supportee: {source['platform']}")
 
         with self._get_connection() as connection:
             connection.execute(
@@ -85,17 +98,12 @@ class IngestionOrchestrator:
         return self.get_source(source["source_id"], client_id=source["client_id"])
 
     def get_source(self, source_id: str, *, client_id: str | None = None) -> dict | None:
+        effective_client_id = client_id or DEFAULT_CLIENT_ID
         with self._get_connection() as connection:
-            if client_id:
-                row = connection.execute(
-                    "SELECT * FROM sources WHERE source_id = ? AND client_id = ?",
-                    (source_id, client_id),
-                ).fetchone()
-            else:
-                row = connection.execute(
-                    "SELECT * FROM sources WHERE source_id = ?",
-                    (source_id,),
-                ).fetchone()
+            row = connection.execute(
+                "SELECT * FROM sources WHERE source_id = ? AND client_id = ?",
+                (source_id, effective_client_id),
+            ).fetchone()
         return dict(row) if row else None
 
     def _select_connector(self, source: dict):
@@ -161,9 +169,14 @@ class IngestionOrchestrator:
         sync_run_id = self._start_sync_run(source_id, run_mode)
         try:
             connector = self._select_connector(source)
+            source_config = parse_source_config(source)
+            credentials_payload = {
+                **resolve_credentials(source_config),
+                **(credentials or {}),
+            }
             documents = connector.fetch_documents(
                 source,
-                credentials=credentials,
+                credentials=credentials_payload,
                 file_path=manual_file_path,
                 column_mapping=column_mapping,
             )
@@ -201,6 +214,37 @@ class IngestionOrchestrator:
                 )
                 connection.commit()
 
+            normalization_result = {
+                "processed_count": 0,
+                "normalizer_version": None,
+            }
+            if inserted > 0:
+                try:
+                    normalization_result = run_normalization_job(
+                        batch_size=inserted,
+                        db_path=self.db_path,
+                        client_id=source.get("client_id") or DEFAULT_CLIENT_ID,
+                        source_id=source_id,
+                    )
+                except Exception as exc:
+                    self._finish_sync_run(
+                        sync_run_id,
+                        status="failed_downstream",
+                        records_fetched=len(documents),
+                        records_inserted=inserted,
+                        records_failed=max(0, len(documents) - inserted),
+                        error_message=str(exc),
+                    )
+                    return {
+                        "sync_run_id": sync_run_id,
+                        "status": "failed_downstream",
+                        "records_fetched": len(documents),
+                        "records_inserted": inserted,
+                        "records_failed": max(0, len(documents) - inserted),
+                        "normalization": normalization_result,
+                        "normalization_error": str(exc),
+                    }
+
             self._finish_sync_run(
                 sync_run_id,
                 status="success",
@@ -214,6 +258,7 @@ class IngestionOrchestrator:
                 "records_fetched": len(documents),
                 "records_inserted": inserted,
                 "records_failed": max(0, len(documents) - inserted),
+                "normalization": normalization_result,
             }
         except Exception as exc:
             self._finish_sync_run(

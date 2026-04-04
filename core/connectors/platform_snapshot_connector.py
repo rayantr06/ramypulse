@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import importlib
-import json
+import inspect
 import logging
 from pathlib import Path
 
@@ -12,37 +12,26 @@ import pandas as pd
 import config
 from core.connectors.base_connector import BaseConnector
 from core.connectors.batch_import_connector import BatchImportConnector
+from core.connectors.source_config import parse_source_config
 from core.ingestion.import_engine import ImportEngine
 
 logger = logging.getLogger(__name__)
 
 
-def _parse_source_config(source: dict) -> dict:
-    raw_config = source.get("config_json") or {}
-    if isinstance(raw_config, dict):
-        return dict(raw_config)
-    if isinstance(raw_config, str):
-        try:
-            parsed = json.loads(raw_config)
-        except json.JSONDecodeError:
-            return {}
-        return parsed if isinstance(parsed, dict) else {}
-    return {}
-
-
 def _call_scraper_entrypoint(function, *, source: dict, credentials: dict | None):
     """Tente plusieurs signatures d'appel pour les collecteurs optionnels."""
     attempts = [
-        lambda: function(source=source, credentials=credentials),
-        lambda: function(source=source),
-        lambda: function(credentials=credentials),
-        lambda: function(),
+        ((), {"source": source, "credentials": credentials}),
+        ((), {"source": source}),
+        ((), {"credentials": credentials}),
+        ((), {}),
     ]
-    for attempt in attempts:
+    for args, kwargs in attempts:
         try:
-            result = attempt()
+            inspect.signature(function).bind(*args, **kwargs)
         except TypeError:
             continue
+        result = function(*args, **kwargs)
         if isinstance(result, pd.DataFrame):
             return result
     return None
@@ -64,7 +53,7 @@ class SnapshotPlatformConnector(BaseConnector):
         self._engine = ImportEngine()
 
     def _candidate_paths(self, source: dict, *, file_path: str | Path | None = None) -> list[Path]:
-        source_config = _parse_source_config(source)
+        source_config = parse_source_config(source)
         candidates: list[Path] = []
         for raw_path in (
             file_path,
@@ -92,8 +81,7 @@ class SnapshotPlatformConnector(BaseConnector):
         )
         if "channel" in dataframe.columns:
             filtered = dataframe[dataframe["channel"].fillna("").astype(str) == self.platform]
-            if not filtered.empty:
-                return filtered.reset_index(drop=True)
+            return filtered.reset_index(drop=True)
         return dataframe.reset_index(drop=True)
 
     def _load_from_snapshots(
@@ -157,15 +145,32 @@ class SnapshotPlatformConnector(BaseConnector):
         column_mapping: dict[str, str] | None = None,
         **kwargs,
     ) -> list[dict]:
-        source_config = _parse_source_config(source)
-        resolved_mapping = column_mapping or source_config.get("column_mapping")
-        mapping = resolved_mapping if isinstance(resolved_mapping, dict) else None
-
-        documents = self._load_from_snapshots(
+        source_config = parse_source_config(source)
+        fetch_mode = str(source_config.get("fetch_mode") or "snapshot").strip().lower() or "snapshot"
+        require_platform_fields = fetch_mode in {"collector", "api"}
+        source_config = self.validate_source_config(
             source,
-            file_path=file_path,
-            column_mapping=mapping,
+            require_platform_fields=require_platform_fields,
         )
-        if documents:
-            return documents
-        return self._load_from_scraper(source, credentials=credentials)
+        runtime_inputs = self.resolve_runtime_inputs(
+            source,
+            credentials=credentials,
+            file_path=file_path,
+            column_mapping=column_mapping,
+            **kwargs,
+        )
+        resolved_mapping = runtime_inputs.get("column_mapping") or source_config.get("column_mapping")
+        mapping = resolved_mapping if isinstance(resolved_mapping, dict) else None
+        resolved_file_path = runtime_inputs.get("file_path")
+
+        if fetch_mode == "snapshot":
+            documents = self._load_from_snapshots(
+                source,
+                file_path=resolved_file_path,
+                column_mapping=mapping,
+            )
+            if documents:
+                return documents
+            return self._load_from_scraper(source, credentials=runtime_inputs.get("credentials"))
+
+        return self._load_from_scraper(source, credentials=runtime_inputs.get("credentials"))

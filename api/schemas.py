@@ -27,6 +27,21 @@ class DashboardSummary(BaseModel):
     health_trend: str
     nss_progress_pts: float
     summary_text: str
+    total_mentions: int = 0
+    period: str = "sur la periode chargee"
+    regional_distribution: list["RegionalDistributionItem"] = Field(default_factory=list)
+    product_performance: list["ProductPerformanceItem"] = Field(default_factory=list)
+
+
+class RegionalDistributionItem(BaseModel):
+    wilaya: str
+    pct: int
+
+
+class ProductPerformanceItem(BaseModel):
+    product: str
+    trend_pct: float
+    relative_volume: int
 
 
 class AlertSummary(BaseModel):
@@ -42,6 +57,10 @@ class ActionRecommendation(BaseModel):
     title: str
     priority: str
     target_platform: str
+    description: str = ""
+    confidence_score: float | None = None
+    cta_label: str = "VOIR DETAILS"
+    icon: str = "auto_awesome"
 
 
 class DashboardAlerts(BaseModel):
@@ -246,4 +265,3 @@ class SourceSyncTrigger(BaseModel):
 class NormalizationTrigger(BaseModel):
     client_id: str | None = None
     batch_size: int = 200
-

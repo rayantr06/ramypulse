@@ -1,109 +1,212 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { AppShell } from "@/components/AppShell";
+import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import type { Source, SyncRun, HealthSnapshot, PipelineTrace } from "@shared/schema";
+import {
+  mapAdminHealthSnapshot,
+  mapAdminSource,
+  mapAdminSyncRun,
+} from "@/lib/apiMappings";
+import { Link } from "wouter";
+import { STITCH_AVATARS } from "@/lib/stitchAssets";
 
-const MOCK_SOURCES: Source[] = [
-  {
-    id: "1",
-    name: "Facebook Ramy Officiel",
-    platform: "Facebook",
-    owner_type: "Owned",
-    health_pct: 98,
-    is_active: true,
-    last_sync: "Il y a 12 min",
-    config_json: JSON.stringify({ api_version: "v14.0", fields: ["insights", "comments"], auth: "OAuth2", rate_limit: 1000 }, null, 2),
-    frequency_min: 15,
-    sla_hours: 1,
-  },
-  {
-    id: "2",
-    name: "Google Maps - Alger",
-    platform: "G-Maps",
-    owner_type: "Market",
-    health_pct: 82,
-    is_active: true,
-    last_sync: "Il y a 4h",
-    config_json: JSON.stringify({ api_version: "v3", place_ids: ["ChIJXXXX"], fields: ["reviews", "rating"] }, null, 2),
-    frequency_min: 60,
-    sla_hours: 4,
-  },
-  {
-    id: "3",
-    name: "YouTube - Reviews",
-    platform: "YouTube",
-    owner_type: "Competitor",
-    health_pct: 45,
-    is_active: false,
-    last_sync: "Échec hier",
-    config_json: JSON.stringify({ api_version: "v3", channel_ids: ["UCxxxx"], quota_units: 10000 }, null, 2),
-    frequency_min: 120,
-    sla_hours: 8,
-  },
+interface SourceView {
+  id: string;
+  name: string;
+  platform: string;
+  platformValue: string;
+  ownerType: string;
+  ownerTypeValue: string;
+  sourceType: string;
+  authMode: string;
+  healthPct: number;
+  isActive: boolean;
+  lastSync: string;
+  configText: string;
+  frequencyMin: number;
+  slaHours: number;
+  rawCount: number;
+  normalizedCount: number;
+  enrichedCount: number;
+  lastSyncStatus: string;
+  latestHealthComputedAt: string;
+}
+
+interface SyncRunView {
+  id: string;
+  sourceId: string;
+  mode: string;
+  status: string;
+  fetched: number;
+  inserted: number;
+  errors: number;
+  startedAt: string;
+}
+
+interface HealthSnapshotView {
+  id: string;
+  sourceId: string;
+  level: "EXCELLENT" | "WARNING" | "ERROR";
+  message: string;
+  timestamp: string;
+}
+
+interface PipelineTraceView {
+  source_count: number;
+  raw_count: number;
+  normalized_count: number;
+  enriched_count: number;
+}
+
+interface SourceFormState {
+  source_name: string;
+  platform: string;
+  owner_type: string;
+  config_text: string;
+  sync_frequency_minutes: number;
+  freshness_sla_hours: number;
+  is_active: boolean;
+}
+
+const PLATFORM_OPTIONS = [
+  { value: "facebook", label: "Facebook" },
+  { value: "instagram", label: "Instagram" },
+  { value: "google_maps", label: "Google Maps" },
+  { value: "youtube", label: "YouTube" },
+  { value: "import", label: "Import" },
 ];
 
-const MOCK_RUNS: SyncRun[] = [
-  { id: "RUN-8812", source_id: "1", mode: "Incremental", status: "SUCCESS", fetched: 842, inserted: 840, errors: 0, started_at: "12:05:33" },
-  { id: "RUN-8811", source_id: "1", mode: "Full Reset", status: "FAILURE", fetched: 120, inserted: 0, errors: 120, started_at: "08:12:10" },
+const OWNER_OPTIONS = [
+  { value: "owned", label: "Owned" },
+  { value: "market", label: "Market" },
+  { value: "competitor", label: "Competitor" },
 ];
 
-const MOCK_SNAPSHOTS: HealthSnapshot[] = [
-  { id: "1", source_id: "1", level: "EXCELLENT", message: "Latency: 240ms. Validation schema passed for 1,200 entities.", timestamp: "Maintenant" },
-  { id: "2", source_id: "1", level: "WARNING", message: "Facebook API returned 429 (Rate Limit). Retrying in 15min.", timestamp: "12:15 AM" },
-  { id: "3", source_id: "1", level: "ERROR", message: "Token for 'YouTube Reviews' needs manual refresh in settings.", timestamp: "Hier" },
-];
+function defaultSourceType(platform: string): string {
+  if (platform === "google_maps") return "public_reviews";
+  if (platform === "import") return "batch_import";
+  if (platform === "instagram") return "instagram_profile";
+  return `${platform}_feed`;
+}
 
-const MOCK_PIPELINE: PipelineTrace = {
-  source_count: 12400,
-  raw_count: 11800,
-  normalized_count: 11200,
-  enriched_count: 10900,
-};
+function labelFromOptions(value: string, options: Array<{ value: string; label: string }>): string {
+  return options.find((option) => option.value === value)?.label || value;
+}
 
-// Map API source response to Source schema
-function mapSourceFromApi(s: Record<string, unknown>): Source {
+function buildLastSync(status: string | null | undefined, timestamp: string | null | undefined): string {
+  if (!timestamp) return "Jamais synchronisé";
+  if (status === "failed" || status === "failed_downstream") return `Échec ${timestamp}`;
+  if (status === "running") return `En cours ${timestamp}`;
+  return timestamp;
+}
+
+function stringifyConfig(value: Record<string, unknown>): string {
+  return JSON.stringify(value, null, 2);
+}
+
+function parseConfigText(value: string): Record<string, unknown> {
+  if (!value.trim()) return {};
+  const parsed = JSON.parse(value);
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("config_json doit etre un objet JSON");
+  }
+  return parsed as Record<string, unknown>;
+}
+
+function mapSourceView(value: unknown): SourceView {
+  const source = mapAdminSource(value);
   return {
-    id: String(s.id ?? s.source_id ?? ""),
-    name: String(s.name ?? ""),
-    platform: String(s.platform ?? ""),
-    owner_type: (s.owner_type as Source["owner_type"]) ?? "Owned",
-    health_pct: Number(s.health_pct ?? s.health ?? 0),
-    is_active: Boolean(s.is_active ?? true),
-    last_sync: String(s.last_sync ?? s.last_synced_at ?? ""),
-    config_json: typeof s.config_json === "string" ? s.config_json : JSON.stringify(s.config_json ?? {}, null, 2),
-    frequency_min: Number(s.frequency_min ?? 60),
-    sla_hours: Number(s.sla_hours ?? 4),
+    id: source.source_id,
+    name: source.source_name,
+    platform: labelFromOptions(source.platform, PLATFORM_OPTIONS),
+    platformValue: source.platform,
+    ownerType: labelFromOptions(source.owner_type, OWNER_OPTIONS),
+    ownerTypeValue: source.owner_type,
+    sourceType: source.source_type,
+    authMode: source.auth_mode || "file_snapshot",
+    healthPct: Number(source.latest_health_score ?? 0),
+    isActive: Boolean(source.is_active),
+    lastSync: buildLastSync(source.last_sync_status, source.last_sync_started_at || source.last_sync_at),
+    configText: stringifyConfig(source.config_json),
+    frequencyMin: source.sync_frequency_minutes,
+    slaHours: source.freshness_sla_hours,
+    rawCount: Number(source.raw_document_count ?? 0),
+    normalizedCount: Number(source.normalized_count ?? 0),
+    enrichedCount: Number(source.enriched_count ?? 0),
+    lastSyncStatus: source.last_sync_status || "unknown",
+    latestHealthComputedAt: source.latest_health_computed_at || "",
   };
 }
 
-// Map API sync run response to SyncRun schema
-function mapRunFromApi(r: Record<string, unknown>): SyncRun {
+function mapRunView(value: unknown): SyncRunView {
+  const run = mapAdminSyncRun(value);
   return {
-    id: String(r.id ?? r.run_id ?? ""),
-    source_id: String(r.source_id ?? ""),
-    mode: String(r.mode ?? "Incremental"),
-    status: (r.status as SyncRun["status"]) ?? "SUCCESS",
-    fetched: Number(r.fetched ?? r.fetched_count ?? 0),
-    inserted: Number(r.inserted ?? r.inserted_count ?? 0),
-    errors: Number(r.errors ?? r.error_count ?? 0),
-    started_at: String(r.started_at ?? r.created_at ?? ""),
+    id: run.sync_run_id,
+    sourceId: run.source_id,
+    mode: run.run_mode,
+    status: run.status,
+    fetched: run.records_fetched,
+    inserted: run.records_inserted,
+    errors: run.records_failed,
+    startedAt: run.started_at,
   };
 }
 
-// Map API health snapshot to HealthSnapshot schema
-function mapSnapshotFromApi(s: Record<string, unknown>): HealthSnapshot {
+function snapshotLevel(score: number): "EXCELLENT" | "WARNING" | "ERROR" {
+  if (score >= 80) return "EXCELLENT";
+  if (score >= 50) return "WARNING";
+  return "ERROR";
+}
+
+function mapSnapshotView(value: unknown): HealthSnapshotView {
+  const snapshot = mapAdminHealthSnapshot(value);
+  const level = snapshotLevel(snapshot.health_score);
+  const parts = [
+    `Score: ${snapshot.health_score}%`,
+    snapshot.success_rate_pct != null ? `Succès: ${snapshot.success_rate_pct}%` : null,
+    snapshot.freshness_hours != null ? `Freshness: ${snapshot.freshness_hours}h` : null,
+    snapshot.records_fetched_avg != null ? `Moy. fetched: ${snapshot.records_fetched_avg}` : null,
+  ].filter(Boolean);
+
   return {
-    id: String(s.id ?? ""),
-    source_id: String(s.source_id ?? ""),
-    level: (s.level as HealthSnapshot["level"]) ?? "WARNING",
-    message: String(s.message ?? ""),
-    timestamp: String(s.timestamp ?? s.created_at ?? ""),
+    id: snapshot.snapshot_id,
+    sourceId: snapshot.source_id,
+    level,
+    message: parts.join(" | "),
+    timestamp: snapshot.computed_at,
+  };
+}
+
+function formFromSource(source: SourceView): SourceFormState {
+  return {
+    source_name: source.name,
+    platform: source.platformValue,
+    owner_type: source.ownerTypeValue,
+    config_text: source.configText,
+    sync_frequency_minutes: source.frequencyMin,
+    freshness_sla_hours: source.slaHours,
+    is_active: source.isActive,
+  };
+}
+
+function blankForm(): SourceFormState {
+  return {
+    source_name: "",
+    platform: "facebook",
+    owner_type: "owned",
+    config_text: "{\n  \"fetch_mode\": \"snapshot\"\n}",
+    sync_frequency_minutes: 60,
+    freshness_sla_hours: 24,
+    is_active: true,
   };
 }
 
 function HealthBar({ pct }: { pct: number }) {
-  const color = pct >= 80 ? "bg-tertiary shadow-[0_0_8px_rgba(76,214,255,0.4)]" : pct >= 50 ? "bg-primary" : "bg-error shadow-[0_0_8px_rgba(255,180,171,0.4)]";
+  const color =
+    pct >= 80
+      ? "bg-tertiary shadow-[0_0_8px_rgba(76,214,255,0.4)]"
+      : pct >= 50
+        ? "bg-primary"
+        : "bg-error shadow-[0_0_8px_rgba(255,180,171,0.4)]";
   const textColor = pct >= 80 ? "text-tertiary" : pct >= 50 ? "text-primary" : "text-error";
   return (
     <div className="flex items-center gap-3">
@@ -122,7 +225,9 @@ function OwnerBadge({ type }: { type: string }) {
     Competitor: "bg-on-surface-variant/10 text-on-surface-variant",
   };
   return (
-    <span className={`px-2 py-0.5 text-[10px] font-bold rounded uppercase ${map[type] ?? ""}`}>{type}</span>
+    <span className={`px-2 py-0.5 text-[10px] font-bold rounded uppercase ${map[type] ?? ""}`}>
+      {type}
+    </span>
   );
 }
 
@@ -140,96 +245,233 @@ function SnapshotLevelDot({ level }: { level: string }) {
   );
 }
 
+function AdminShell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="bg-background text-on-surface font-body selection:bg-primary-container selection:text-on-primary-container min-h-screen">
+      <nav className="bg-[#121315] text-[#ffb693] font-headline tracking-tight font-bold text-lg flex justify-between items-center w-full px-6 py-3 h-16 fixed top-0 z-50">
+        <div className="text-xl font-black text-[#ffb693] tracking-tighter">RamyPulse Admin</div>
+        <div className="hidden md:flex items-center gap-8">
+          <Link href="/">
+            <a className="text-gray-400 font-medium hover:text-white transition-colors duration-200 active:scale-95">
+              Dashboard
+            </a>
+          </Link>
+          <a className="text-[#ffb693] border-b-2 border-[#ffb693] pb-1 hover:text-white transition-colors duration-200 active:scale-95">
+            Ingestion
+          </a>
+          <a className="text-gray-400 font-medium hover:text-white transition-colors duration-200 active:scale-95">
+            Pipelines
+          </a>
+          <a className="text-gray-400 font-medium hover:text-white transition-colors duration-200 active:scale-95">
+            Logs
+          </a>
+        </div>
+        <div className="flex items-center gap-4">
+          <span className="material-symbols-outlined hover:text-white transition-colors cursor-pointer">
+            notifications
+          </span>
+          <span className="material-symbols-outlined hover:text-white transition-colors cursor-pointer">
+            settings
+          </span>
+          <img
+            alt={STITCH_AVATARS.admin.alt}
+            className="w-8 h-8 rounded-full border-2 border-primary/20 object-cover"
+            src={STITCH_AVATARS.admin.src}
+          />
+        </div>
+      </nav>
+
+      <div className="flex min-h-screen pt-16">
+        <aside className="bg-[#121315] font-body text-sm font-semibold tracking-wide flex flex-col h-[calc(100vh-4rem)] border-r border-white/5 p-4 gap-2 w-64 shrink-0 fixed top-16 left-0">
+          <div className="mb-6 px-2">
+            <p className="text-xs text-on-surface-variant/50 uppercase tracking-widest font-bold mb-1">
+              COMMAND CENTER
+            </p>
+            <h2 className="text-on-surface text-base">Ramy Juice Intelligence</h2>
+          </div>
+          <nav className="flex-1 space-y-1">
+            {[
+              { label: "Sources", icon: "database", active: true },
+              { label: "Connectors", icon: "alt_route" },
+              { label: "Health", icon: "analytics" },
+              { label: "Validation", icon: "fact_check" },
+              { label: "Archive", icon: "inventory_2" },
+            ].map((item) => (
+              <a
+                key={item.label}
+                className={`flex items-center gap-3 px-3 py-2 rounded-sm transition-all duration-200 ease-out ${
+                  item.active
+                    ? "text-[#ffb693] bg-[#1c1e21]"
+                    : "text-gray-500 hover:bg-[#1c1e21] hover:text-white"
+                }`}
+              >
+                <span className="material-symbols-outlined">{item.icon}</span>
+                <span>{item.label}</span>
+              </a>
+            ))}
+          </nav>
+          <button className="mt-4 bg-gradient-to-r from-primary to-primary-container text-on-primary-fixed px-4 py-3 rounded-lg flex items-center justify-center gap-2 font-bold shadow-lg hover:brightness-110 active:scale-95 transition-all">
+            <span className="material-symbols-outlined">add</span>
+            New Pipeline
+          </button>
+          <div className="mt-auto pt-4 space-y-1 border-t border-white/5">
+            <a className="flex items-center gap-3 px-3 py-2 text-gray-500 hover:text-white transition-all">
+              <span className="material-symbols-outlined">help</span>
+              <span>Support</span>
+            </a>
+            <a className="flex items-center gap-3 px-3 py-2 text-gray-500 hover:text-white transition-all">
+              <span className="material-symbols-outlined">description</span>
+              <span>Documentation</span>
+            </a>
+          </div>
+        </aside>
+
+        <main className="flex-1 overflow-y-auto bg-surface-container-lowest ml-64">
+          {children}
+        </main>
+      </div>
+
+      <div className="fixed top-0 left-0 w-full h-full pointer-events-none z-[-1] opacity-20">
+        <div className="absolute top-[10%] left-[20%] w-96 h-96 bg-primary/20 blur-[120px] rounded-full"></div>
+        <div className="absolute bottom-[20%] right-[10%] w-[500px] h-[500px] bg-tertiary/10 blur-[160px] rounded-full"></div>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminSources() {
-  const [selectedSource, setSelectedSource] = useState<Source | null>(MOCK_SOURCES[0]);
-  const [editForm, setEditForm] = useState<Source>(MOCK_SOURCES[0]);
-
   const queryClientHook = useQueryClient();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [isCreateMode, setIsCreateMode] = useState(false);
+  const [editForm, setEditForm] = useState<SourceFormState>(blankForm());
+  const [formError, setFormError] = useState<string | null>(null);
 
-  const { data: sources, isLoading: sourcesLoading } = useQuery<Source[]>({
+  const { data: sources, isLoading: sourcesLoading } = useQuery<SourceView[]>({
     queryKey: ["/api/admin/sources"],
     queryFn: async () => {
-      try {
-        const res = await apiRequest("GET", "/api/admin/sources");
-        const apiData = await res.json();
-        const list = Array.isArray(apiData) ? apiData : (apiData.sources ?? apiData.results ?? []);
-        const mapped = (list as Array<Record<string, unknown>>).map(mapSourceFromApi);
-        return mapped.length > 0 ? mapped : MOCK_SOURCES;
-      } catch {
-        return MOCK_SOURCES;
-      }
+      const res = await apiRequest("GET", "/api/admin/sources");
+      const payload = await res.json();
+      return (Array.isArray(payload) ? payload : []).map(mapSourceView);
     },
   });
 
-  const { data: runs, isLoading: runsLoading } = useQuery<SyncRun[]>({
+  const allSources = sources ?? [];
+
+  useEffect(() => {
+    if (!allSources.length) {
+      setSelectedId(null);
+      return;
+    }
+    if (!selectedId && !isCreateMode) {
+      setSelectedId(allSources[0].id);
+    }
+  }, [allSources, selectedId, isCreateMode]);
+
+  const selectedSource = useMemo(() => {
+    return allSources.find((source) => source.id === selectedId) ?? null;
+  }, [allSources, selectedId]);
+
+  useEffect(() => {
+    if (selectedSource && !isCreateMode) {
+      setEditForm(formFromSource(selectedSource));
+      setFormError(null);
+    }
+  }, [selectedSource, isCreateMode]);
+
+  const { data: runs, isLoading: runsLoading } = useQuery<SyncRunView[]>({
     queryKey: ["/api/admin/sources", selectedSource?.id, "runs"],
     queryFn: async () => {
-      if (!selectedSource) return MOCK_RUNS;
-      try {
-        const res = await apiRequest("GET", `/api/admin/sources/${selectedSource.id}/runs`);
-        const apiData = await res.json();
-        const list = Array.isArray(apiData) ? apiData : (apiData.runs ?? apiData.results ?? []);
-        const mapped = (list as Array<Record<string, unknown>>).map(mapRunFromApi);
-        return mapped.length > 0 ? mapped : MOCK_RUNS;
-      } catch {
-        return MOCK_RUNS;
-      }
+      const res = await apiRequest("GET", `/api/admin/sources/${selectedSource?.id}/runs`);
+      const payload = await res.json();
+      return (Array.isArray(payload) ? payload : []).map(mapRunView);
     },
-    enabled: !!selectedSource,
+    enabled: Boolean(selectedSource?.id),
   });
 
-  const { data: snapshots, isLoading: snapshotsLoading } = useQuery<HealthSnapshot[]>({
+  const { data: snapshots, isLoading: snapshotsLoading } = useQuery<HealthSnapshotView[]>({
     queryKey: ["/api/admin/sources", selectedSource?.id, "snapshots"],
     queryFn: async () => {
-      if (!selectedSource) return MOCK_SNAPSHOTS;
-      try {
-        const res = await apiRequest("GET", `/api/admin/sources/${selectedSource.id}/snapshots`);
-        const apiData = await res.json();
-        const list = Array.isArray(apiData) ? apiData : (apiData.snapshots ?? apiData.results ?? []);
-        const mapped = (list as Array<Record<string, unknown>>).map(mapSnapshotFromApi);
-        return mapped.length > 0 ? mapped : MOCK_SNAPSHOTS;
-      } catch {
-        return MOCK_SNAPSHOTS;
-      }
+      const res = await apiRequest("GET", `/api/admin/sources/${selectedSource?.id}/snapshots`);
+      const payload = await res.json();
+      return (Array.isArray(payload) ? payload : []).map(mapSnapshotView);
     },
-    enabled: !!selectedSource,
+    enabled: Boolean(selectedSource?.id),
   });
 
-  const { data: pipeline, isLoading: pipelineLoading } = useQuery<PipelineTrace>({
-    queryKey: ["/api/admin/pipeline"],
-    queryFn: async () => {
-      try {
-        const res = await apiRequest("GET", "/api/admin/pipeline");
-        const apiData = await res.json();
-        return {
-          source_count: Number(apiData.source_count ?? MOCK_PIPELINE.source_count),
-          raw_count: Number(apiData.raw_count ?? MOCK_PIPELINE.raw_count),
-          normalized_count: Number(apiData.normalized_count ?? MOCK_PIPELINE.normalized_count),
-          enriched_count: Number(apiData.enriched_count ?? MOCK_PIPELINE.enriched_count),
-        };
-      } catch {
-        return MOCK_PIPELINE;
-      }
+  const pipelineData = useMemo<PipelineTraceView>(() => {
+    return allSources.reduce(
+      (accumulator, source) => ({
+        source_count: accumulator.source_count + Math.max(source.rawCount, 0),
+        raw_count: accumulator.raw_count + source.rawCount,
+        normalized_count: accumulator.normalized_count + source.normalizedCount,
+        enriched_count: accumulator.enriched_count + source.enrichedCount,
+      }),
+      {
+        source_count: 0,
+        raw_count: 0,
+        normalized_count: 0,
+        enriched_count: 0,
+      },
+    );
+  }, [allSources]);
+
+  const createMutation = useMutation({
+    mutationFn: async (form: SourceFormState) => {
+      const configJson = parseConfigText(form.config_text);
+      const res = await apiRequest("POST", "/api/admin/sources", {
+        source_name: form.source_name,
+        platform: form.platform,
+        source_type: defaultSourceType(form.platform),
+        owner_type: form.owner_type,
+        auth_mode: "file_snapshot",
+        config_json: configJson,
+        is_active: form.is_active,
+        sync_frequency_minutes: form.sync_frequency_minutes,
+        freshness_sla_hours: form.freshness_sla_hours,
+      });
+      return mapSourceView(await res.json());
+    },
+    onSuccess: (createdSource) => {
+      setIsCreateMode(false);
+      setSelectedId(createdSource.id);
+      setEditForm(formFromSource(createdSource));
+      setFormError(null);
+      queryClientHook.invalidateQueries({ queryKey: ["/api/admin/sources"] });
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: async (data: Partial<Source> & { id: string }) => {
-      const res = await apiRequest("PUT", `/api/admin/sources/${data.id}`, data);
-      return res.json();
+    mutationFn: async (payload: { id: string; form: SourceFormState }) => {
+      const configJson = parseConfigText(payload.form.config_text);
+      const res = await apiRequest("PUT", `/api/admin/sources/${payload.id}`, {
+        source_name: payload.form.source_name,
+        is_active: payload.form.is_active,
+        config_json: configJson,
+        sync_frequency_minutes: payload.form.sync_frequency_minutes,
+        freshness_sla_hours: payload.form.freshness_sla_hours,
+      });
+      return mapSourceView(await res.json());
     },
-    onSuccess: () => {
+    onSuccess: (updatedSource) => {
+      setSelectedId(updatedSource.id);
+      setEditForm(formFromSource(updatedSource));
+      setFormError(null);
       queryClientHook.invalidateQueries({ queryKey: ["/api/admin/sources"] });
     },
   });
 
   const syncMutation = useMutation({
     mutationFn: async (sourceId: string) => {
-      const res = await apiRequest("POST", `/api/admin/sources/${sourceId}/sync`, {});
+      const res = await apiRequest("POST", `/api/admin/sources/${sourceId}/sync`, {
+        run_mode: "manual",
+      });
       return res.json();
     },
     onSuccess: () => {
       queryClientHook.invalidateQueries({ queryKey: ["/api/admin/sources"] });
+      if (selectedSource?.id) {
+        queryClientHook.invalidateQueries({ queryKey: ["/api/admin/sources", selectedSource.id, "runs"] });
+      }
     },
   });
 
@@ -239,29 +481,36 @@ export default function AdminSources() {
       return res.json();
     },
     onSuccess: () => {
-      if (selectedSource) {
+      queryClientHook.invalidateQueries({ queryKey: ["/api/admin/sources"] });
+      if (selectedSource?.id) {
         queryClientHook.invalidateQueries({ queryKey: ["/api/admin/sources", selectedSource.id, "snapshots"] });
       }
     },
   });
 
-  const allSources = sources ?? MOCK_SOURCES;
-  const runsData = runs ?? MOCK_RUNS;
-  const snapshotsData = snapshots ?? MOCK_SNAPSHOTS;
-  const pipelineData = pipeline ?? MOCK_PIPELINE;
-
-  const selectSource = (source: Source) => {
-    setSelectedSource(source);
-    setEditForm(source);
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setFormError(null);
+    try {
+      parseConfigText(editForm.config_text);
+      if (isCreateMode) {
+        createMutation.mutate(editForm);
+      } else if (selectedSource) {
+        updateMutation.mutate({ id: selectedSource.id, form: editForm });
+      }
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : "config_json invalide");
+    }
   };
 
+  const runsData = runs ?? [];
+  const snapshotsData = snapshots ?? [];
+
   return (
-    <AppShell>
+    <AdminShell>
       <div className="p-8">
         <div className="grid grid-cols-12 gap-8 items-start">
-          {/* Left: Main Content */}
           <div className="col-span-12 lg:col-span-8 space-y-6">
-            {/* Header */}
             <div className="flex items-end justify-between">
               <div>
                 <p className="text-on-surface-variant font-bold tracking-[0.15em] mb-1 uppercase text-[10px]">
@@ -277,10 +526,18 @@ export default function AdminSources() {
                   disabled={!selectedSource || syncMutation.isPending}
                   className="bg-surface-container-high text-on-surface px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-surface-bright transition-all text-sm disabled:opacity-50"
                 >
-                  <span className={`material-symbols-outlined text-lg ${syncMutation.isPending ? "animate-spin" : ""}`}>sync</span>
+                  <span className={`material-symbols-outlined text-lg ${syncMutation.isPending ? "animate-spin" : ""}`}>
+                    sync
+                  </span>
                   Sync maintenant
                 </button>
                 <button
+                  onClick={() => {
+                    setIsCreateMode(true);
+                    setSelectedId(null);
+                    setEditForm(blankForm());
+                    setFormError(null);
+                  }}
                   className="bg-primary-container text-on-primary-fixed px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:brightness-110 shadow-lg transition-all text-sm"
                   data-testid="btn-new-source"
                 >
@@ -290,25 +547,24 @@ export default function AdminSources() {
               </div>
             </div>
 
-            {/* Sources Table */}
             <div className="bg-surface-container rounded-xl overflow-hidden border border-white/5">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-surface-container-high">
-                    {["Nom", "Plateforme", "Owner", "Santé", "Actif", "Dernier Sync", "Actions"].map((h, i) => (
+                    {["Nom", "Plateforme", "Owner", "Santé", "Actif", "Dernier Sync", "Actions"].map((heading, index) => (
                       <th
-                        key={h}
-                        className={`px-6 py-4 text-xs font-bold text-on-surface-variant/70 uppercase tracking-widest ${i === 6 ? "text-right" : i === 4 ? "text-center" : ""}`}
+                        key={heading}
+                        className={`px-6 py-4 text-xs font-bold text-on-surface-variant/70 uppercase tracking-widest ${index === 6 ? "text-right" : index === 4 ? "text-center" : ""}`}
                       >
-                        {h}
+                        {heading}
                       </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/[0.03]">
                   {sourcesLoading ? (
-                    Array.from({ length: 3 }).map((_, i) => (
-                      <tr key={i}>
+                    Array.from({ length: 3 }).map((_, index) => (
+                      <tr key={index}>
                         <td colSpan={7} className="px-6 py-4">
                           <div className="h-10 bg-surface-container-high rounded animate-pulse"></div>
                         </td>
@@ -318,8 +574,11 @@ export default function AdminSources() {
                     allSources.map((source) => (
                       <tr
                         key={source.id}
-                        onClick={() => selectSource(source)}
-                        className={`hover:bg-surface-container-high/50 transition-colors group cursor-pointer ${selectedSource?.id === source.id ? "bg-surface-container-high/30" : ""}`}
+                        onClick={() => {
+                          setSelectedId(source.id);
+                          setIsCreateMode(false);
+                        }}
+                        className={`hover:bg-surface-container-high/50 transition-colors group cursor-pointer ${selectedSource?.id === source.id && !isCreateMode ? "bg-surface-container-high/30" : ""}`}
                         data-testid={`source-row-${source.id}`}
                       >
                         <td className="px-6 py-4 font-semibold text-on-surface">{source.name}</td>
@@ -330,25 +589,30 @@ export default function AdminSources() {
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <OwnerBadge type={source.owner_type} />
+                          <OwnerBadge type={source.ownerType} />
                         </td>
                         <td className="px-6 py-4">
-                          <HealthBar pct={source.health_pct} />
+                          <HealthBar pct={source.healthPct} />
                         </td>
                         <td className="px-6 py-4 text-center">
                           <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              updateMutation.mutate({ id: source.id, is_active: !source.is_active });
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              updateMutation.mutate({
+                                id: source.id,
+                                form: { ...formFromSource(source), is_active: !source.isActive },
+                              });
                             }}
-                            className={`w-10 h-5 rounded-full relative p-0.5 cursor-pointer transition-colors ${source.is_active ? "bg-primary/20" : "bg-surface-container-highest"} ml-auto mr-auto block`}
+                            className={`w-10 h-5 rounded-full relative p-0.5 cursor-pointer transition-colors ${source.isActive ? "bg-primary/20" : "bg-surface-container-highest"} ml-auto mr-auto block`}
                             data-testid={`toggle-active-${source.id}`}
                           >
-                            <div className={`w-4 h-4 rounded-full absolute top-0.5 transition-all ${source.is_active ? "right-0.5 bg-primary" : "left-0.5 bg-on-secondary-container"}`}></div>
+                            <div
+                              className={`w-4 h-4 rounded-full absolute top-0.5 transition-all ${source.isActive ? "right-0.5 bg-primary" : "left-0.5 bg-on-secondary-container"}`}
+                            ></div>
                           </button>
                         </td>
-                        <td className={`px-6 py-4 text-sm ${source.last_sync.startsWith("Échec") ? "text-error font-medium" : "text-on-surface-variant"}`}>
-                          {source.last_sync}
+                        <td className={`px-6 py-4 text-sm ${source.lastSync.startsWith("Échec") ? "text-error font-medium" : "text-on-surface-variant"}`}>
+                          {source.lastSync}
                         </td>
                         <td className="px-6 py-4 text-right">
                           <button className="text-on-surface-variant hover:text-primary transition-colors">
@@ -362,45 +626,35 @@ export default function AdminSources() {
               </table>
             </div>
 
-            {/* Pipeline Trace */}
             <div className="bg-surface-container p-6 rounded-xl border border-white/5">
               <p className="text-xs font-bold text-on-surface-variant tracking-widest uppercase mb-6">
-                PIPELINE TRACE & DÉBIT
+                    PIPELINE TRACE & DÉBIT
               </p>
-              {pipelineLoading ? (
-                <div className="flex items-center justify-between gap-4">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="flex-1 h-24 bg-surface-container-high rounded-lg animate-pulse"></div>
-                  ))}
-                </div>
-              ) : (
-                <div className="flex items-center justify-between gap-4">
-                  {[
-                    { icon: "input", color: "text-primary", borderColor: "border-primary", label: "Source Data", value: pipelineData.source_count },
-                    { icon: "description", color: "text-tertiary", borderColor: "border-tertiary", label: "Raw Docs", value: pipelineData.raw_count },
-                    { icon: "rule", color: "text-primary", borderColor: "border-primary", label: "Normalized", value: pipelineData.normalized_count },
-                    { icon: "auto_awesome", color: "text-tertiary", borderColor: "border-tertiary", label: "Enriched", value: pipelineData.enriched_count },
-                  ].map(({ icon, color, borderColor, label, value }, i, arr) => (
-                    <div key={label} className="flex items-center gap-4 flex-1">
-                      <div className={`flex-1 bg-surface-container-high p-4 rounded-lg flex flex-col items-center gap-2 text-center border-l-2 ${borderColor}`}>
-                        <span className={`material-symbols-outlined ${color}`}>{icon}</span>
-                        <span className="text-xl font-headline font-bold">
-                          {value >= 1000 ? `${(value / 1000).toFixed(1)}k` : value}
-                        </span>
-                        <span className="text-[10px] font-bold uppercase tracking-tighter opacity-60">{label}</span>
-                      </div>
-                      {i < arr.length - 1 && (
-                        <span className="material-symbols-outlined text-on-surface-variant/30 text-sm shrink-0">
-                          arrow_forward
-                        </span>
-                      )}
+              <div className="flex items-center justify-between gap-4">
+                {[
+                  { icon: "input", color: "text-primary", borderColor: "border-primary", label: "Source Data", value: pipelineData.source_count },
+                  { icon: "description", color: "text-tertiary", borderColor: "border-tertiary", label: "Raw Docs", value: pipelineData.raw_count },
+                  { icon: "rule", color: "text-primary", borderColor: "border-primary", label: "Normalized", value: pipelineData.normalized_count },
+                  { icon: "auto_awesome", color: "text-tertiary", borderColor: "border-tertiary", label: "Enriched", value: pipelineData.enriched_count },
+                ].map(({ icon, color, borderColor, label, value }, index, items) => (
+                  <div key={label} className="flex items-center gap-4 flex-1">
+                    <div className={`flex-1 bg-surface-container-high p-4 rounded-lg flex flex-col items-center gap-2 text-center border-l-2 ${borderColor}`}>
+                      <span className={`material-symbols-outlined ${color}`}>{icon}</span>
+                      <span className="text-xl font-headline font-bold">
+                        {value >= 1000 ? `${(value / 1000).toFixed(1)}k` : value}
+                      </span>
+                      <span className="text-[10px] font-bold uppercase tracking-tighter opacity-60">{label}</span>
                     </div>
-                  ))}
-                </div>
-              )}
+                    {index < items.length - 1 ? (
+                      <span className="material-symbols-outlined text-on-surface-variant/30 text-sm shrink-0">
+                        arrow_forward
+                      </span>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
             </div>
 
-            {/* Sync Runs Table */}
             <div className="bg-surface-container rounded-xl border border-white/5">
               <div className="p-6 border-b border-white/5 flex justify-between items-center">
                 <h3 className="text-sm font-bold uppercase tracking-widest text-on-surface-variant">
@@ -413,15 +667,17 @@ export default function AdminSources() {
               <table className="w-full text-left text-sm">
                 <thead className="bg-surface-container-high/30">
                   <tr>
-                    {["Run ID", "Mode", "Status", "Records (F/I/E)", "Started at"].map((h) => (
-                      <th key={h} className="px-6 py-3 font-bold opacity-70 text-xs">{h}</th>
+                    {["Run ID", "Mode", "Status", "Records (F/I/E)", "Started at"].map((heading) => (
+                      <th key={heading} className="px-6 py-3 font-bold opacity-70 text-xs">
+                        {heading}
+                      </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/[0.03]">
                   {runsLoading ? (
-                    Array.from({ length: 2 }).map((_, i) => (
-                      <tr key={i}>
+                    Array.from({ length: 2 }).map((_, index) => (
+                      <tr key={index}>
                         <td colSpan={5} className="px-6 py-4">
                           <div className="h-6 bg-surface-container-high rounded animate-pulse"></div>
                         </td>
@@ -433,27 +689,30 @@ export default function AdminSources() {
                         <td className="px-6 py-4 font-mono text-xs">#{run.id}</td>
                         <td className="px-6 py-4 text-sm">{run.mode}</td>
                         <td className="px-6 py-4">
-                          {run.status === "SUCCESS" ? (
+                          {run.status === "success" ? (
                             <span className="inline-flex items-center gap-1.5 text-tertiary font-bold text-xs">
                               <span className="w-1.5 h-1.5 rounded-full bg-tertiary animate-pulse"></span>
-                              Succès
+                                  Succès
                             </span>
-                          ) : run.status === "RUNNING" ? (
+                          ) : run.status === "running" ? (
                             <span className="inline-flex items-center gap-1.5 text-primary font-bold text-xs">
                               <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
                               En cours
                             </span>
+                          ) : run.status === "failed_downstream" ? (
+                            <span className="inline-flex items-center gap-1.5 text-primary font-bold text-xs">
+                              <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                              Aval KO
+                            </span>
                           ) : (
                             <span className="inline-flex items-center gap-1.5 text-error font-bold text-xs">
                               <span className="w-1.5 h-1.5 rounded-full bg-error"></span>
-                              Échec
+                                  Échec
                             </span>
                           )}
                         </td>
-                        <td className="px-6 py-4 text-xs font-medium">
-                          {run.fetched} / {run.inserted} / {run.errors}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-on-surface-variant">{run.started_at}</td>
+                        <td className="px-6 py-4 text-xs font-medium">{run.fetched} / {run.inserted} / {run.errors}</td>
+                        <td className="px-6 py-4 text-sm text-on-surface-variant">{run.startedAt}</td>
                       </tr>
                     ))
                   )}
@@ -462,107 +721,104 @@ export default function AdminSources() {
             </div>
           </div>
 
-          {/* Right: Edit + Health Snapshots */}
           <div className="col-span-12 lg:col-span-4 space-y-6 sticky top-20">
-            {/* Edit form */}
-            {editForm && (
-              <div className="bg-surface-container p-6 rounded-xl border border-white/5">
-                <p className="text-xs font-bold text-on-surface-variant tracking-widest uppercase mb-5">
-                  ÉDITION DE SOURCE
-                </p>
-                <form
-                  className="space-y-4"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    updateMutation.mutate(editForm);
-                  }}
-                >
+            <div className="bg-surface-container p-6 rounded-xl border border-white/5">
+              <p className="text-xs font-bold text-on-surface-variant tracking-widest uppercase mb-5">
+                    {isCreateMode ? "CRÉATION DE SOURCE" : "ÉDITION DE SOURCE"}
+              </p>
+              <form className="space-y-4" onSubmit={handleSubmit}>
+                <div>
+                  <label className="block text-xs font-bold text-on-surface-variant mb-1 ml-1">Nom de la source</label>
+                  <input
+                    className="w-full bg-surface-container-highest border-none rounded-lg text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
+                    type="text"
+                    value={editForm.source_name}
+                    onChange={(event) => setEditForm({ ...editForm, source_name: event.target.value })}
+                    data-testid="input-source-name"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-on-surface-variant mb-1 ml-1">Nom de la source</label>
-                    <input
+                    <label className="block text-xs font-bold text-on-surface-variant mb-1 ml-1">Plateforme</label>
+                    <select
                       className="w-full bg-surface-container-highest border-none rounded-lg text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
-                      type="text"
-                      value={editForm.name}
-                      onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                      data-testid="input-source-name"
+                      value={editForm.platform}
+                      disabled={!isCreateMode}
+                      onChange={(event) => setEditForm({ ...editForm, platform: event.target.value })}
+                    >
+                      {PLATFORM_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-on-surface-variant mb-1 ml-1">Owner Type</label>
+                    <select
+                      className="w-full bg-surface-container-highest border-none rounded-lg text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
+                      value={editForm.owner_type}
+                      disabled={!isCreateMode}
+                      onChange={(event) => setEditForm({ ...editForm, owner_type: event.target.value })}
+                    >
+                      {OWNER_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-on-surface-variant mb-1 ml-1">Config JSON</label>
+                  <textarea
+                    className="w-full bg-[#0d0e10] p-3 rounded-lg font-mono text-[11px] text-primary/80 h-28 overflow-y-auto border border-white/5 focus:outline-none focus:ring-1 focus:ring-primary/40"
+                    value={editForm.config_text}
+                    onChange={(event) => setEditForm({ ...editForm, config_text: event.target.value })}
+                  />
+                  {formError ? <p className="text-xs text-error mt-2">{formError}</p> : null}
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                        <label className="block text-xs font-bold text-on-surface-variant mb-1 ml-1">Fréquence (min)</label>
+                    <input
+                      className="w-full bg-surface-container-highest border-none rounded-lg text-sm py-2 px-3 focus:outline-none"
+                      type="number"
+                      value={editForm.sync_frequency_minutes}
+                      onChange={(event) => setEditForm({ ...editForm, sync_frequency_minutes: Number(event.target.value || 0) })}
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-on-surface-variant mb-1 ml-1">Plateforme</label>
-                      <select
-                        className="w-full bg-surface-container-highest border-none rounded-lg text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
-                        value={editForm.platform}
-                        onChange={(e) => setEditForm({ ...editForm, platform: e.target.value })}
-                      >
-                        <option>Facebook</option>
-                        <option>Instagram</option>
-                        <option>Google Maps</option>
-                        <option>YouTube</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-on-surface-variant mb-1 ml-1">Owner Type</label>
-                      <select
-                        className="w-full bg-surface-container-highest border-none rounded-lg text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
-                        value={editForm.owner_type}
-                        onChange={(e) => setEditForm({ ...editForm, owner_type: e.target.value as Source["owner_type"] })}
-                      >
-                        <option>Owned</option>
-                        <option>Market</option>
-                        <option>Competitor</option>
-                      </select>
-                    </div>
-                  </div>
                   <div>
-                    <label className="block text-xs font-bold text-on-surface-variant mb-1 ml-1">Config JSON</label>
-                    <div className="bg-[#0d0e10] p-3 rounded-lg font-mono text-[11px] text-primary/80 h-28 overflow-y-auto border border-white/5">
-                      <pre className="whitespace-pre-wrap break-all">{editForm.config_json}</pre>
-                    </div>
+                    <label className="block text-xs font-bold text-on-surface-variant mb-1 ml-1">SLA Fresh (h)</label>
+                    <input
+                      className="w-full bg-surface-container-highest border-none rounded-lg text-sm py-2 px-3 focus:outline-none"
+                      type="number"
+                      value={editForm.freshness_sla_hours}
+                      onChange={(event) => setEditForm({ ...editForm, freshness_sla_hours: Number(event.target.value || 0) })}
+                    />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-on-surface-variant mb-1 ml-1">Fréquence (min)</label>
-                      <input
-                        className="w-full bg-surface-container-highest border-none rounded-lg text-sm py-2 px-3 focus:outline-none"
-                        type="number"
-                        value={editForm.frequency_min}
-                        onChange={(e) => setEditForm({ ...editForm, frequency_min: parseInt(e.target.value) })}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-on-surface-variant mb-1 ml-1">SLA Fresh (h)</label>
-                      <input
-                        className="w-full bg-surface-container-highest border-none rounded-lg text-sm py-2 px-3 focus:outline-none"
-                        type="number"
-                        value={editForm.sla_hours}
-                        onChange={(e) => setEditForm({ ...editForm, sla_hours: parseInt(e.target.value) })}
-                      />
-                    </div>
-                  </div>
+                </div>
+                <button
+                  type="submit"
+                  disabled={createMutation.isPending || updateMutation.isPending}
+                  className="w-full py-3 bg-primary text-on-primary font-bold rounded-lg mt-2 shadow-xl shadow-primary/10 hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 text-sm"
+                  data-testid="btn-save-source"
+                >
+                  {createMutation.isPending || updateMutation.isPending ? "Enregistrement..." : "Enregistrer les modifications"}
+                </button>
+                {!isCreateMode && selectedSource ? (
                   <button
-                    type="submit"
-                    disabled={updateMutation.isPending}
-                    className="w-full py-3 bg-primary text-on-primary font-bold rounded-lg mt-2 shadow-xl shadow-primary/10 hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 text-sm"
-                    data-testid="btn-save-source"
+                    type="button"
+                    onClick={() => healthCheckMutation.mutate(selectedSource.id)}
+                    disabled={healthCheckMutation.isPending}
+                    className="w-full py-2 bg-surface-container-high text-on-surface-variant font-bold rounded-lg text-xs hover:bg-surface-bright transition-all disabled:opacity-50"
                   >
-                    {updateMutation.isPending ? "Enregistrement..." : "Enregistrer les modifications"}
+                        {healthCheckMutation.isPending ? "Vérification..." : "Vérifier la santé"}
                   </button>
-                  {selectedSource && (
-                    <button
-                      type="button"
-                      onClick={() => healthCheckMutation.mutate(selectedSource.id)}
-                      disabled={healthCheckMutation.isPending}
-                      className="w-full py-2 bg-surface-container-high text-on-surface-variant font-bold rounded-lg text-xs hover:bg-surface-bright transition-all disabled:opacity-50"
-                    >
-                      {healthCheckMutation.isPending ? "Vérification..." : "Vérifier la santé"}
-                    </button>
-                  )}
-                </form>
-              </div>
-            )}
+                ) : null}
+              </form>
+            </div>
 
-            {/* Health Snapshots */}
             <div className="bg-surface-container p-6 rounded-xl border border-white/5">
               <div className="flex justify-between items-center mb-6">
                 <p className="text-xs font-bold text-on-surface-variant tracking-widest uppercase">Health Snapshots</p>
@@ -575,20 +831,24 @@ export default function AdminSources() {
               </div>
               {snapshotsLoading ? (
                 <div className="space-y-4">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="h-16 bg-surface-container-high rounded animate-pulse"></div>
+                  {[1, 2, 3].map((item) => (
+                    <div key={item} className="h-16 bg-surface-container-high rounded animate-pulse"></div>
                   ))}
+                </div>
+              ) : snapshotsData.length === 0 ? (
+                <div className="text-sm text-on-surface-variant">
+                      Aucun snapshot de santé disponible pour cette source.
                 </div>
               ) : (
                 <div className="space-y-6 relative before:content-[''] before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[1px] before:bg-white/10">
-                  {snapshotsData.map((snap) => (
-                    <div key={snap.id} className="relative pl-8">
-                      <SnapshotLevelDot level={snap.level} />
+                  {snapshotsData.map((snapshot) => (
+                    <div key={snapshot.id} className="relative pl-8">
+                      <SnapshotLevelDot level={snapshot.level} />
                       <div className="flex justify-between items-start">
-                        <h4 className="text-sm font-bold">{snap.level}</h4>
-                        <span className="text-[10px] font-mono opacity-50">{snap.timestamp}</span>
+                        <h4 className="text-sm font-bold">{snapshot.level}</h4>
+                        <span className="text-[10px] font-mono opacity-50">{snapshot.timestamp}</span>
                       </div>
-                      <p className="text-xs text-on-surface-variant mt-1 leading-relaxed">{snap.message}</p>
+                      <p className="text-xs text-on-surface-variant mt-1 leading-relaxed">{snapshot.message}</p>
                     </div>
                   ))}
                 </div>
@@ -597,6 +857,6 @@ export default function AdminSources() {
           </div>
         </div>
       </div>
-    </AppShell>
+    </AdminShell>
   );
 }
