@@ -777,6 +777,183 @@ class TestAdmin:
             assert r.status_code == 200
             assert r.json()["status"] == "success"
 
+    def test_scheduler_tick_runs_due_priority_source_only(self):
+        client_id = f"client-{uuid.uuid4().hex[:8]}"
+        coverage_key = f"owned:facebook:scheduler-priority-{uuid.uuid4().hex[:8]}"
+        r_primary = client.post("/api/admin/sources", json={
+            "client_id": client_id,
+            "source_name": "Scheduler Primary",
+            "platform": "facebook",
+            "source_type": "managed_page",
+            "owner_type": "owned",
+            "source_purpose": "owned_content",
+            "source_priority": 1,
+            "coverage_key": coverage_key,
+        })
+        r_fallback = client.post("/api/admin/sources", json={
+            "client_id": client_id,
+            "source_name": "Scheduler Fallback",
+            "platform": "facebook",
+            "source_type": "managed_page",
+            "owner_type": "owned",
+            "source_purpose": "owned_content",
+            "source_priority": 2,
+            "coverage_key": coverage_key,
+        })
+        primary_id = r_primary.json()["source_id"]
+        fallback_id = r_fallback.json()["source_id"]
+
+        with patch(
+            "core.ingestion.scheduler.IngestionOrchestrator.run_source_sync",
+            return_value={
+                "status": "success",
+                "records_fetched": 1,
+                "records_inserted": 1,
+                "records_failed": 0,
+            },
+        ) as mocked_run:
+            r = client.post(f"/api/admin/scheduler/tick?client_id={client_id}")
+
+        assert r.status_code == 200
+        data = r.json()
+        assert data["groups_processed"] == 1
+        assert data["sources_scheduled"] == 1
+        assert data["groups"][0]["coverage_key"] == coverage_key
+        assert data["groups"][0]["winner_source_id"] == primary_id
+        assert [call.kwargs["source_id"] for call in mocked_run.call_args_list] == [primary_id]
+        assert fallback_id not in [call.kwargs["source_id"] for call in mocked_run.call_args_list]
+
+    def test_scheduler_tick_falls_back_when_primary_fails(self):
+        client_id = f"client-{uuid.uuid4().hex[:8]}"
+        coverage_key = f"owned:facebook:scheduler-fallback-{uuid.uuid4().hex[:8]}"
+        r_primary = client.post("/api/admin/sources", json={
+            "client_id": client_id,
+            "source_name": "Fallback Primary",
+            "platform": "facebook",
+            "source_type": "managed_page",
+            "owner_type": "owned",
+            "source_purpose": "owned_content",
+            "source_priority": 1,
+            "coverage_key": coverage_key,
+        })
+        r_fallback = client.post("/api/admin/sources", json={
+            "client_id": client_id,
+            "source_name": "Fallback Secondary",
+            "platform": "facebook",
+            "source_type": "managed_page",
+            "owner_type": "owned",
+            "source_purpose": "owned_content",
+            "source_priority": 2,
+            "coverage_key": coverage_key,
+        })
+        primary_id = r_primary.json()["source_id"]
+        fallback_id = r_fallback.json()["source_id"]
+
+        def _run_source_sync(*, source_id, **kwargs):
+            if source_id == primary_id:
+                raise RuntimeError("API unavailable")
+            return {
+                "status": "success",
+                "records_fetched": 1,
+                "records_inserted": 1,
+                "records_failed": 0,
+            }
+
+        with patch(
+            "core.ingestion.scheduler.IngestionOrchestrator.run_source_sync",
+            side_effect=_run_source_sync,
+        ) as mocked_run:
+            r = client.post(f"/api/admin/scheduler/tick?client_id={client_id}")
+
+        assert r.status_code == 200
+        data = r.json()
+        assert data["sources_scheduled"] == 1
+        assert data["groups"][0]["winner_source_id"] == fallback_id
+        assert [call.kwargs["source_id"] for call in mocked_run.call_args_list] == [primary_id, fallback_id]
+        assert data["groups"][0]["attempts"][0]["status"] == "failed"
+        assert "API unavailable" in data["groups"][0]["attempts"][0]["error"]
+
+    def test_scheduler_tick_skips_not_due_sources(self):
+        client_id = f"client-{uuid.uuid4().hex[:8]}"
+        coverage_key = f"owned:facebook:scheduler-fresh-{uuid.uuid4().hex[:8]}"
+        r_source = client.post("/api/admin/sources", json={
+            "client_id": client_id,
+            "source_name": "Fresh Source",
+            "platform": "facebook",
+            "source_type": "managed_page",
+            "owner_type": "owned",
+            "source_purpose": "owned_content",
+            "source_priority": 1,
+            "coverage_key": coverage_key,
+            "sync_frequency_minutes": 120,
+        })
+        source_id = r_source.json()["source_id"]
+        with _get_connection() as conn:
+            conn.execute(
+                "UPDATE sources SET last_sync_at = ? WHERE source_id = ? AND client_id = ?",
+                ["2026-04-03T11:50:00+00:00", source_id, client_id],
+            )
+            conn.commit()
+
+        with patch("core.ingestion.scheduler.IngestionOrchestrator.run_source_sync") as mocked_run:
+            r = client.post(f"/api/admin/scheduler/tick?client_id={client_id}&now=2026-04-03T12:00:00%2B00:00")
+
+        assert r.status_code == 200
+        data = r.json()
+        assert data["groups_processed"] == 0
+        assert data["sources_scheduled"] == 0
+        assert mocked_run.call_count == 0
+
+    def test_trigger_source_sync_same_content_across_sources_shares_content_item(self):
+        coverage_key = f"owned:facebook:shared-content-{uuid.uuid4().hex[:8]}"
+        source_ids = []
+        for name, priority in (("Shared A", 1), ("Shared B", 2)):
+            response = client.post("/api/admin/sources", json={
+                "source_name": name,
+                "platform": "facebook",
+                "source_type": "managed_page",
+                "owner_type": "owned",
+                "source_purpose": "owned_content",
+                "source_priority": priority,
+                "coverage_key": coverage_key,
+            })
+            source_ids.append(response.json()["source_id"])
+
+        shared_doc = {
+            "external_document_id": f"{coverage_key}-post-1",
+            "raw_text": "shared text",
+            "raw_payload": {},
+            "raw_metadata": {"source_url": f"https://facebook.com/posts/{coverage_key}-post-1"},
+            "collected_at": "2026-01-01T00:00:00Z",
+            "checksum_sha256": f"hash-{coverage_key}",
+        }
+
+        with patch("core.connectors.facebook_connector.FacebookConnector.fetch_documents", return_value=[shared_doc]):
+            for source_id in source_ids:
+                response = client.post(f"/api/admin/sources/{source_id}/sync", json={"run_mode": "manual"})
+                assert response.status_code == 200
+
+        with _get_connection() as conn:
+            content_items = conn.execute(
+                """
+                SELECT content_item_id
+                FROM content_items
+                WHERE canonical_key = ?
+                """,
+                [f"facebook:{shared_doc['external_document_id']}"],
+            ).fetchall()
+            raw_documents = conn.execute(
+                """
+                SELECT DISTINCT content_item_id
+                FROM raw_documents
+                WHERE canonical_key = ?
+                """,
+                [f"facebook:{shared_doc['external_document_id']}"],
+            ).fetchall()
+
+        assert len(content_items) == 1
+        assert len(raw_documents) == 1
+
 
 # ---------------------------------------------------------------------------
 # Social Metrics
