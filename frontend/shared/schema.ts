@@ -158,11 +158,15 @@ export interface Recommendation {
 
 export interface ContextPreview {
   estimated_tokens: number;
+  estimated_cost_usd?: number | null;
   nss_global?: number | null;
   volume_total: number;
   active_alerts_count: number;
   active_watchlists_count: number;
   recent_campaigns_count: number;
+  provider_used?: string | null;
+  model_used?: string | null;
+  pricing_basis?: string | null;
   trigger?: string | null;
 }
 

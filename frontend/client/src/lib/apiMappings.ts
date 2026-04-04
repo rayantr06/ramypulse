@@ -285,11 +285,16 @@ export function mapContextPreview(value: unknown): ContextPreview {
   const record = asRecord(value);
   return {
     estimated_tokens: asNumber(record.estimated_tokens),
+    estimated_cost_usd:
+      record.estimated_cost_usd == null ? null : asNumber(record.estimated_cost_usd),
     nss_global: record.nss_global == null ? null : asNumber(record.nss_global),
     volume_total: asNumber(record.volume_total),
     active_alerts_count: asNumber(record.active_alerts_count),
     active_watchlists_count: asNumber(record.active_watchlists_count),
     recent_campaigns_count: asNumber(record.recent_campaigns_count),
+    provider_used: asString(record.provider_used) || null,
+    model_used: asString(record.model_used) || null,
+    pricing_basis: asString(record.pricing_basis) || null,
     trigger: asString(record.trigger) || null,
   };
 }

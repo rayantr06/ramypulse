@@ -6,17 +6,39 @@ l'assemblage de contexte (context_builder) et la persistance
 """
 
 import logging
+from math import isfinite
 
 from fastapi import APIRouter, HTTPException
 
 import config
 from api.data_loader import load_annotated
-from api.schemas import RecommendationGenerate, RecommendationStatusUpdate
+from api.schemas import ContextPreview, RecommendationGenerate, RecommendationStatusUpdate
 from core.recommendation import agent_client, context_builder, recommendation_manager
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/recommendations", tags=["Recommendations"])
+
+
+def _estimate_prompt_cost_usd(
+    provider: str | None,
+    model: str | None,
+    estimated_tokens: int,
+) -> float | None:
+    """Estimate prompt-only cost from the configured model pricing table."""
+    if estimated_tokens <= 0:
+        return 0.0
+
+    provider_key = provider or config.DEFAULT_AGENT_PROVIDER
+    model_key = model or config.DEFAULT_AGENT_MODEL
+    price_per_1k = (
+        config.LLM_INPUT_PRICING_USD_PER_1K_TOKENS.get(provider_key, {}).get(model_key)
+    )
+    if price_per_1k is None:
+        return None
+
+    estimate = (estimated_tokens / 1000.0) * float(price_per_1k)
+    return round(estimate, 6) if isfinite(estimate) else None
 
 
 @router.get("/providers")
@@ -25,8 +47,13 @@ def get_providers():
     return {"providers": getattr(agent_client, "MODEL_CATALOG", {})}
 
 
-@router.get("/context-preview")
-def get_context_preview(trigger_type: str = "manual", trigger_id: str = None):
+@router.get("/context-preview", response_model=ContextPreview)
+def get_context_preview(
+    trigger_type: str = "manual",
+    trigger_id: str = None,
+    provider: str | None = None,
+    model: str | None = None,
+):
     """Prévisualisation du contexte compilé avant génération LLM."""
     try:
         df_annotated = load_annotated()
@@ -35,13 +62,24 @@ def get_context_preview(trigger_type: str = "manual", trigger_id: str = None):
             trigger_id=trigger_id,
             df_annotated=df_annotated,
         )
+        provider_used = provider or config.DEFAULT_AGENT_PROVIDER
+        model_used = model or config.DEFAULT_AGENT_MODEL
+        estimated_tokens = ctx.get("estimated_tokens", len(str(ctx)) // 4)
         return {
-            "estimated_tokens": ctx.get("estimated_tokens", len(str(ctx)) // 4),
+            "estimated_tokens": estimated_tokens,
+            "estimated_cost_usd": _estimate_prompt_cost_usd(
+                provider=provider_used,
+                model=model_used,
+                estimated_tokens=estimated_tokens,
+            ),
             "nss_global": ctx.get("current_metrics", {}).get("nss_global"),
             "volume_total": ctx.get("current_metrics", {}).get("volume_total", 0),
             "active_alerts_count": len(ctx.get("active_alerts", [])),
             "active_watchlists_count": len(ctx.get("active_watchlists", [])),
             "recent_campaigns_count": len(ctx.get("recent_campaigns", [])),
+            "provider_used": provider_used,
+            "model_used": model_used,
+            "pricing_basis": "prompt_input_usd_per_1k_tokens",
             "trigger": trigger_type,
         }
     except Exception as e:

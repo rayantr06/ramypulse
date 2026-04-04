@@ -435,6 +435,32 @@ class TestRecommendations:
         assert "estimated_tokens" in data
         assert "trigger" in data
 
+    def test_context_preview_estimates_prompt_cost_for_selected_model(self):
+        mock_ctx = {
+            "estimated_tokens": 4000,
+            "current_metrics": {"nss_global": 18.5, "volume_total": 240},
+            "active_alerts": [{"id": "a1"}],
+            "active_watchlists": [{"id": "w1"}, {"id": "w2"}],
+            "recent_campaigns": [{"id": "c1"}],
+        }
+
+        with patch(
+            "api.routers.recommendations.context_builder.build_recommendation_context",
+            return_value=mock_ctx,
+        ), patch(
+            "api.routers.recommendations.load_annotated",
+            return_value=pd.DataFrame(),
+        ):
+            r = client.get(
+                "/api/recommendations/context-preview"
+                "?trigger_type=manual&provider=openai&model=gpt-4o"
+            )
+
+        assert r.status_code == 200
+        data = r.json()
+        assert data["estimated_tokens"] == 4000
+        assert data["estimated_cost_usd"] == 0.01
+
     def test_list_recommendations(self):
         r = client.get("/api/recommendations")
         assert r.status_code == 200

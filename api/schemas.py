@@ -195,11 +195,16 @@ class RecommendationResponse(BaseModel):
 
 class ContextPreview(BaseModel):
     estimated_tokens: int = 0
+    estimated_cost_usd: float | None = None
     nss_global: float | None = None
     volume_total: int = 0
     active_alerts_count: int = 0
     active_watchlists_count: int = 0
     recent_campaigns_count: int = 0
+    provider_used: str | None = None
+    model_used: str | None = None
+    pricing_basis: str | None = None
+    trigger: str | None = None
 
 
 # ---------------------------------------------------------------------------
