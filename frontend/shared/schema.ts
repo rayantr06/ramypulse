@@ -1,198 +1,259 @@
-// RamyPulse shared types — frontend only (no DB needed, API is FastAPI backend)
+/**
+ * RamyPulse frontend types — aligned with api/schemas.py Pydantic models
+ * and core manager return shapes.
+ */
 
-// Dashboard
+// ---------------------------------------------------------------------------
+// Dashboard (matches api/routers/dashboard.py responses)
+// ---------------------------------------------------------------------------
+
 export interface DashboardSummary {
-  nss_score: number;
-  nss_trend: number;
-  total_mentions: number;
-  period: string;
-  regional_distribution: Array<{ wilaya: string; pct: number }>;
-  product_performance: Array<{ product: string; trend_pct: number; relative_volume: number }>;
+  health_score: number;
+  health_trend: "up" | "down" | "flat";
+  nss_progress_pts: number;
+  summary_text: string;
 }
 
 export interface DashboardAlert {
-  id: string;
+  alert_id: string;
+  severity: string;
   title: string;
   description: string;
-  severity: "URGENT" | "ANALYSE" | "SYSTÈME";
-  timestamp: string;
-  icon: string;
+  created_at: string;
 }
 
 export interface DashboardAction {
-  id: string;
+  recommendation_id: string;
   title: string;
-  description: string;
-  confidence: number;
-  icon: string;
-  cta_label: string;
+  priority: string;
+  target_platform: string;
 }
 
-// Explorer
-export interface SearchResult {
-  id: string;
-  source: string;
-  content: string;
-  relevance_score: number;
-  sentiment: string;
-  wilaya: string;
-  created_at: string;
-}
+// ---------------------------------------------------------------------------
+// Campaigns (matches CampaignResponse, CampaignImpact in schemas.py)
+// ---------------------------------------------------------------------------
 
-export interface Verbatim {
-  id: string;
-  date: string;
-  time: string;
-  source: string;
-  aspect: string;
-  sentiment: string;
-  wilaya: string;
-  text: string;
-}
-
-export interface VerbatimsResponse {
-  items: Verbatim[];
-  total: number;
-  page: number;
-  page_size: number;
-  total_pages: number;
-}
-
-// Campaigns
 export interface Campaign {
-  id: string;
-  name: string;
-  type: string;
-  platform: string;
-  influencer: string;
-  budget_dza: number;
-  start_date: string;
-  end_date: string;
+  campaign_id: string;
+  client_id?: string;
+  campaign_name: string;
+  campaign_type?: string;
+  platform?: string;
+  description?: string;
+  influencer_handle?: string;
+  influencer_tier?: string;
+  target_segment?: string;
+  target_aspects: string[];
+  target_regions: string[];
   keywords: string[];
-  status: "ACTIVE" | "PLANIFIÉE" | "TERMINÉE" | "ANNULÉE";
-  impact_nss?: number;
+  budget_dza?: number;
+  start_date?: string;
+  end_date?: string;
+  pre_window_days?: number;
+  post_window_days?: number;
+  status?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface PhaseMetrics {
+  nss: number | null;
+  volume: number;
+  aspect_breakdown: Record<string, number>;
+  sentiment_breakdown: Record<string, number>;
 }
 
 export interface CampaignImpact {
-  pre_campaign_nss: number;
-  during_campaign_nss: number;
-  post_campaign_nss: number;
-  uplift_pct: number;
-  retention_pct: number;
-  ai_insight: string;
+  campaign_id: string;
+  campaign_name?: string;
+  phases: {
+    pre: PhaseMetrics;
+    active: PhaseMetrics;
+    post: PhaseMetrics;
+  };
+  uplift_nss: number | null;
+  uplift_volume_pct: number | null;
+  is_reliable: boolean;
+  reliability_note: string;
 }
 
 export interface CreateCampaignPayload {
-  name: string;
-  type: string;
-  platform: string;
-  influencer: string;
-  budget_dza: number;
-  start_date: string;
-  end_date: string;
-  keywords: string[];
+  campaign_name: string;
+  campaign_type?: string;
+  platform?: string;
+  description?: string;
+  influencer_handle?: string;
+  target_aspects?: string[];
+  target_regions?: string[];
+  keywords?: string[];
+  budget_dza?: number;
+  start_date?: string;
+  end_date?: string;
 }
 
-// Alerts
+// ---------------------------------------------------------------------------
+// Alerts (matches core/alerts/alert_manager.py _row_to_alert dict)
+// ---------------------------------------------------------------------------
+
 export interface Alert {
-  id: string;
+  alert_id: string;
+  client_id?: string;
+  watchlist_id?: string;
+  alert_rule_id?: string;
   title: string;
-  description: string;
-  severity: "CRITIQUE" | "HAUTE" | "MOYENNE" | "BASSE";
-  status: "NOUVEAU" | "RECONNU" | "EN_COURS" | "RÉSOLU";
-  location: string;
-  estimated_impact: string;
-  detected_at: string;
-  social_excerpts: Array<{ author: string; platform: string; text: string }>;
+  description?: string;
+  severity: string;
+  status: string;
+  detected_at?: string;
+  resolved_at?: string;
+  alert_payload?: Record<string, unknown>;
+  dedup_key?: string;
+  navigation_url?: string;
 }
 
-// Watchlists
+// ---------------------------------------------------------------------------
+// Watchlists (matches core/watchlists/watchlist_manager.py dict)
+// ---------------------------------------------------------------------------
+
 export interface Watchlist {
-  id: string;
-  name: string;
-  description: string;
-  scope: "RÉGION" | "CANAL" | "PRODUIT";
-  is_active: boolean;
-  owners: string[];
+  watchlist_id: string;
+  client_id?: string;
+  watchlist_name: string;
+  description?: string;
+  scope_type?: string;
+  filters?: Record<string, unknown>;
+  is_active: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface WatchlistMetrics {
-  nss_score: number;
-  nss_delta: number;
-  volume: number;
-  volume_delta: number;
-  aspects: Array<{ name: string; score: number; is_negative?: boolean }>;
-  quick_insight: string;
-  last_updated: string;
+  watchlist_id: string;
+  nss_current?: number;
+  delta_nss?: number;
+  volume_total?: number;
+  volume_delta?: number;
+  computed_at?: string;
 }
 
-// Recommendations
+// ---------------------------------------------------------------------------
+// Recommendations (matches RecommendationResponse in schemas.py)
+// ---------------------------------------------------------------------------
+
 export interface RecommendationContext {
-  nss_global: number;
-  volume: number;
-  active_alerts: number;
-  last_run: string;
+  estimated_tokens: number;
+  nss_global: number | null;
+  volume_total: number;
+  active_alerts_count: number;
+  active_watchlists_count: number;
+  recent_campaigns_count: number;
+}
+
+export interface RecommendationItem {
+  title: string;
+  priority: string;
+  description?: string;
+  target_platform?: string;
+  kpi_impact?: string;
+  timing?: string;
 }
 
 export interface Recommendation {
-  id: string;
-  run_id: string;
-  priority: "URGENT" | "MOYEN" | "BAS";
-  title: string;
-  rationale: string;
-  target: string;
-  timing: string;
-  kpi_impact: string;
-  status: "ACTIVE" | "ARCHIVED" | "APPLIED";
-  created_at: string;
-  confidence: number;
-  provider: string;
-  model: string;
-  summary: string;
+  recommendation_id: string;
+  client_id?: string;
+  trigger_type?: string;
+  trigger_id?: string;
+  analysis_summary?: string;
+  recommendations: RecommendationItem[];
+  watchlist_priorities: unknown[];
+  confidence_score?: number;
+  data_quality_note?: string;
+  provider_used?: string;
+  model_used?: string;
+  context_tokens?: number;
+  generation_ms?: number;
+  status?: string;
+  created_at?: string;
 }
 
 export interface GenerateRecommendationsPayload {
   trigger_type: string;
   provider: string;
   model: string;
+  api_key?: string;
 }
 
+// ---------------------------------------------------------------------------
+// Explorer (matches SearchResponse, VerbatimResponse in schemas.py)
+// ---------------------------------------------------------------------------
+
+export interface SearchResult {
+  text: string;
+  score: number;
+  sentiment_label: string;
+  aspect: string;
+  channel: string;
+  source_url: string;
+}
+
+export interface SearchResponse {
+  query: string;
+  results: SearchResult[];
+  total: number;
+}
+
+export interface VerbatimItem {
+  text: string;
+  sentiment_label: string;
+  confidence: number;
+  channel: string;
+  aspect: string;
+  wilaya: string;
+  timestamp: string;
+  source_url: string;
+}
+
+export interface VerbatimsResponse {
+  results: VerbatimItem[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages?: number;
+}
+
+// ---------------------------------------------------------------------------
 // Admin Sources
+// ---------------------------------------------------------------------------
+
 export interface Source {
-  id: string;
-  name: string;
+  source_id: string;
+  client_id?: string;
+  source_name: string;
   platform: string;
-  owner_type: "Owned" | "Market" | "Competitor";
-  health_pct: number;
+  source_type: string;
+  owner_type: string;
   is_active: boolean;
-  last_sync: string;
-  config_json: string;
-  frequency_min: number;
-  sla_hours: number;
+  config_json?: Record<string, unknown>;
+  sync_frequency_minutes?: number;
+  freshness_sla_hours?: number;
 }
 
 export interface SyncRun {
-  id: string;
+  run_id: string;
   source_id: string;
-  mode: string;
-  status: "SUCCESS" | "FAILURE" | "RUNNING";
-  fetched: number;
-  inserted: number;
-  errors: number;
+  run_mode: string;
+  status: string;
+  records_fetched: number;
+  records_inserted: number;
+  errors_count: number;
   started_at: string;
+  finished_at?: string;
 }
 
 export interface HealthSnapshot {
-  id: string;
+  snapshot_id: string;
   source_id: string;
-  level: "EXCELLENT" | "WARNING" | "ERROR";
+  health_level: string;
   message: string;
-  timestamp: string;
-}
-
-export interface PipelineTrace {
-  source_count: number;
-  raw_count: number;
-  normalized_count: number;
-  enriched_count: number;
+  computed_at: string;
 }
