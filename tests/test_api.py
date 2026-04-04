@@ -734,3 +734,170 @@ class TestAdmin:
             })
             assert r.status_code == 200
             assert r.json()["status"] == "success"
+
+
+# ---------------------------------------------------------------------------
+# Social Metrics
+# ---------------------------------------------------------------------------
+
+class TestSocialMetrics:
+    """Tests des endpoints /api/social-metrics/."""
+
+    def test_create_credential(self):
+        """Crée un credential Instagram brand."""
+        r = client.post("/api/social-metrics/credentials", json={
+            "entity_type": "brand",
+            "entity_name": "Ramy Official",
+            "platform": "instagram",
+            "account_id": "12345678",
+            "access_token": "EAAtest123",
+            "app_id": "app-001",
+        })
+        assert r.status_code == 201
+        data = r.json()
+        assert "credential_id" in data
+        assert data["status"] == "created"
+
+    def test_list_credentials(self):
+        """Liste les credentials actifs."""
+        client.post("/api/social-metrics/credentials", json={
+            "entity_type": "influencer",
+            "entity_name": "Influenceur Test",
+            "platform": "instagram",
+        })
+        r = client.get("/api/social-metrics/credentials")
+        assert r.status_code == 200
+        assert isinstance(r.json(), list)
+        assert len(r.json()) >= 1
+
+    def test_deactivate_credential(self):
+        """Désactive un credential."""
+        r_create = client.post("/api/social-metrics/credentials", json={
+            "entity_type": "brand",
+            "entity_name": "Ramy TikTok",
+            "platform": "tiktok",
+        })
+        cid = r_create.json()["credential_id"]
+        r = client.delete(f"/api/social-metrics/credentials/{cid}")
+        assert r.status_code == 204
+
+    def test_deactivate_credential_404(self):
+        """Retourne 404 pour un credential inexistant."""
+        r = client.delete("/api/social-metrics/credentials/cred-inexistant")
+        assert r.status_code == 404
+
+    def test_add_campaign_post(self):
+        """Lie un post Instagram à une campagne."""
+        campaign_id = _seed_campaign("Test Social Campaign")
+        r = client.post(f"/api/social-metrics/campaigns/{campaign_id}/posts", json={
+            "platform": "instagram",
+            "post_platform_id": "17854360229135492",
+            "post_url": "https://www.instagram.com/p/ABC123/",
+            "entity_type": "brand",
+            "entity_name": "Ramy Official",
+        })
+        assert r.status_code == 201
+        data = r.json()
+        assert "post_id" in data
+        assert data["campaign_id"] == campaign_id
+
+    def test_list_campaign_posts(self):
+        """Liste les posts liés à une campagne."""
+        campaign_id = _seed_campaign("Campaign Posts List")
+        client.post(f"/api/social-metrics/campaigns/{campaign_id}/posts", json={
+            "platform": "instagram",
+            "post_platform_id": "post-abc-001",
+        })
+        r = client.get(f"/api/social-metrics/campaigns/{campaign_id}/posts")
+        assert r.status_code == 200
+        posts = r.json()
+        assert isinstance(posts, list)
+        assert len(posts) == 1
+        assert posts[0]["post_platform_id"] == "post-abc-001"
+
+    def test_get_campaign_engagement_empty(self):
+        """Retourne une structure vide si aucun post lié."""
+        campaign_id = _seed_campaign("Empty Engagement Campaign")
+        r = client.get(f"/api/social-metrics/campaigns/{campaign_id}")
+        assert r.status_code == 200
+        data = r.json()
+        assert data["campaign_id"] == campaign_id
+        assert data["post_count"] == 0
+        assert data["engagement_rate"] is None
+        assert data["roi_pct"] is None
+
+    def test_get_campaign_engagement_404(self):
+        """Retourne 404 pour une campagne inexistante."""
+        r = client.get("/api/social-metrics/campaigns/camp-does-not-exist")
+        assert r.status_code == 404
+
+    def test_add_manual_metrics(self):
+        """Saisie manuelle des métriques sur un post existant."""
+        campaign_id = _seed_campaign("Manual Metrics Campaign")
+        r_post = client.post(f"/api/social-metrics/campaigns/{campaign_id}/posts", json={
+            "platform": "instagram",
+            "post_platform_id": "manual-post-001",
+        })
+        post_id = r_post.json()["post_id"]
+
+        r = client.post(f"/api/social-metrics/posts/{post_id}/metrics/manual", json={
+            "likes": 1500,
+            "comments": 120,
+            "shares": 45,
+            "reach": 28000,
+            "impressions": 35000,
+        })
+        assert r.status_code == 200
+        data = r.json()
+        assert "metric_id" in data
+        assert data["post_id"] == post_id
+
+    def test_engagement_rate_calculated(self):
+        """Engagement rate calculé correctement après saisie manuelle."""
+        campaign_id = _seed_campaign("Engagement Rate Test")
+        r_post = client.post(f"/api/social-metrics/campaigns/{campaign_id}/posts", json={
+            "platform": "instagram",
+            "post_platform_id": "engrate-post-001",
+        })
+        post_id = r_post.json()["post_id"]
+
+        client.post(f"/api/social-metrics/posts/{post_id}/metrics/manual", json={
+            "likes": 100,
+            "comments": 20,
+            "shares": 5,
+            "reach": 5000,
+        })
+
+        r = client.get(f"/api/social-metrics/campaigns/{campaign_id}")
+        assert r.status_code == 200
+        data = r.json()
+        assert data["engagement_rate"] == pytest.approx(2.5, abs=0.01)
+
+    def test_set_campaign_revenue(self):
+        """Renseigne le revenue_dza d'une campagne."""
+        campaign_id = _seed_campaign("Revenue Campaign")
+        r = client.patch(f"/api/social-metrics/campaigns/{campaign_id}/revenue", json={
+            "revenue_dza": 5_000_000
+        })
+        assert r.status_code == 200
+        data = r.json()
+        assert data["revenue_dza"] == 5_000_000
+
+    def test_roi_calculated_after_revenue(self):
+        """ROI calculé correctement quand budget et revenue sont renseignés."""
+        campaign_id = _seed_campaign("ROI Campaign")
+        with _get_connection() as conn:
+            conn.execute(
+                "UPDATE campaigns SET budget_dza = 1000000 WHERE campaign_id = ?",
+                [campaign_id],
+            )
+            conn.commit()
+
+        client.patch(f"/api/social-metrics/campaigns/{campaign_id}/revenue", json={
+            "revenue_dza": 1_500_000
+        })
+
+        r = client.get(f"/api/social-metrics/campaigns/{campaign_id}")
+        assert r.status_code == 200
+        data = r.json()
+        assert data["roi_pct"] == pytest.approx(50.0, abs=0.1)

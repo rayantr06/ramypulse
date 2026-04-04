@@ -38,6 +38,9 @@ EXPECTED_TABLES = {
     "notifications",
     "source_health_snapshots",
     "audit_log",
+    "platform_credentials",
+    "campaign_posts",
+    "post_engagement_metrics",
 }
 
 

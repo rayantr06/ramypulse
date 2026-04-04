@@ -246,6 +246,7 @@ _SCHEMA_STATEMENTS = {
             end_date          TEXT,
             pre_window_days   INTEGER DEFAULT 14,
             post_window_days  INTEGER DEFAULT 14,
+            revenue_dza       INTEGER,
             status            TEXT DEFAULT 'planned',
             created_at        TEXT,
             updated_at        TEXT
@@ -391,6 +392,52 @@ _SCHEMA_STATEMENTS = {
             source TEXT,
             details TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    """,
+    "platform_credentials": """
+        CREATE TABLE IF NOT EXISTS platform_credentials (
+            credential_id     TEXT PRIMARY KEY,
+            client_id         TEXT NOT NULL DEFAULT 'ramy_client_001',
+            entity_type       TEXT NOT NULL,
+            entity_name       TEXT NOT NULL,
+            platform          TEXT NOT NULL,
+            account_id        TEXT,
+            access_token_ref  TEXT,
+            app_id            TEXT,
+            app_secret_ref    TEXT,
+            extra_config      TEXT DEFAULT '{}',
+            is_active         INTEGER NOT NULL DEFAULT 1,
+            created_at        TEXT NOT NULL,
+            updated_at        TEXT
+        )
+    """,
+    "campaign_posts": """
+        CREATE TABLE IF NOT EXISTS campaign_posts (
+            post_id          TEXT PRIMARY KEY,
+            campaign_id      TEXT NOT NULL,
+            platform         TEXT NOT NULL,
+            post_platform_id TEXT NOT NULL,
+            post_url         TEXT,
+            entity_type      TEXT DEFAULT 'brand',
+            entity_name      TEXT,
+            credential_id    TEXT,
+            added_at         TEXT NOT NULL
+        )
+    """,
+    "post_engagement_metrics": """
+        CREATE TABLE IF NOT EXISTS post_engagement_metrics (
+            metric_id        TEXT PRIMARY KEY,
+            post_id          TEXT NOT NULL,
+            collected_at     TEXT NOT NULL,
+            likes            INTEGER DEFAULT 0,
+            comments         INTEGER DEFAULT 0,
+            shares           INTEGER DEFAULT 0,
+            views            INTEGER DEFAULT 0,
+            reach            INTEGER DEFAULT 0,
+            impressions      INTEGER DEFAULT 0,
+            saves            INTEGER DEFAULT 0,
+            collection_mode  TEXT DEFAULT 'api',
+            raw_response     TEXT DEFAULT '{}'
         )
     """,
 }
@@ -1015,8 +1062,19 @@ def _seed_default_client(connection: sqlite3.Connection) -> None:
             DEFAULT_CLIENT_ID,
             "Ramy",
             "Agroalimentaire algerien",
-        ),
-    )
+            ),
+        )
+
+
+def _migrate_campaigns_add_revenue_if_needed(connection: sqlite3.Connection) -> None:
+    """Ajoute la colonne revenue_dza dans campaigns si elle est absente."""
+    if not _table_exists(connection, "campaigns"):
+        return
+
+    columns = _column_definitions(connection, "campaigns")
+    if "revenue_dza" not in columns:
+        logger.info("Migration SQLite : ajout de revenue_dza dans campaigns")
+        connection.execute("ALTER TABLE campaigns ADD COLUMN revenue_dza INTEGER")
 
 
 class DatabaseManager:
@@ -1078,6 +1136,7 @@ class DatabaseManager:
             _migrate_alerts_if_needed(connection)
             _migrate_notifications_if_needed(connection)
             _migrate_recommendations_if_needed(connection)
+            _migrate_campaigns_add_revenue_if_needed(connection)
 
             for statement in _SCHEMA_STATEMENTS.values():
                 connection.execute(statement)
