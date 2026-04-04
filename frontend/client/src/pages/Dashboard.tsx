@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
 import { apiRequest } from "@/lib/queryClient";
 import {
+  mapApiStatus,
   mapDashboardActions,
   mapDashboardAlerts,
   mapDashboardSummary,
@@ -36,6 +37,11 @@ interface DashboardActionView {
   ctaLabel: string;
   targetPlatform: string;
   confidence: number;
+}
+
+interface ApiStatusView {
+  apiStatus: string;
+  latencyMs: number | null;
 }
 
 function severityLabel(severity: string): string {
@@ -156,6 +162,18 @@ export default function Dashboard() {
     },
   });
 
+  const { data: apiStatus } = useQuery<ApiStatusView>({
+    queryKey: ["/api/status"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/status");
+      const status = mapApiStatus(await res.json());
+      return {
+        apiStatus: status.api_status,
+        latencyMs: status.latency_ms,
+      };
+    },
+  });
+
   const summaryView = summary ?? {
     score: 0,
     trend: "flat" as const,
@@ -168,6 +186,10 @@ export default function Dashboard() {
   };
   const currentAlerts = alertsList ?? [];
   const currentActions = actionsList ?? [];
+  const statusView = apiStatus ?? {
+    apiStatus: "Indisponible",
+    latencyMs: null,
+  };
 
   const circumference = 2 * Math.PI * 88;
   const dashOffset = circumference * (1 - summaryView.score / 100);
@@ -451,6 +473,18 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+
+        <footer className="pt-2 flex justify-between items-center text-[10px] text-gray-600 font-bold uppercase tracking-widest">
+          <div className="flex gap-4">
+            <span>{`API Status: ${statusView.apiStatus}`}</span>
+            <span>
+              {statusView.latencyMs == null
+                ? "Latency: n/a"
+                : `Latency: ${statusView.latencyMs}ms`}
+            </span>
+          </div>
+          <div>© 2024 RamyPulse Intelligence Unit</div>
+        </footer>
       </div>
     </AppShell>
   );

@@ -11,6 +11,7 @@ import json
 import os
 import sqlite3
 import uuid
+from datetime import date
 from unittest.mock import patch
 
 import numpy as np
@@ -111,6 +112,15 @@ class TestHealth:
         assert r.status_code == 200
         assert r.json()["status"] in ("ok", "degraded")
 
+    def test_status_returns_real_monitoring_fields(self):
+        r = client.get("/api/status")
+        assert r.status_code == 200
+        data = r.json()
+        assert data["api_status"] in ("Normal", "Dégradé", "Erreur")
+        assert data["db_status"] in ("connected", "missing", "error", "unreachable")
+        assert isinstance(data["latency_ms"], int)
+        assert data["latency_ms"] >= 0
+
 
 # ===========================================================================
 # Dashboard
@@ -205,6 +215,63 @@ class TestCampaigns:
         assert r.status_code == 200
         for c in r.json():
             assert c["status"] == "active"
+
+    def test_campaign_stats_returns_quarterly_budget_fields(self):
+        baseline = client.get("/api/campaigns/stats")
+        assert baseline.status_code == 200
+        baseline_data = baseline.json()
+
+        today = date.today()
+        quarter_start_month = ((today.month - 1) // 3) * 3 + 1
+        quarter_date = today.replace(month=quarter_start_month, day=1).isoformat()
+
+        previous_quarter_month = 12 if quarter_start_month == 1 else quarter_start_month - 1
+        previous_quarter_year = today.year - 1 if quarter_start_month == 1 else today.year
+        previous_quarter_date = date(previous_quarter_year, previous_quarter_month, 1).isoformat()
+
+        active_id = _seed_campaign("Quarter Active", status="active")
+        planned_id = _seed_campaign("Quarter Planned", status="planned")
+        archived_id = _seed_campaign("Previous Quarter", status="completed")
+
+        with _get_connection() as conn:
+            conn.execute(
+                """
+                UPDATE campaigns
+                SET start_date = ?, budget_dza = ?
+                WHERE campaign_id = ?
+                """,
+                (quarter_date, 1000000, active_id),
+            )
+            conn.execute(
+                """
+                UPDATE campaigns
+                SET start_date = ?, budget_dza = ?
+                WHERE campaign_id = ?
+                """,
+                (quarter_date, 250000, planned_id),
+            )
+            conn.execute(
+                """
+                UPDATE campaigns
+                SET start_date = ?, budget_dza = ?
+                WHERE campaign_id = ?
+                """,
+                (previous_quarter_date, 999999, archived_id),
+            )
+            conn.commit()
+
+        r = client.get("/api/campaigns/stats")
+        assert r.status_code == 200
+        data = r.json()
+        assert (
+            data["quarterly_budget_committed"] - baseline_data["quarterly_budget_committed"]
+            == 1000000
+        )
+        assert (
+            data["quarterly_budget_allocation"] - baseline_data["quarterly_budget_allocation"]
+            == 1250000
+        )
+        assert "quarter_label" in data
 
     def test_get_campaign_detail(self):
         cid = _seed_campaign("Detail Test")

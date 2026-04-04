@@ -1,5 +1,12 @@
 // RamyPulse frontend shared types aligned to the FastAPI contracts.
 
+// System
+export interface ApiStatus {
+  api_status: string;
+  db_status: string;
+  latency_ms: number;
+}
+
 // Dashboard
 export interface DashboardSummary {
   health_score: number;
@@ -70,6 +77,12 @@ export interface CampaignImpact {
   uplift_volume_pct?: number | null;
   is_reliable: boolean;
   reliability_note: string;
+}
+
+export interface CampaignStats {
+  quarterly_budget_committed: number;
+  quarterly_budget_allocation: number;
+  quarter_label: string;
 }
 
 // Alerts

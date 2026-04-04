@@ -33,6 +33,20 @@ const STATUS_TO_API: Record<StatusFilter, string> = {
   ECARTE: "dismissed",
 };
 
+const STATUS_LABELS: Record<StatusFilter, string> = {
+  NOUVEAU: "Nouveau",
+  RECONNU: "Reconnu",
+  RESOLU: "Résolu",
+  ECARTE: "Écarté",
+};
+
+const SEVERITY_LABELS: Record<SeverityFilter, string> = {
+  CRITIQUE: "Critique",
+  HAUTE: "Haute",
+  MOYENNE: "Moyenne",
+  BASSE: "Basse",
+};
+
 function mapSeverity(value: string | undefined | null): SeverityFilter {
   if (value === "critical") return "CRITIQUE";
   if (value === "high") return "HAUTE";
@@ -66,10 +80,13 @@ function buildImpactLabel(payload: Record<string, unknown>): string {
   if (typeof payload.metric === "string") {
     return String(payload.metric).toUpperCase();
   }
-  return "Impact non chiffre";
+  return "Impact non chiffré";
 }
 
-function buildLocation(payload: Record<string, unknown>, navigationUrl: string | null | undefined): string {
+function buildLocation(
+  payload: Record<string, unknown>,
+  navigationUrl: string | null | undefined,
+): string {
   if (typeof payload.wilaya === "string" && payload.wilaya) return payload.wilaya;
   if (typeof payload.region === "string" && payload.region) return payload.region;
   if (typeof payload.segment === "string" && payload.segment) return payload.segment;
@@ -117,6 +134,7 @@ function StatusBadge({ status }: { status: StatusFilter }) {
     RESOLU: "bg-green-500/10 text-green-400",
     ECARTE: "bg-gray-500/10 text-gray-400",
   };
+
   return (
     <span
       className={`text-[10px] font-bold px-2 py-1 rounded uppercase flex items-center gap-1.5 ${map[status]}`}
@@ -128,7 +146,7 @@ function StatusBadge({ status }: { status: StatusFilter }) {
       ) : (
         <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
       )}
-      {status}
+      {status === "RESOLU" ? "RÉSOLU" : status === "ECARTE" ? "ÉCARTÉ" : status}
     </span>
   );
 }
@@ -157,6 +175,14 @@ function severityGradient(severity: SeverityFilter): string {
   if (severity === "CRITIQUE") return "from-error to-error-container";
   if (severity === "HAUTE") return "from-primary-container to-primary";
   return "from-tertiary to-tertiary-container";
+}
+
+function impactTone(label: string): string {
+  return label.startsWith("-") ? "text-error" : "text-tertiary";
+}
+
+function impactIcon(label: string): string {
+  return label.startsWith("-") ? "trending_down" : "analytics";
 }
 
 export default function Alertes() {
@@ -189,7 +215,13 @@ export default function Alertes() {
   });
 
   const updateStatusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: "acknowledged" | "resolved" | "dismissed" }) => {
+    mutationFn: async ({
+      id,
+      status,
+    }: {
+      id: string;
+      status: "acknowledged" | "resolved" | "dismissed";
+    }) => {
       const res = await apiRequest("PUT", `/api/alerts/${id}/status`, { status });
       return res.json();
     },
@@ -233,7 +265,13 @@ export default function Alertes() {
           </div>
           <div className="flex items-center gap-2 text-xs text-on-surface-variant">
             <span className="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>
-            Système en ligne : {alertsList.filter((alert) => alert.status !== "RESOLU" && alert.status !== "ECARTE").length} alertes actives
+            Système en ligne :{" "}
+            {
+              alertsList.filter(
+                (alert) => alert.status !== "RESOLU" && alert.status !== "ECARTE",
+              ).length
+            }{" "}
+            alertes actives
           </div>
         </div>
 
@@ -243,20 +281,22 @@ export default function Alertes() {
               Statut
             </span>
             <div className="flex gap-2">
-              {(["NOUVEAU", "RECONNU", "RESOLU", "ECARTE"] as StatusFilter[]).map((status) => (
-                <button
-                  key={status}
-                  onClick={() => setStatusFilter(statusFilter === status ? null : status)}
-                  className={`px-3 py-1.5 rounded-sm text-xs font-medium transition-colors ${
-                    statusFilter === status
-                      ? "bg-surface-container-highest text-primary border border-primary/20"
-                      : "bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high"
-                  }`}
-                  data-testid={`filter-status-${status.toLowerCase()}`}
-                >
-                  {status}
-                </button>
-              ))}
+              {(["NOUVEAU", "RECONNU", "RESOLU", "ECARTE"] as StatusFilter[]).map(
+                (status) => (
+                  <button
+                    key={status}
+                    onClick={() => setStatusFilter(statusFilter === status ? null : status)}
+                    className={`px-3 py-1.5 rounded-sm text-xs font-medium transition-colors ${
+                      statusFilter === status
+                        ? "bg-surface-container-highest text-primary border border-primary/20"
+                        : "bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high"
+                    }`}
+                    data-testid={`filter-status-${status.toLowerCase()}`}
+                  >
+                    {STATUS_LABELS[status]}
+                  </button>
+                ),
+              )}
             </div>
           </div>
           <div className="w-px h-6 bg-outline-variant/30"></div>
@@ -281,7 +321,7 @@ export default function Alertes() {
                   }`}
                 >
                   <span className={`w-2 h-2 rounded-full ${dotClass}`}></span>
-                  {value.charAt(0) + value.slice(1).toLowerCase()}
+                  {SEVERITY_LABELS[value]}
                 </button>
               ))}
             </div>
@@ -343,14 +383,14 @@ export default function Alertes() {
           <div className="lg:col-span-7">
             {selectedAlert ? (
               <section className="bg-surface-container-low rounded-sm sticky top-24 overflow-hidden">
-                <div className={`h-1 bg-gradient-to-r ${severityGradient(selectedAlert.severity)}`}></div>
+                <div
+                  className={`h-1 bg-gradient-to-r ${severityGradient(selectedAlert.severity)}`}
+                ></div>
                 <div className="p-8">
                   <div className="flex items-center gap-4 mb-6">
                     <div
                       className={`w-12 h-12 rounded-sm flex items-center justify-center ${
-                        selectedAlert.severity === "CRITIQUE"
-                          ? "bg-error/10"
-                          : "bg-primary/10"
+                        selectedAlert.severity === "CRITIQUE" ? "bg-error/10" : "bg-primary/10"
                       }`}
                     >
                       <span
@@ -422,8 +462,12 @@ export default function Alertes() {
                         <span className="text-[10px] text-on-surface-variant uppercase block mb-1">
                           Impact Estimé
                         </span>
-                        <span className="text-sm font-bold flex items-center gap-2 text-tertiary">
-                          <span className="material-symbols-outlined text-sm">analytics</span>
+                        <span
+                          className={`text-sm font-bold flex items-center gap-2 ${impactTone(selectedAlert.estimated_impact)}`}
+                        >
+                          <span className="material-symbols-outlined text-sm">
+                            {impactIcon(selectedAlert.estimated_impact)}
+                          </span>
                           {selectedAlert.estimated_impact}
                         </span>
                       </div>
@@ -452,7 +496,7 @@ export default function Alertes() {
                         className="flex-1 bg-surface-container-high hover:bg-surface-bright text-primary font-bold py-3 px-4 rounded-sm text-xs transition-colors border border-primary/20 uppercase tracking-widest"
                         data-testid="btn-dismiss"
                       >
-                        Ecarter
+                        Écarter
                       </button>
                       <button
                         onClick={() =>

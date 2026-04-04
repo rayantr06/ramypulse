@@ -18,6 +18,12 @@ class HealthResponse(BaseModel):
     db_status: str
 
 
+class ApiStatusResponse(BaseModel):
+    api_status: str
+    db_status: str
+    latency_ms: int
+
+
 # ---------------------------------------------------------------------------
 # Dashboard
 # ---------------------------------------------------------------------------
@@ -135,6 +141,12 @@ class CampaignResponse(BaseModel):
     status: str | None = None
     created_at: str | None = None
     updated_at: str | None = None
+
+
+class CampaignStats(BaseModel):
+    quarterly_budget_committed: int = 0
+    quarterly_budget_allocation: int = 0
+    quarter_label: str
 
 
 # ---------------------------------------------------------------------------

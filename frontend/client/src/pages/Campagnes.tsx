@@ -6,6 +6,7 @@ import {
   buildCampaignCreatePayload,
   mapCampaign,
   mapCampaignImpact,
+  mapCampaignStats,
 } from "@/lib/apiMappings";
 import { STITCH_AVATARS } from "@/lib/stitchAssets";
 
@@ -60,6 +61,12 @@ interface CampaignImpactView {
   ai_insight: string;
 }
 
+interface CampaignStatsView {
+  quarterlyBudgetCommitted: number;
+  quarterlyBudgetAllocation: number;
+  quarterLabel: string;
+}
+
 function normalizeStatus(status: string | null | undefined): string {
   if (status === "active") return "ACTIVE";
   if (status === "completed") return "TERMINEE";
@@ -99,6 +106,15 @@ function mapCampaignImpactView(value: unknown): CampaignImpactView {
         ? Number((((post / during) * 100)).toFixed(1))
         : null,
     ai_insight: impact.reliability_note || "Analyse d'impact disponible.",
+  };
+}
+
+function mapCampaignStatsView(value: unknown): CampaignStatsView {
+  const stats = mapCampaignStats(value);
+  return {
+    quarterlyBudgetCommitted: stats.quarterly_budget_committed,
+    quarterlyBudgetAllocation: stats.quarterly_budget_allocation,
+    quarterLabel: stats.quarter_label,
   };
 }
 
@@ -207,6 +223,14 @@ export default function Campagnes() {
     enabled: Boolean(selectedCampaign),
   });
 
+  const { data: stats } = useQuery<CampaignStatsView>({
+    queryKey: ["/api/campaigns/stats"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/campaigns/stats");
+      return mapCampaignStatsView(await res.json());
+    },
+  });
+
   const createMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest(
@@ -261,6 +285,12 @@ export default function Campagnes() {
     ai_insight: "Analyse d'impact disponible dès qu'une campagne est sélectionnée.",
   };
 
+  const statsData = stats ?? {
+    quarterlyBudgetCommitted: 0,
+    quarterlyBudgetAllocation: 0,
+    quarterLabel: "Trimestre courant",
+  };
+
   const activeNss = impactData.during_campaign_nss;
   const postCampaignDeltaPct =
     impactData.during_campaign_nss != null &&
@@ -274,14 +304,11 @@ export default function Campagnes() {
           ).toFixed(1),
         )
       : null;
-  const totalBudget = allCampaigns.reduce(
-    (sum, campaign) => sum + (campaign.budget_dza || 0),
-    0,
-  );
-  const quarterlyAllocation = 6_320_000;
+  const totalBudget = statsData.quarterlyBudgetCommitted;
+  const quarterlyAllocation = statsData.quarterlyBudgetAllocation;
   const allocationPct = Math.min(
     100,
-    Math.round((totalBudget / quarterlyAllocation) * 100),
+    quarterlyAllocation > 0 ? Math.round((totalBudget / quarterlyAllocation) * 100) : 0,
   );
   const topPerformer =
     allCampaigns.find((campaign) => campaign.status === "ACTIVE") ?? allCampaigns[0] ?? null;
@@ -790,19 +817,15 @@ export default function Campagnes() {
                   </div>
                   <div>
                     <h4 className="font-headline font-bold text-lg">
-                      {topPerformer?.influencer || "@rifka.bjm"}
+                      {topPerformer?.influencer || "@aucun_influenceur"}
                     </h4>
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-on-surface-variant">
-                        {topPerformer?.status === "ACTIVE"
-                          ? "ROI 4.2x"
-                          : topPerformer?.type || "Campagne"}
+                        {topPerformer?.type || "Campagne"}
                       </span>
                       <span className="w-1 h-1 bg-on-surface-variant rounded-full"></span>
                       <span className="text-xs text-tertiary">
-                        {impactData.uplift_pct != null
-                          ? `${formatDelta(impactData.uplift_pct)}% Engagement`
-                          : topPerformer?.platform || "+18% Engagement"}
+                        {topPerformer?.platform || "Plateforme non renseignée"}
                       </span>
                     </div>
                   </div>
@@ -827,7 +850,7 @@ export default function Campagnes() {
                     ></div>
                   </div>
                   <p className="text-[10px] text-on-surface-variant mt-2 uppercase font-bold">
-                    {allocationPct}% de l'allocation trimestrielle
+                    {allocationPct}% de l'allocation trimestrielle ({statsData.quarterLabel})
                   </p>
                 </div>
               </div>

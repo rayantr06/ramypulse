@@ -1,7 +1,9 @@
 import type {
+  ApiStatus,
   Alert,
   Campaign,
   CampaignImpact,
+  CampaignStats,
   ContextPreview,
   DashboardAction,
   DashboardAlert,
@@ -88,6 +90,15 @@ export function mapDashboardSummary(value: unknown): DashboardSummary {
       trend_pct: asNumber(item.trend_pct),
       relative_volume: asNumber(item.relative_volume),
     })),
+  };
+}
+
+export function mapApiStatus(value: unknown): ApiStatus {
+  const record = asRecord(value);
+  return {
+    api_status: asString(record.api_status),
+    db_status: asString(record.db_status),
+    latency_ms: asNumber(record.latency_ms),
   };
 }
 
@@ -189,6 +200,15 @@ export function mapCampaignImpact(value: unknown): CampaignImpact {
       record.uplift_volume_pct == null ? null : asNumber(record.uplift_volume_pct),
     is_reliable: Boolean(record.is_reliable),
     reliability_note: asString(record.reliability_note),
+  };
+}
+
+export function mapCampaignStats(value: unknown): CampaignStats {
+  const record = asRecord(value);
+  return {
+    quarterly_budget_committed: asNumber(record.quarterly_budget_committed),
+    quarterly_budget_allocation: asNumber(record.quarterly_budget_allocation),
+    quarter_label: asString(record.quarter_label),
   };
 }
 

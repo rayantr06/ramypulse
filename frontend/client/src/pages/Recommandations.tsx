@@ -154,11 +154,8 @@ function buildProviderGroups(value: unknown): ProviderGroup[] {
   return Array.from(grouped.values());
 }
 
-function estimateCost(providerId: string, estimatedTokens: number): string {
-  if (!providerId || providerId === "ollama_local") return "0.00$";
-  if (estimatedTokens <= 0) return "0.00$";
-  const roughDollars = Math.max(0.01, (estimatedTokens / 1000) * 0.003);
-  return `${roughDollars.toFixed(2)}$`;
+function estimatedCostLabel(): string {
+  return "Non disponible";
 }
 
 function PriorityBadge({ priority }: { priority: string }) {
@@ -379,7 +376,7 @@ export default function Recommandations() {
                       Coût est.
                     </span>
                     <span className="text-sm font-bold text-white">
-                      {estimateCost(activeProvider, contextData.estimated_tokens)}
+                      {estimatedCostLabel()}
                     </span>
                   </div>
                 </div>
