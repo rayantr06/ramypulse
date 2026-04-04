@@ -17,6 +17,13 @@ from config import (
     DEFAULT_CLIENT_ID,
     SQLITE_DB_PATH,
 )
+from core.ingestion.content_identity import (
+    default_coverage_key,
+    default_source_priority,
+    extract_canonical_url,
+    infer_source_purpose,
+    resolve_or_create_content_item,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +69,10 @@ _SCHEMA_STATEMENTS = {
             is_active INTEGER NOT NULL DEFAULT 1,
             sync_frequency_minutes INTEGER DEFAULT 60,
             freshness_sla_hours INTEGER DEFAULT 24,
+            source_purpose TEXT NOT NULL DEFAULT 'owned_content',
+            source_priority INTEGER NOT NULL DEFAULT 3,
+            coverage_key TEXT,
+            credential_id TEXT,
             last_sync_at TEXT,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
             updated_at TEXT DEFAULT CURRENT_TIMESTAMP
@@ -93,6 +104,10 @@ _SCHEMA_STATEMENTS = {
             raw_text TEXT,
             raw_metadata TEXT DEFAULT '{}',
             checksum_sha256 TEXT,
+            content_item_id TEXT,
+            platform TEXT,
+            canonical_url TEXT,
+            canonical_key TEXT,
             collected_at TEXT NOT NULL,
             is_normalized INTEGER DEFAULT 0,
             normalizer_version TEXT,
@@ -438,6 +453,21 @@ _SCHEMA_STATEMENTS = {
             saves            INTEGER DEFAULT 0,
             collection_mode  TEXT DEFAULT 'api',
             raw_response     TEXT DEFAULT '{}'
+        )
+    """,
+    "content_items": """
+        CREATE TABLE IF NOT EXISTS content_items (
+            content_item_id    TEXT PRIMARY KEY,
+            client_id          TEXT NOT NULL DEFAULT 'ramy_client_001',
+            platform           TEXT NOT NULL,
+            external_content_id TEXT,
+            canonical_url      TEXT,
+            canonical_key      TEXT NOT NULL,
+            owner_type         TEXT,
+            coverage_key       TEXT,
+            created_at         TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at         TEXT DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(client_id, canonical_key)
         )
     """,
 }
@@ -1077,6 +1107,135 @@ def _migrate_campaigns_add_revenue_if_needed(connection: sqlite3.Connection) -> 
         connection.execute("ALTER TABLE campaigns ADD COLUMN revenue_dza INTEGER")
 
 
+def _migrate_sources_governance_if_needed(connection: sqlite3.Connection) -> None:
+    """Ajoute et backfill les champs de gouvernance sur sources."""
+    if not _table_exists(connection, "sources"):
+        return
+
+    columns = _column_definitions(connection, "sources")
+    if "source_purpose" not in columns:
+        connection.execute(
+            "ALTER TABLE sources ADD COLUMN source_purpose TEXT NOT NULL DEFAULT 'owned_content'"
+        )
+    if "source_priority" not in columns:
+        connection.execute(
+            "ALTER TABLE sources ADD COLUMN source_priority INTEGER NOT NULL DEFAULT 3"
+        )
+    if "coverage_key" not in columns:
+        connection.execute("ALTER TABLE sources ADD COLUMN coverage_key TEXT")
+    if "credential_id" not in columns:
+        connection.execute("ALTER TABLE sources ADD COLUMN credential_id TEXT")
+
+    rows = connection.execute(
+        """
+        SELECT source_id, platform, source_type, owner_type, source_purpose,
+               source_priority, coverage_key
+        FROM sources
+        """
+    ).fetchall()
+    for row in rows:
+        is_legacy_row = not row["coverage_key"]
+        source_purpose = infer_source_purpose(
+            platform=row["platform"],
+            source_type=row["source_type"],
+            owner_type=row["owner_type"],
+            explicit=row["source_purpose"],
+        )
+        source_priority = (
+            default_source_priority(source_purpose)
+            if is_legacy_row
+            else (row["source_priority"] or default_source_priority(source_purpose))
+        )
+        coverage_key = row["coverage_key"] or default_coverage_key(
+            row["source_id"],
+            row["platform"],
+        )
+        connection.execute(
+            """
+            UPDATE sources
+            SET source_purpose = ?, source_priority = ?, coverage_key = ?
+            WHERE source_id = ?
+            """,
+            (source_purpose, source_priority, coverage_key, row["source_id"]),
+        )
+
+
+def _migrate_raw_documents_identity_if_needed(connection: sqlite3.Connection) -> None:
+    """Ajoute les colonnes d'identité canonique à raw_documents."""
+    if not _table_exists(connection, "raw_documents"):
+        return
+
+    columns = _column_definitions(connection, "raw_documents")
+    if "content_item_id" not in columns:
+        connection.execute("ALTER TABLE raw_documents ADD COLUMN content_item_id TEXT")
+    if "platform" not in columns:
+        connection.execute("ALTER TABLE raw_documents ADD COLUMN platform TEXT")
+    if "canonical_url" not in columns:
+        connection.execute("ALTER TABLE raw_documents ADD COLUMN canonical_url TEXT")
+    if "canonical_key" not in columns:
+        connection.execute("ALTER TABLE raw_documents ADD COLUMN canonical_key TEXT")
+
+
+def _backfill_content_items_if_needed(connection: sqlite3.Connection) -> None:
+    """Crée et rattache les content_items pour les raw_documents existants."""
+    if not _table_exists(connection, "content_items") or not _table_exists(connection, "raw_documents"):
+        return
+
+    rows = connection.execute(
+        """
+        SELECT
+            rd.raw_document_id,
+            rd.client_id,
+            rd.source_id,
+            rd.external_document_id,
+            rd.raw_payload,
+            rd.raw_metadata,
+            rd.checksum_sha256,
+            rd.platform AS raw_platform,
+            rd.canonical_url AS raw_canonical_url,
+            rd.canonical_key AS raw_canonical_key,
+            s.platform AS source_platform,
+            s.owner_type,
+            s.coverage_key
+        FROM raw_documents rd
+        LEFT JOIN sources s ON s.source_id = rd.source_id
+        ORDER BY rd.created_at ASC, rd.raw_document_id ASC
+        """
+    ).fetchall()
+
+    for row in rows:
+        platform = row["raw_platform"] or row["source_platform"] or "unknown"
+        canonical_url = row["raw_canonical_url"] or extract_canonical_url(
+            raw_payload=row["raw_payload"],
+            raw_metadata=row["raw_metadata"],
+        )
+        content_item_id, canonical_key, canonical_url = resolve_or_create_content_item(
+            connection,
+            client_id=row["client_id"] or DEFAULT_CLIENT_ID,
+            platform=platform,
+            external_content_id=row["external_document_id"],
+            canonical_url=canonical_url,
+            owner_type=row["owner_type"],
+            coverage_key=row["coverage_key"],
+            checksum_sha256=row["checksum_sha256"],
+            fallback_id=row["raw_document_id"],
+        )
+        connection.execute(
+            """
+            UPDATE raw_documents
+            SET content_item_id = ?, platform = ?, canonical_url = ?, canonical_key = ?
+            WHERE raw_document_id = ?
+            """,
+            (
+                content_item_id,
+                platform,
+                canonical_url,
+                row["raw_canonical_key"] or canonical_key,
+                row["raw_document_id"],
+            ),
+        )
+
+
 class DatabaseManager:
     """Gestionnaire de connexion SQLite pour RamyPulse."""
 
@@ -1136,10 +1295,13 @@ class DatabaseManager:
             _migrate_alerts_if_needed(connection)
             _migrate_notifications_if_needed(connection)
             _migrate_recommendations_if_needed(connection)
-            _migrate_campaigns_add_revenue_if_needed(connection)
 
             for statement in _SCHEMA_STATEMENTS.values():
                 connection.execute(statement)
+            _migrate_campaigns_add_revenue_if_needed(connection)
+            _migrate_sources_governance_if_needed(connection)
+            _migrate_raw_documents_identity_if_needed(connection)
+            _backfill_content_items_if_needed(connection)
             _seed_default_client(connection)
             _seed_default_alert_rules(connection)
             _seed_default_client_agent_config(connection)

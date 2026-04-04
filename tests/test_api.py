@@ -595,11 +595,17 @@ class TestAdmin:
             "platform": "facebook",
             "source_type": "managed_page",
             "owner_type": "owned",
+            "source_purpose": "owned_content",
+            "source_priority": 1,
+            "coverage_key": "owned:facebook:test-facebook-page",
         })
         assert r.status_code == 200
         data = r.json()
         assert "source_id" in data
         assert data["source_name"] == "Test Facebook Page"
+        assert data["source_purpose"] == "owned_content"
+        assert data["source_priority"] == 1
+        assert data["coverage_key"] == "owned:facebook:test-facebook-page"
 
     def test_list_sources(self):
         r = client.get("/api/admin/sources")
@@ -637,12 +643,16 @@ class TestAdmin:
 
         r = client.put(f"/api/admin/sources/{sid}", json={
             "is_active": False,
-            "sync_frequency_minutes": 120
+            "sync_frequency_minutes": 120,
+            "source_priority": 2,
+            "coverage_key": "owned:facebook:update-source",
         })
         assert r.status_code == 200
         data = r.json()
         assert data["is_active"] == 0 # SQLite returns 0 for False
         assert data["sync_frequency_minutes"] == 120
+        assert data["source_priority"] == 2
+        assert data["coverage_key"] == "owned:facebook:update-source"
 
     def test_trigger_source_health(self):
         r_create = client.post("/api/admin/sources", json={
@@ -662,24 +672,28 @@ class TestAdmin:
     def test_trigger_source_sync_mock(self):
         r_create = client.post("/api/admin/sources", json={
             "source_name": "Sync Source",
-            "platform": "import",
-            "source_type": "batch_import",
+            "platform": "facebook",
+            "source_type": "managed_page",
             "owner_type": "owned",
+            "source_purpose": "owned_content",
+            "source_priority": 1,
+            "coverage_key": "owned:facebook:sync-source",
         })
         sid = r_create.json()["source_id"]
+        external_document_id = f"{sid}-doc1"
 
         mock_docs = [
             {
-                "external_document_id": "doc1",
+                "external_document_id": external_document_id,
                 "raw_text": "text1",
                 "raw_payload": {},
-                "raw_metadata": {},
+                "raw_metadata": {"source_url": f"https://facebook.com/posts/{external_document_id}"},
                 "collected_at": "2026-01-01T00:00:00Z",
                 "checksum_sha256": "hash1"
             }
         ]
 
-        with patch("core.connectors.batch_import_connector.BatchImportConnector.fetch_documents", return_value=mock_docs):
+        with patch("core.connectors.facebook_connector.FacebookConnector.fetch_documents", return_value=mock_docs):
             r = client.post(f"/api/admin/sources/{sid}/sync", json={
                 "run_mode": "manual"
             })
@@ -687,6 +701,34 @@ class TestAdmin:
             data = r.json()
             assert data["status"] == "success"
             assert data["records_inserted"] == 1
+
+        with _get_connection() as conn:
+            raw_row = conn.execute(
+                """
+                SELECT content_item_id, platform, canonical_url, canonical_key
+                FROM raw_documents
+                WHERE source_id = ?
+                ORDER BY created_at DESC
+                LIMIT 1
+                """,
+                [sid],
+            ).fetchone()
+            item_row = conn.execute(
+                """
+                SELECT platform, coverage_key, external_content_id, canonical_key
+                FROM content_items
+                WHERE content_item_id = ?
+                """,
+                [raw_row["content_item_id"]],
+            ).fetchone()
+
+        assert raw_row["platform"] == "facebook"
+        assert raw_row["canonical_url"] == f"https://facebook.com/posts/{external_document_id}"
+        assert raw_row["canonical_key"] == f"facebook:{external_document_id}"
+        assert item_row["platform"] == "facebook"
+        assert item_row["coverage_key"] == "owned:facebook:sync-source"
+        assert item_row["external_content_id"] == external_document_id
+        assert item_row["canonical_key"] == f"facebook:{external_document_id}"
 
     def test_trigger_source_sync_failure_mock(self):
         r_create = client.post("/api/admin/sources", json={

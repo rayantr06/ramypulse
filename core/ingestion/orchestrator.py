@@ -16,6 +16,14 @@ from core.connectors.google_maps_connector import GoogleMapsConnector
 from core.connectors.instagram_connector import InstagramConnector
 from core.connectors.youtube_connector import YouTubeConnector
 from core.database import DatabaseManager
+from core.ingestion.content_identity import (
+    VALID_SOURCE_PURPOSES,
+    default_coverage_key,
+    default_source_priority,
+    extract_canonical_url,
+    infer_source_purpose,
+    resolve_or_create_content_item,
+)
 from core.normalization.normalizer_pipeline import run_normalization_job
 
 logger = logging.getLogger(__name__)
@@ -72,6 +80,15 @@ class IngestionOrchestrator:
             "is_active": 1 if bool(payload.get("is_active", True)) else 0,
             "sync_frequency_minutes": int(payload.get("sync_frequency_minutes") or 60),
             "freshness_sla_hours": int(payload.get("freshness_sla_hours") or 24),
+            "source_purpose": infer_source_purpose(
+                platform=payload.get("platform"),
+                source_type=payload.get("source_type"),
+                owner_type=payload.get("owner_type"),
+                explicit=payload.get("source_purpose"),
+            ),
+            "source_priority": int(payload.get("source_priority") or 0),
+            "coverage_key": str(payload.get("coverage_key") or "").strip(),
+            "credential_id": payload.get("credential_id"),
             "last_sync_at": payload.get("last_sync_at"),
             "created_at": _now(),
             "updated_at": _now(),
@@ -82,6 +99,15 @@ class IngestionOrchestrator:
             raise ValueError("platform, source_type et owner_type sont requis")
         if source["platform"] not in SUPPORTED_PLATFORMS:
             raise ValueError(f"Plateforme non supportee: {source['platform']}")
+        if source["source_purpose"] not in VALID_SOURCE_PURPOSES:
+            raise ValueError(f"source_purpose invalide: {source['source_purpose']}")
+        if source["source_priority"] <= 0:
+            source["source_priority"] = default_source_priority(source["source_purpose"])
+        if not source["coverage_key"]:
+            source["coverage_key"] = default_coverage_key(
+                source["source_id"],
+                source["platform"],
+            )
 
         with self._get_connection() as connection:
             connection.execute(
@@ -89,8 +115,9 @@ class IngestionOrchestrator:
                 INSERT INTO sources (
                     source_id, client_id, source_name, platform, source_type, owner_type,
                     auth_mode, config_json, is_active, sync_frequency_minutes,
-                    freshness_sla_hours, last_sync_at, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    freshness_sla_hours, source_purpose, source_priority,
+                    coverage_key, credential_id, last_sync_at, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 tuple(source.values()),
             )
@@ -183,16 +210,34 @@ class IngestionOrchestrator:
             inserted = 0
             with self._get_connection() as connection:
                 for document in documents:
+                    canonical_url = extract_canonical_url(
+                        raw_payload=document.get("raw_payload"),
+                        raw_metadata=document.get("raw_metadata"),
+                        explicit_url=document.get("source_url"),
+                    )
+                    raw_document_id = _new_id("raw")
+                    content_item_id, canonical_key, canonical_url = resolve_or_create_content_item(
+                        connection,
+                        client_id=source.get("client_id") or DEFAULT_CLIENT_ID,
+                        platform=source.get("platform"),
+                        external_content_id=document.get("external_document_id"),
+                        canonical_url=canonical_url,
+                        owner_type=source.get("owner_type"),
+                        coverage_key=source.get("coverage_key"),
+                        checksum_sha256=document.get("checksum_sha256"),
+                        fallback_id=raw_document_id,
+                    )
                     connection.execute(
                         """
                         INSERT INTO raw_documents (
                             raw_document_id, client_id, source_id, sync_run_id, external_document_id,
                             raw_payload, raw_text, raw_metadata, checksum_sha256,
+                            content_item_id, platform, canonical_url, canonical_key,
                             collected_at, is_normalized, normalizer_version, created_at
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
                         (
-                            _new_id("raw"),
+                            raw_document_id,
                             source.get("client_id") or DEFAULT_CLIENT_ID,
                             source_id,
                             sync_run_id,
@@ -201,6 +246,10 @@ class IngestionOrchestrator:
                             document.get("raw_text"),
                             json.dumps(document.get("raw_metadata") or {}, ensure_ascii=False, default=str),
                             document.get("checksum_sha256"),
+                            content_item_id,
+                            source.get("platform"),
+                            canonical_url,
+                            canonical_key,
                             document.get("collected_at") or _now(),
                             0,
                             None,

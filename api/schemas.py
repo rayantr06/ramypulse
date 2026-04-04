@@ -262,6 +262,10 @@ class SourceCreate(BaseModel):
     is_active: bool = True
     sync_frequency_minutes: int = 60
     freshness_sla_hours: int = 24
+    source_purpose: str | None = None
+    source_priority: int | None = None
+    coverage_key: str | None = None
+    credential_id: str | None = None
 
 
 class SourceUpdate(BaseModel):
@@ -271,6 +275,10 @@ class SourceUpdate(BaseModel):
     config_json: dict | None = None
     sync_frequency_minutes: int | None = None
     freshness_sla_hours: int | None = None
+    source_purpose: str | None = None
+    source_priority: int | None = None
+    coverage_key: str | None = None
+    credential_id: str | None = None
 
 
 class SourceSyncTrigger(BaseModel):
