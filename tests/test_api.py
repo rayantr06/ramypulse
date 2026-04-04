@@ -637,11 +637,17 @@ class TestAdmin:
             "platform": "facebook",
             "source_type": "managed_page",
             "owner_type": "owned",
+            "source_purpose": "owned_content",
+            "source_priority": 1,
+            "coverage_key": "owned:facebook:test-facebook-page",
         })
         assert r.status_code == 200
         data = r.json()
         assert "source_id" in data
         assert data["source_name"] == "Test Facebook Page"
+        assert data["source_purpose"] == "owned_content"
+        assert data["source_priority"] == 1
+        assert data["coverage_key"] == "owned:facebook:test-facebook-page"
 
     def test_list_sources(self):
         r = client.get("/api/admin/sources")
@@ -679,12 +685,16 @@ class TestAdmin:
 
         r = client.put(f"/api/admin/sources/{sid}", json={
             "is_active": False,
-            "sync_frequency_minutes": 120
+            "sync_frequency_minutes": 120,
+            "source_priority": 2,
+            "coverage_key": "owned:facebook:update-source",
         })
         assert r.status_code == 200
         data = r.json()
         assert data["is_active"] == 0 # SQLite returns 0 for False
         assert data["sync_frequency_minutes"] == 120
+        assert data["source_priority"] == 2
+        assert data["coverage_key"] == "owned:facebook:update-source"
 
     def test_trigger_source_health(self):
         r_create = client.post("/api/admin/sources", json={
@@ -704,24 +714,28 @@ class TestAdmin:
     def test_trigger_source_sync_mock(self):
         r_create = client.post("/api/admin/sources", json={
             "source_name": "Sync Source",
-            "platform": "import",
-            "source_type": "batch_import",
+            "platform": "facebook",
+            "source_type": "managed_page",
             "owner_type": "owned",
+            "source_purpose": "owned_content",
+            "source_priority": 1,
+            "coverage_key": "owned:facebook:sync-source",
         })
         sid = r_create.json()["source_id"]
+        external_document_id = f"{sid}-doc1"
 
         mock_docs = [
             {
-                "external_document_id": "doc1",
+                "external_document_id": external_document_id,
                 "raw_text": "text1",
                 "raw_payload": {},
-                "raw_metadata": {},
+                "raw_metadata": {"source_url": f"https://facebook.com/posts/{external_document_id}"},
                 "collected_at": "2026-01-01T00:00:00Z",
                 "checksum_sha256": "hash1"
             }
         ]
 
-        with patch("core.connectors.batch_import_connector.BatchImportConnector.fetch_documents", return_value=mock_docs):
+        with patch("core.connectors.facebook_connector.FacebookConnector.fetch_documents", return_value=mock_docs):
             r = client.post(f"/api/admin/sources/{sid}/sync", json={
                 "run_mode": "manual"
             })
@@ -729,6 +743,34 @@ class TestAdmin:
             data = r.json()
             assert data["status"] == "success"
             assert data["records_inserted"] == 1
+
+        with _get_connection() as conn:
+            raw_row = conn.execute(
+                """
+                SELECT content_item_id, platform, canonical_url, canonical_key
+                FROM raw_documents
+                WHERE source_id = ?
+                ORDER BY created_at DESC
+                LIMIT 1
+                """,
+                [sid],
+            ).fetchone()
+            item_row = conn.execute(
+                """
+                SELECT platform, coverage_key, external_content_id, canonical_key
+                FROM content_items
+                WHERE content_item_id = ?
+                """,
+                [raw_row["content_item_id"]],
+            ).fetchone()
+
+        assert raw_row["platform"] == "facebook"
+        assert raw_row["canonical_url"] == f"https://facebook.com/posts/{external_document_id}"
+        assert raw_row["canonical_key"] == f"facebook:{external_document_id}"
+        assert item_row["platform"] == "facebook"
+        assert item_row["coverage_key"] == "owned:facebook:sync-source"
+        assert item_row["external_content_id"] == external_document_id
+        assert item_row["canonical_key"] == f"facebook:{external_document_id}"
 
     def test_trigger_source_sync_failure_mock(self):
         r_create = client.post("/api/admin/sources", json={
@@ -776,3 +818,524 @@ class TestAdmin:
             })
             assert r.status_code == 200
             assert r.json()["status"] == "success"
+
+    def test_scheduler_tick_runs_due_priority_source_only(self):
+        client_id = f"client-{uuid.uuid4().hex[:8]}"
+        coverage_key = f"owned:facebook:scheduler-priority-{uuid.uuid4().hex[:8]}"
+        r_primary = client.post("/api/admin/sources", json={
+            "client_id": client_id,
+            "source_name": "Scheduler Primary",
+            "platform": "facebook",
+            "source_type": "managed_page",
+            "owner_type": "owned",
+            "source_purpose": "owned_content",
+            "source_priority": 1,
+            "coverage_key": coverage_key,
+        })
+        r_fallback = client.post("/api/admin/sources", json={
+            "client_id": client_id,
+            "source_name": "Scheduler Fallback",
+            "platform": "facebook",
+            "source_type": "managed_page",
+            "owner_type": "owned",
+            "source_purpose": "owned_content",
+            "source_priority": 2,
+            "coverage_key": coverage_key,
+        })
+        primary_id = r_primary.json()["source_id"]
+        fallback_id = r_fallback.json()["source_id"]
+
+        with patch(
+            "core.ingestion.scheduler.IngestionOrchestrator.run_source_sync",
+            return_value={
+                "status": "success",
+                "records_fetched": 1,
+                "records_inserted": 1,
+                "records_failed": 0,
+            },
+        ) as mocked_run:
+            r = client.post(f"/api/admin/scheduler/tick?client_id={client_id}")
+
+        assert r.status_code == 200
+        data = r.json()
+        assert data["groups_processed"] == 1
+        assert data["sources_scheduled"] == 1
+        assert data["groups"][0]["coverage_key"] == coverage_key
+        assert data["groups"][0]["winner_source_id"] == primary_id
+        assert [call.kwargs["source_id"] for call in mocked_run.call_args_list] == [primary_id]
+        assert fallback_id not in [call.kwargs["source_id"] for call in mocked_run.call_args_list]
+
+    def test_scheduler_tick_falls_back_when_primary_fails(self):
+        client_id = f"client-{uuid.uuid4().hex[:8]}"
+        coverage_key = f"owned:facebook:scheduler-fallback-{uuid.uuid4().hex[:8]}"
+        r_primary = client.post("/api/admin/sources", json={
+            "client_id": client_id,
+            "source_name": "Fallback Primary",
+            "platform": "facebook",
+            "source_type": "managed_page",
+            "owner_type": "owned",
+            "source_purpose": "owned_content",
+            "source_priority": 1,
+            "coverage_key": coverage_key,
+        })
+        r_fallback = client.post("/api/admin/sources", json={
+            "client_id": client_id,
+            "source_name": "Fallback Secondary",
+            "platform": "facebook",
+            "source_type": "managed_page",
+            "owner_type": "owned",
+            "source_purpose": "owned_content",
+            "source_priority": 2,
+            "coverage_key": coverage_key,
+        })
+        primary_id = r_primary.json()["source_id"]
+        fallback_id = r_fallback.json()["source_id"]
+
+        def _run_source_sync(*, source_id, **kwargs):
+            if source_id == primary_id:
+                raise RuntimeError("API unavailable")
+            return {
+                "status": "success",
+                "records_fetched": 1,
+                "records_inserted": 1,
+                "records_failed": 0,
+            }
+
+        with patch(
+            "core.ingestion.scheduler.IngestionOrchestrator.run_source_sync",
+            side_effect=_run_source_sync,
+        ) as mocked_run:
+            r = client.post(f"/api/admin/scheduler/tick?client_id={client_id}")
+
+        assert r.status_code == 200
+        data = r.json()
+        assert data["sources_scheduled"] == 1
+        assert data["groups"][0]["winner_source_id"] == fallback_id
+        assert [call.kwargs["source_id"] for call in mocked_run.call_args_list] == [primary_id, fallback_id]
+        assert data["groups"][0]["attempts"][0]["status"] == "failed"
+        assert "API unavailable" in data["groups"][0]["attempts"][0]["error"]
+
+    def test_scheduler_tick_skips_not_due_sources(self):
+        client_id = f"client-{uuid.uuid4().hex[:8]}"
+        coverage_key = f"owned:facebook:scheduler-fresh-{uuid.uuid4().hex[:8]}"
+        r_source = client.post("/api/admin/sources", json={
+            "client_id": client_id,
+            "source_name": "Fresh Source",
+            "platform": "facebook",
+            "source_type": "managed_page",
+            "owner_type": "owned",
+            "source_purpose": "owned_content",
+            "source_priority": 1,
+            "coverage_key": coverage_key,
+            "sync_frequency_minutes": 120,
+        })
+        source_id = r_source.json()["source_id"]
+        with _get_connection() as conn:
+            conn.execute(
+                "UPDATE sources SET last_sync_at = ? WHERE source_id = ? AND client_id = ?",
+                ["2026-04-03T11:50:00+00:00", source_id, client_id],
+            )
+            conn.commit()
+
+        with patch("core.ingestion.scheduler.IngestionOrchestrator.run_source_sync") as mocked_run:
+            r = client.post(f"/api/admin/scheduler/tick?client_id={client_id}&now=2026-04-03T12:00:00%2B00:00")
+
+        assert r.status_code == 200
+        data = r.json()
+        assert data["groups_processed"] == 0
+        assert data["sources_scheduled"] == 0
+        assert mocked_run.call_count == 0
+
+    def test_trigger_source_sync_same_content_across_sources_shares_content_item(self):
+        coverage_key = f"owned:facebook:shared-content-{uuid.uuid4().hex[:8]}"
+        source_ids = []
+        for name, priority in (("Shared A", 1), ("Shared B", 2)):
+            response = client.post("/api/admin/sources", json={
+                "source_name": name,
+                "platform": "facebook",
+                "source_type": "managed_page",
+                "owner_type": "owned",
+                "source_purpose": "owned_content",
+                "source_priority": priority,
+                "coverage_key": coverage_key,
+            })
+            source_ids.append(response.json()["source_id"])
+
+        shared_doc = {
+            "external_document_id": f"{coverage_key}-post-1",
+            "raw_text": "shared text",
+            "raw_payload": {},
+            "raw_metadata": {"source_url": f"https://facebook.com/posts/{coverage_key}-post-1"},
+            "collected_at": "2026-01-01T00:00:00Z",
+            "checksum_sha256": f"hash-{coverage_key}",
+        }
+
+        with patch("core.connectors.facebook_connector.FacebookConnector.fetch_documents", return_value=[shared_doc]):
+            for source_id in source_ids:
+                response = client.post(f"/api/admin/sources/{source_id}/sync", json={"run_mode": "manual"})
+                assert response.status_code == 200
+
+        with _get_connection() as conn:
+            content_items = conn.execute(
+                """
+                SELECT content_item_id
+                FROM content_items
+                WHERE canonical_key = ?
+                """,
+                [f"facebook:{shared_doc['external_document_id']}"],
+            ).fetchall()
+            raw_documents = conn.execute(
+                """
+                SELECT DISTINCT content_item_id
+                FROM raw_documents
+                WHERE canonical_key = ?
+                """,
+                [f"facebook:{shared_doc['external_document_id']}"],
+            ).fetchall()
+
+        assert len(content_items) == 1
+        assert len(raw_documents) == 1
+
+
+# ---------------------------------------------------------------------------
+# Social Metrics
+# ---------------------------------------------------------------------------
+
+class TestSocialMetrics:
+    """Tests des endpoints /api/social-metrics/."""
+
+    def test_create_credential(self):
+        """Crée un credential Instagram brand."""
+        r = client.post("/api/social-metrics/credentials", json={
+            "entity_type": "brand",
+            "entity_name": "Ramy Official",
+            "platform": "instagram",
+            "account_id": "12345678",
+            "access_token": "EAAtest123",
+            "app_id": "app-001",
+        })
+        assert r.status_code == 201
+        data = r.json()
+        assert "credential_id" in data
+        assert data["status"] == "created"
+
+    def test_list_credentials(self):
+        """Liste les credentials actifs."""
+        client.post("/api/social-metrics/credentials", json={
+            "entity_type": "influencer",
+            "entity_name": "Influenceur Test",
+            "platform": "instagram",
+        })
+        r = client.get("/api/social-metrics/credentials")
+        assert r.status_code == 200
+        assert isinstance(r.json(), list)
+        assert len(r.json()) >= 1
+
+    def test_deactivate_credential(self):
+        """Désactive un credential."""
+        r_create = client.post("/api/social-metrics/credentials", json={
+            "entity_type": "brand",
+            "entity_name": "Ramy TikTok",
+            "platform": "tiktok",
+        })
+        cid = r_create.json()["credential_id"]
+        r = client.delete(f"/api/social-metrics/credentials/{cid}")
+        assert r.status_code == 204
+
+    def test_deactivate_credential_404(self):
+        """Retourne 404 pour un credential inexistant."""
+        r = client.delete("/api/social-metrics/credentials/cred-inexistant")
+        assert r.status_code == 404
+
+    def test_add_campaign_post(self):
+        """Lie un post Instagram à une campagne."""
+        campaign_id = _seed_campaign("Test Social Campaign")
+        r = client.post(f"/api/social-metrics/campaigns/{campaign_id}/posts", json={
+            "platform": "instagram",
+            "post_platform_id": "17854360229135492",
+            "post_url": "https://www.instagram.com/p/ABC123/",
+            "entity_type": "brand",
+            "entity_name": "Ramy Official",
+        })
+        assert r.status_code == 201
+        data = r.json()
+        assert "post_id" in data
+        assert data["campaign_id"] == campaign_id
+
+    def test_list_campaign_posts(self):
+        """Liste les posts liés à une campagne."""
+        campaign_id = _seed_campaign("Campaign Posts List")
+        client.post(f"/api/social-metrics/campaigns/{campaign_id}/posts", json={
+            "platform": "instagram",
+            "post_platform_id": "post-abc-001",
+        })
+        r = client.get(f"/api/social-metrics/campaigns/{campaign_id}/posts")
+        assert r.status_code == 200
+        posts = r.json()
+        assert isinstance(posts, list)
+        assert len(posts) == 1
+        assert posts[0]["post_platform_id"] == "post-abc-001"
+
+    def test_get_campaign_engagement_empty(self):
+        """Retourne une structure vide si aucun post lié."""
+        campaign_id = _seed_campaign("Empty Engagement Campaign")
+        r = client.get(f"/api/social-metrics/campaigns/{campaign_id}")
+        assert r.status_code == 200
+        data = r.json()
+        assert data["campaign_id"] == campaign_id
+        assert data["post_count"] == 0
+        assert data["engagement_rate"] is None
+        assert data["roi_pct"] is None
+
+    def test_get_campaign_engagement_404(self):
+        """Retourne 404 pour une campagne inexistante."""
+        r = client.get("/api/social-metrics/campaigns/camp-does-not-exist")
+        assert r.status_code == 404
+
+    def test_add_manual_metrics(self):
+        """Saisie manuelle des métriques sur un post existant."""
+        campaign_id = _seed_campaign("Manual Metrics Campaign")
+        r_post = client.post(f"/api/social-metrics/campaigns/{campaign_id}/posts", json={
+            "platform": "instagram",
+            "post_platform_id": "manual-post-001",
+        })
+        post_id = r_post.json()["post_id"]
+
+        r = client.post(f"/api/social-metrics/posts/{post_id}/metrics/manual", json={
+            "likes": 1500,
+            "comments": 120,
+            "shares": 45,
+            "reach": 28000,
+            "impressions": 35000,
+        })
+        assert r.status_code == 200
+        data = r.json()
+        assert "metric_id" in data
+        assert data["post_id"] == post_id
+
+    def test_engagement_rate_calculated(self):
+        """Engagement rate calculé correctement après saisie manuelle."""
+        campaign_id = _seed_campaign("Engagement Rate Test")
+        r_post = client.post(f"/api/social-metrics/campaigns/{campaign_id}/posts", json={
+            "platform": "instagram",
+            "post_platform_id": "engrate-post-001",
+        })
+        post_id = r_post.json()["post_id"]
+
+        client.post(f"/api/social-metrics/posts/{post_id}/metrics/manual", json={
+            "likes": 100,
+            "comments": 20,
+            "shares": 5,
+            "reach": 5000,
+        })
+
+        r = client.get(f"/api/social-metrics/campaigns/{campaign_id}")
+        assert r.status_code == 200
+        data = r.json()
+        assert data["engagement_rate"] == pytest.approx(2.5, abs=0.01)
+
+    def test_set_campaign_revenue(self):
+        """Renseigne le revenue_dza d'une campagne."""
+        campaign_id = _seed_campaign("Revenue Campaign")
+        r = client.patch(f"/api/social-metrics/campaigns/{campaign_id}/revenue", json={
+            "revenue_dza": 5_000_000
+        })
+        assert r.status_code == 200
+        data = r.json()
+        assert data["revenue_dza"] == 5_000_000
+
+    def test_roi_calculated_after_revenue(self):
+        """ROI calculé correctement quand budget et revenue sont renseignés."""
+        campaign_id = _seed_campaign("ROI Campaign")
+        with _get_connection() as conn:
+            conn.execute(
+                "UPDATE campaigns SET budget_dza = 1000000 WHERE campaign_id = ?",
+                [campaign_id],
+            )
+            conn.commit()
+
+        client.patch(f"/api/social-metrics/campaigns/{campaign_id}/revenue", json={
+            "revenue_dza": 1_500_000
+        })
+
+        r = client.get(f"/api/social-metrics/campaigns/{campaign_id}")
+        assert r.status_code == 200
+        data = r.json()
+        assert data["roi_pct"] == pytest.approx(50.0, abs=0.1)
+
+    def test_get_campaign_engagement_includes_sentiment_context(self):
+        """Le résumé campagne doit joindre engagement et signaux enrichis du même post."""
+        campaign_id = _seed_campaign("Campaign Sentiment Join")
+        post_platform_id = f"fb-sent-{uuid.uuid4().hex[:8]}"
+        post_url = f"https://facebook.com/posts/{post_platform_id}"
+
+        r_post = client.post(f"/api/social-metrics/campaigns/{campaign_id}/posts", json={
+            "platform": "facebook",
+            "post_platform_id": post_platform_id,
+            "post_url": post_url,
+            "entity_type": "brand",
+            "entity_name": "Ramy Official",
+        })
+        post_id = r_post.json()["post_id"]
+
+        client.post(f"/api/social-metrics/posts/{post_id}/metrics/manual", json={
+            "likes": 200,
+            "comments": 40,
+            "shares": 10,
+            "reach": 4000,
+        })
+
+        source_id = f"src-sent-{uuid.uuid4().hex[:8]}"
+        content_item_id = f"cnt-sent-{uuid.uuid4().hex[:8]}"
+        raw_document_id = f"raw-sent-{uuid.uuid4().hex[:8]}"
+        normalized_record_id = f"norm-sent-{uuid.uuid4().hex[:8]}"
+
+        with _get_connection() as conn:
+            conn.execute(
+                """
+                INSERT INTO sources (
+                    source_id, client_id, source_name, platform, source_type, owner_type,
+                    auth_mode, config_json, is_active, sync_frequency_minutes,
+                    freshness_sla_hours, source_purpose, source_priority, coverage_key,
+                    credential_id, last_sync_at, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    source_id,
+                    "ramy_client_001",
+                    "Sentiment Source",
+                    "facebook",
+                    "managed_page",
+                    "owned",
+                    None,
+                    "{}",
+                    1,
+                    60,
+                    24,
+                    "owned_content",
+                    1,
+                    "owned:facebook:campaign-sentiment",
+                    None,
+                    None,
+                    "2026-04-03T10:00:00Z",
+                    "2026-04-03T10:00:00Z",
+                ),
+            )
+            conn.execute(
+                """
+                INSERT INTO content_items (
+                    content_item_id, client_id, platform, external_content_id,
+                    canonical_url, canonical_key, owner_type, coverage_key,
+                    created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    content_item_id,
+                    "ramy_client_001",
+                    "facebook",
+                    post_platform_id,
+                    post_url,
+                    f"facebook:{post_platform_id}",
+                    "owned",
+                    "owned:facebook:campaign-sentiment",
+                    "2026-04-03T10:00:00Z",
+                    "2026-04-03T10:00:00Z",
+                ),
+            )
+            conn.execute(
+                """
+                INSERT INTO raw_documents (
+                    raw_document_id, client_id, source_id, sync_run_id, external_document_id,
+                    raw_payload, raw_text, raw_metadata, checksum_sha256,
+                    content_item_id, platform, canonical_url, canonical_key,
+                    collected_at, is_normalized, normalizer_version, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    raw_document_id,
+                    "ramy_client_001",
+                    source_id,
+                    "run-sent-1",
+                    post_platform_id,
+                    "{}",
+                    "Le goût est mauvais",
+                    json.dumps({"source_url": post_url}),
+                    f"sha-{post_platform_id}",
+                    content_item_id,
+                    "facebook",
+                    post_url,
+                    f"facebook:{post_platform_id}",
+                    "2026-04-03T10:00:00Z",
+                    1,
+                    "wave5.2-local",
+                    "2026-04-03T10:00:00Z",
+                ),
+            )
+            conn.execute(
+                """
+                INSERT INTO normalized_records (
+                    normalized_record_id, client_id, source_id, raw_document_id,
+                    text, text_original, channel, source_url, published_at, language,
+                    script_detected, normalized_payload, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    normalized_record_id,
+                    "ramy_client_001",
+                    source_id,
+                    raw_document_id,
+                    "Le goût est mauvais",
+                    "Le goût est mauvais",
+                    "facebook",
+                    post_url,
+                    "2026-04-03T10:00:00Z",
+                    "fr",
+                    "latin",
+                    "{}",
+                    "2026-04-03T10:00:00Z",
+                ),
+            )
+            conn.execute(
+                """
+                INSERT INTO enriched_signals (
+                    signal_id, client_id, normalized_record_id, source_id, sentiment_label,
+                    confidence, aspect, aspects, aspect_sentiments, brand, competitor,
+                    product, product_line, sku, wilaya, region_id, distributor_id,
+                    source_url, channel, event_timestamp, normalizer_version, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    f"sig-sent-{uuid.uuid4().hex[:8]}",
+                    "ramy_client_001",
+                    normalized_record_id,
+                    source_id,
+                    "negatif",
+                    0.88,
+                    "gout",
+                    '["gout"]',
+                    "[]",
+                    "Ramy",
+                    None,
+                    "Ramy Citron",
+                    "Citron",
+                    None,
+                    "Alger",
+                    None,
+                    None,
+                    post_url,
+                    "facebook",
+                    "2026-04-03T10:00:00Z",
+                    "wave5.2-local",
+                    "2026-04-03T10:00:00Z",
+                ),
+            )
+            conn.commit()
+
+        r = client.get(f"/api/social-metrics/campaigns/{campaign_id}")
+        assert r.status_code == 200
+        data = r.json()
+        assert data["signal_count"] == 1
+        assert data["sentiment_breakdown"]["negatif"] == 1
+        assert "gout" in data["negative_aspects"]
+        assert data["top_performer"]["signal_count"] == 1
+        assert data["top_performer"]["sentiment_breakdown"]["negatif"] == 1

@@ -97,6 +97,7 @@ class CampaignCreate(BaseModel):
     end_date: str | None = None
     pre_window_days: int = 14
     post_window_days: int = 14
+    revenue_dza: int | None = None
 
 
 class CampaignStatusUpdate(BaseModel):
@@ -138,6 +139,7 @@ class CampaignResponse(BaseModel):
     end_date: str | None = None
     pre_window_days: int | None = None
     post_window_days: int | None = None
+    revenue_dza: int | None = None
     status: str | None = None
     created_at: str | None = None
     updated_at: str | None = None
@@ -260,6 +262,10 @@ class SourceCreate(BaseModel):
     is_active: bool = True
     sync_frequency_minutes: int = 60
     freshness_sla_hours: int = 24
+    source_purpose: str | None = None
+    source_priority: int | None = None
+    coverage_key: str | None = None
+    credential_id: str | None = None
 
 
 class SourceUpdate(BaseModel):
@@ -269,6 +275,10 @@ class SourceUpdate(BaseModel):
     config_json: dict | None = None
     sync_frequency_minutes: int | None = None
     freshness_sla_hours: int | None = None
+    source_purpose: str | None = None
+    source_priority: int | None = None
+    coverage_key: str | None = None
+    credential_id: str | None = None
 
 
 class SourceSyncTrigger(BaseModel):
@@ -297,3 +307,53 @@ class WatchlistUpdate(BaseModel):
     scope_type: str | None = None
     filters: dict | None = None
     is_active: bool | None = None
+
+
+# ---------------------------------------------------------------------------
+# Social Metrics
+# ---------------------------------------------------------------------------
+
+class CredentialCreate(BaseModel):
+    entity_type: str
+    entity_name: str
+    platform: str
+    account_id: str | None = None
+    access_token: str | None = None
+    app_id: str | None = None
+    app_secret: str | None = None
+    extra_config: dict = Field(default_factory=dict)
+
+
+class CredentialResponse(BaseModel):
+    credential_id: str
+    entity_type: str
+    entity_name: str
+    platform: str
+    account_id: str | None = None
+    app_id: str | None = None
+    is_active: bool = True
+    created_at: str | None = None
+    updated_at: str | None = None
+
+
+class CampaignPostAdd(BaseModel):
+    platform: str
+    post_platform_id: str
+    post_url: str | None = None
+    entity_type: str = "brand"
+    entity_name: str | None = None
+    credential_id: str | None = None
+
+
+class ManualMetricsInput(BaseModel):
+    likes: int = 0
+    comments: int = 0
+    shares: int = 0
+    views: int = 0
+    reach: int = 0
+    impressions: int = 0
+    saves: int = 0
+
+
+class CampaignRevenuePatch(BaseModel):
+    revenue_dza: int = Field(ge=0)

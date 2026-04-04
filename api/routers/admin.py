@@ -18,6 +18,7 @@ from api.schemas import (
 )
 from core.ingestion.health_checker import compute_source_health
 from core.ingestion.orchestrator import IngestionOrchestrator
+from core.ingestion.scheduler import run_due_syncs
 from core.ingestion.source_admin_service import SourceAdminService
 
 logger = logging.getLogger(__name__)
@@ -176,4 +177,17 @@ def trigger_normalization(payload: NormalizationTrigger):
         )
     except Exception as e:
         logger.error("Erreur trigger_normalization: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/scheduler/tick")
+def scheduler_tick(
+    client_id: str = Query(DEFAULT_CLIENT_ID),
+    now: str | None = Query(None),
+):
+    """Exécute les synchronisations dues avec priorité/fallback par coverage_key."""
+    try:
+        return run_due_syncs(client_id=client_id, now=now)
+    except Exception as e:
+        logger.error("Erreur scheduler_tick: %s", e)
         raise HTTPException(status_code=500, detail=str(e))

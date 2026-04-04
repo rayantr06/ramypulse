@@ -38,6 +38,10 @@ EXPECTED_TABLES = {
     "notifications",
     "source_health_snapshots",
     "audit_log",
+    "platform_credentials",
+    "campaign_posts",
+    "post_engagement_metrics",
+    "content_items",
 }
 
 
@@ -176,6 +180,204 @@ def test_competitors_schema_aligne_prd_v6() -> None:
     columns = _column_definitions(db, "competitors")
 
     assert columns["competitor_id"] == "TEXT"
+    db.close()
+
+
+def test_create_tables_ajoute_gouvernance_aux_sources_existantes(tmp_path) -> None:
+    """La migration sources ajoute et backfill les champs de gouvernance."""
+    db_path = tmp_path / "legacy_sources.db"
+    db = DatabaseManager(db_path)
+    connection = db.connection
+
+    connection.execute(
+        """
+        CREATE TABLE sources (
+            source_id TEXT PRIMARY KEY,
+            client_id TEXT NOT NULL DEFAULT 'ramy_client_001',
+            source_name TEXT NOT NULL,
+            platform TEXT NOT NULL,
+            source_type TEXT NOT NULL,
+            owner_type TEXT NOT NULL,
+            auth_mode TEXT,
+            config_json TEXT DEFAULT '{}',
+            is_active INTEGER NOT NULL DEFAULT 1,
+            sync_frequency_minutes INTEGER DEFAULT 60,
+            freshness_sla_hours INTEGER DEFAULT 24,
+            last_sync_at TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+    connection.execute(
+        """
+        INSERT INTO sources (
+            source_id, client_id, source_name, platform, source_type, owner_type,
+            config_json, is_active, sync_frequency_minutes, freshness_sla_hours,
+            created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            "src-legacy",
+            "ramy_client_001",
+            "Legacy Source",
+            "facebook",
+            "managed_page",
+            "owned",
+            "{}",
+            1,
+            60,
+            24,
+            "2026-04-01T00:00:00Z",
+            "2026-04-01T00:00:00Z",
+        ),
+    )
+    connection.commit()
+
+    db.create_tables()
+
+    columns = _column_definitions(db, "sources")
+    assert "source_purpose" in columns
+    assert "source_priority" in columns
+    assert "coverage_key" in columns
+    assert "credential_id" in columns
+
+    row = db.connection.execute(
+        """
+        SELECT source_purpose, source_priority, coverage_key, credential_id
+        FROM sources
+        WHERE source_id = ?
+        """,
+        ("src-legacy",),
+    ).fetchone()
+
+    assert row["source_purpose"] == "owned_content"
+    assert row["source_priority"] == 1
+    assert row["coverage_key"] == "legacy:facebook:src-legacy"
+    assert row["credential_id"] is None
+    db.close()
+
+
+def test_create_tables_backfill_content_items_depuis_raw_documents(tmp_path) -> None:
+    """Le backfill doit créer un content_item unique pour un même contenu logique."""
+    db_path = tmp_path / "legacy_content_items.db"
+    db = DatabaseManager(db_path)
+    connection = db.connection
+
+    connection.execute(
+        """
+        CREATE TABLE sources (
+            source_id TEXT PRIMARY KEY,
+            client_id TEXT NOT NULL DEFAULT 'ramy_client_001',
+            source_name TEXT NOT NULL,
+            platform TEXT NOT NULL,
+            source_type TEXT NOT NULL,
+            owner_type TEXT NOT NULL,
+            auth_mode TEXT,
+            config_json TEXT DEFAULT '{}',
+            is_active INTEGER NOT NULL DEFAULT 1,
+            sync_frequency_minutes INTEGER DEFAULT 60,
+            freshness_sla_hours INTEGER DEFAULT 24,
+            last_sync_at TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE TABLE raw_documents (
+            raw_document_id TEXT PRIMARY KEY,
+            client_id TEXT NOT NULL DEFAULT 'ramy_client_001',
+            source_id TEXT NOT NULL,
+            sync_run_id TEXT,
+            external_document_id TEXT,
+            raw_payload TEXT,
+            raw_text TEXT,
+            raw_metadata TEXT DEFAULT '{}',
+            checksum_sha256 TEXT,
+            collected_at TEXT NOT NULL,
+            is_normalized INTEGER DEFAULT 0,
+            normalizer_version TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+    connection.execute(
+        """
+        INSERT INTO sources (
+            source_id, client_id, source_name, platform, source_type, owner_type,
+            config_json, is_active, sync_frequency_minutes, freshness_sla_hours,
+            created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            "src-facebook",
+            "ramy_client_001",
+            "Facebook Ramy",
+            "facebook",
+            "managed_page",
+            "owned",
+            "{}",
+            1,
+            60,
+            24,
+            "2026-04-01T00:00:00Z",
+            "2026-04-01T00:00:00Z",
+        ),
+    )
+    for raw_document_id in ("raw-1", "raw-2"):
+        connection.execute(
+            """
+            INSERT INTO raw_documents (
+                raw_document_id, client_id, source_id, sync_run_id, external_document_id,
+                raw_payload, raw_text, raw_metadata, checksum_sha256,
+                collected_at, is_normalized, normalizer_version, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                raw_document_id,
+                "ramy_client_001",
+                "src-facebook",
+                "run-1",
+                "fb-post-001",
+                "{}",
+                "same post",
+                '{"source_url":"https://facebook.com/posts/1"}',
+                "checksum-001",
+                "2026-04-01T00:00:00Z",
+                0,
+                None,
+                "2026-04-01T00:00:00Z",
+            ),
+        )
+    connection.commit()
+
+    db.create_tables()
+
+    items = db.connection.execute(
+        """
+        SELECT content_item_id, platform, external_content_id, canonical_url, canonical_key
+        FROM content_items
+        """
+    ).fetchall()
+    assert len(items) == 1
+    assert items[0]["platform"] == "facebook"
+    assert items[0]["external_content_id"] == "fb-post-001"
+    assert items[0]["canonical_url"] == "https://facebook.com/posts/1"
+    assert items[0]["canonical_key"] == "facebook:fb-post-001"
+
+    raw_rows = db.connection.execute(
+        """
+        SELECT raw_document_id, content_item_id, platform, canonical_url, canonical_key
+        FROM raw_documents
+        ORDER BY raw_document_id
+        """
+    ).fetchall()
+    assert raw_rows[0]["content_item_id"] == raw_rows[1]["content_item_id"]
+    assert raw_rows[0]["platform"] == "facebook"
+    assert raw_rows[0]["canonical_key"] == "facebook:fb-post-001"
+    assert raw_rows[1]["canonical_url"] == "https://facebook.com/posts/1"
     db.close()
 
 
