@@ -207,9 +207,9 @@ WEEKLY_REPORT_SLACK_WEBHOOK_REFERENCE: str = os.getenv("WEEKLY_REPORT_SLACK_WEBH
 # Used only for pre-generation cost previews in the UI.
 LLM_INPUT_PRICING_USD_PER_1K_TOKENS: dict[str, dict[str, float]] = {
     "anthropic": {
-        "claude-opus-4-6": 0.005,
+        "claude-opus-4-6": 0.015,
         "claude-sonnet-4-6": 0.003,
-        "claude-haiku-4-5-20251001": 0.001,
+        "claude-haiku-4-5-20251001": 0.0008,
     },
     "openai": {
         "gpt-4o": 0.0025,
