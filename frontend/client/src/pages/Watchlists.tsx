@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
 import { apiRequest } from "@/lib/queryClient";
 import { mapWatchlist, mapWatchlistMetrics } from "@/lib/apiMappings";
@@ -90,6 +90,14 @@ function ScopeBadge({ scope }: { scope: string }) {
 export default function Watchlists() {
   const [tab, setTab] = useState<TabFilter>("Toutes");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    name: "",
+    description: "",
+    scope_type: "product",
+  });
+
+  const queryClient = useQueryClient();
 
   const watchlistsQuery = useQuery({
     queryKey: ["/api/watchlists"],
@@ -136,6 +144,34 @@ export default function Watchlists() {
   });
 
   const metricsData = metricsQuery.data;
+
+  const createMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/watchlists", {
+        name: createForm.name.trim(),
+        description: createForm.description.trim(),
+        scope_type: createForm.scope_type,
+        filters: {},
+      });
+      return res.json();
+    },
+    onSuccess: (data: { watchlist_id: string }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/watchlists"] });
+      setShowCreateForm(false);
+      setCreateForm({ name: "", description: "", scope_type: "product" });
+      setSelectedId(data.watchlist_id);
+    },
+  });
+
+  const deactivateMutation = useMutation({
+    mutationFn: async (watchlistId: string) => {
+      await apiRequest("DELETE", `/api/watchlists/${watchlistId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/watchlists"] });
+      setSelectedId(null);
+    },
+  });
 
   return (
     <AppShell
@@ -233,14 +269,63 @@ export default function Watchlists() {
                 </div>
               ))}
 
-              <div className="group border-2 border-dashed border-white/5 hover:border-primary/20 hover:bg-primary/5 transition-all duration-300 p-5 rounded-xl flex flex-col items-center justify-center gap-3 cursor-pointer">
-                <div className="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <span className="material-symbols-outlined text-primary">add</span>
+              {showCreateForm ? (
+                <div className="border-2 border-primary/20 bg-primary/5 p-5 rounded-xl flex flex-col gap-4">
+                  <p className="text-xs font-bold text-primary uppercase tracking-widest">Nouvelle watchlist</p>
+                  <input
+                    className="w-full bg-surface-container-highest border-none rounded-sm text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
+                    placeholder="Nom de la watchlist"
+                    value={createForm.name}
+                    onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+                    data-testid="input-watchlist-name"
+                  />
+                  <input
+                    className="w-full bg-surface-container-highest border-none rounded-sm text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
+                    placeholder="Description (optionnel)"
+                    value={createForm.description}
+                    onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
+                  />
+                  <select
+                    className="w-full bg-surface-container-highest border-none rounded-sm text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
+                    value={createForm.scope_type}
+                    onChange={(e) => setCreateForm({ ...createForm, scope_type: e.target.value })}
+                  >
+                    <option value="product">Produit</option>
+                    <option value="region">Région</option>
+                    <option value="channel">Canal</option>
+                    <option value="cross_dimension">Multi-dimension</option>
+                  </select>
+                  <div className="flex gap-2">
+                    <button
+                      disabled={!createForm.name.trim() || createMutation.isPending}
+                      onClick={() => createMutation.mutate()}
+                      className="flex-1 py-2 bg-primary text-on-primary-fixed text-xs font-bold uppercase rounded-sm disabled:opacity-50"
+                      data-testid="btn-submit-watchlist"
+                    >
+                      {createMutation.isPending ? "Création..." : "Créer"}
+                    </button>
+                    <button
+                      onClick={() => setShowCreateForm(false)}
+                      className="px-4 py-2 bg-surface-container-high text-on-surface-variant text-xs font-bold uppercase rounded-sm"
+                    >
+                      Annuler
+                    </button>
+                  </div>
                 </div>
-                <span className="text-xs font-semibold text-on-surface-variant group-hover:text-primary transition-colors">
-                  Créer une watchlist
-                </span>
-              </div>
+              ) : (
+                <div
+                  onClick={() => setShowCreateForm(true)}
+                  className="group border-2 border-dashed border-white/5 hover:border-primary/20 hover:bg-primary/5 transition-all duration-300 p-5 rounded-xl flex flex-col items-center justify-center gap-3 cursor-pointer"
+                  data-testid="btn-create-watchlist"
+                >
+                  <div className="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <span className="material-symbols-outlined text-primary">add</span>
+                  </div>
+                  <span className="text-xs font-semibold text-on-surface-variant group-hover:text-primary transition-colors">
+                    Créer une watchlist
+                  </span>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -255,8 +340,16 @@ export default function Watchlists() {
                   </span>
                   <h2 className="font-headline font-semibold text-xl">{selectedWatchlist.name}</h2>
                 </div>
-                <button className="p-2 hover:bg-white/5 rounded-lg transition-colors">
-                  <span className="material-symbols-outlined text-on-surface-variant">more_vert</span>
+                <button
+                  onClick={() => deactivateMutation.mutate(selectedWatchlist.id)}
+                  disabled={deactivateMutation.isPending || !selectedWatchlist.is_active}
+                  title="Désactiver cette watchlist"
+                  className="p-2 hover:bg-error/10 rounded-lg transition-colors disabled:opacity-30"
+                  data-testid="btn-deactivate-watchlist"
+                >
+                  <span className="material-symbols-outlined text-on-surface-variant hover:text-error text-sm">
+                    {deactivateMutation.isPending ? "hourglass_empty" : "delete"}
+                  </span>
                 </button>
               </div>
 

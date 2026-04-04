@@ -350,6 +350,48 @@ class TestWatchlists:
         r = client.get(f"/api/watchlists/{wid}/metrics")
         assert r.status_code == 404
 
+    def test_create_watchlist(self):
+        r = client.post("/api/watchlists", json={
+            "name": "Watchlist Alger Sud",
+            "description": "Suivi NSS Alger Sud",
+            "scope_type": "region",
+            "filters": {"wilaya": "alger"},
+        })
+        assert r.status_code == 201
+        data = r.json()
+        assert "watchlist_id" in data
+        assert data["status"] == "created"
+
+    def test_create_watchlist_missing_name(self):
+        r = client.post("/api/watchlists", json={
+            "name": "",
+            "scope_type": "product",
+        })
+        assert r.status_code == 422
+
+    def test_update_watchlist(self):
+        wid = _seed_watchlist("To Update")
+        r = client.put(f"/api/watchlists/{wid}", json={"name": "Updated Name"})
+        assert r.status_code == 200
+        assert r.json()["status"] == "updated"
+        detail = client.get(f"/api/watchlists/{wid}").json()
+        assert detail["watchlist_name"] == "Updated Name"
+
+    def test_update_watchlist_404(self):
+        r = client.put("/api/watchlists/nonexistent-uuid", json={"name": "X"})
+        assert r.status_code == 404
+
+    def test_deactivate_watchlist(self):
+        wid = _seed_watchlist("To Deactivate")
+        r = client.delete(f"/api/watchlists/{wid}")
+        assert r.status_code == 204
+        detail = client.get(f"/api/watchlists/{wid}").json()
+        assert not detail["is_active"]
+
+    def test_deactivate_watchlist_404(self):
+        r = client.delete("/api/watchlists/nonexistent-uuid")
+        assert r.status_code == 404
+
 
 # ===========================================================================
 # Recommendations

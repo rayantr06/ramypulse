@@ -265,3 +265,18 @@ class SourceSyncTrigger(BaseModel):
 class NormalizationTrigger(BaseModel):
     client_id: str | None = None
     batch_size: int = 200
+
+
+class WatchlistCreate(BaseModel):
+    name: str = Field(..., min_length=1)
+    description: str = ""
+    scope_type: str = "product"
+    filters: dict = Field(default_factory=dict)
+
+
+class WatchlistUpdate(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    scope_type: str | None = None
+    filters: dict | None = None
+    is_active: bool | None = None

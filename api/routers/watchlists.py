@@ -11,9 +11,13 @@ import sqlite3
 from fastapi import APIRouter, HTTPException
 
 import config
+from api.schemas import WatchlistCreate, WatchlistUpdate
 from core.watchlists.watchlist_manager import (
-    list_watchlists as _core_list_watchlists,
+    create_watchlist as _core_create_watchlist,
+    deactivate_watchlist as _core_deactivate_watchlist,
     get_watchlist as _core_get_watchlist,
+    list_watchlists as _core_list_watchlists,
+    update_watchlist as _core_update_watchlist,
 )
 
 logger = logging.getLogger(__name__)
@@ -26,6 +30,24 @@ def _get_db_connection() -> sqlite3.Connection:
     conn = sqlite3.connect(str(config.SQLITE_DB_PATH))
     conn.row_factory = sqlite3.Row
     return conn
+
+
+@router.post("", status_code=201)
+def create_watchlist(data: WatchlistCreate):
+    """Crée une nouvelle watchlist."""
+    try:
+        watchlist_id = _core_create_watchlist(
+            name=data.name,
+            description=data.description,
+            scope_type=data.scope_type,
+            filters=data.filters,
+        )
+        return {"watchlist_id": watchlist_id, "status": "created"}
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except Exception as e:
+        logger.error("Erreur create_watchlist: %s", e)
+        raise HTTPException(status_code=500, detail="Internal DB error")
 
 
 @router.get("")
@@ -50,6 +72,40 @@ def get_watchlist(watchlist_id: str):
         raise
     except Exception as e:
         logger.error("Erreur get_watchlist: %s", e)
+        raise HTTPException(status_code=500, detail="Internal DB error")
+
+
+@router.put("/{watchlist_id}")
+def update_watchlist(watchlist_id: str, data: WatchlistUpdate):
+    """Met à jour les champs d'une watchlist existante."""
+    try:
+        updates = {k: v for k, v in data.model_dump(exclude_unset=True).items() if v is not None}
+        if "name" in updates:
+            updates["watchlist_name"] = updates.pop("name")
+        updated = _core_update_watchlist(watchlist_id, updates)
+        if not updated:
+            raise HTTPException(status_code=404, detail="Watchlist not found")
+        return {"watchlist_id": watchlist_id, "status": "updated"}
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except Exception as e:
+        logger.error("Erreur update_watchlist: %s", e)
+        raise HTTPException(status_code=500, detail="Internal DB error")
+
+
+@router.delete("/{watchlist_id}", status_code=204)
+def deactivate_watchlist(watchlist_id: str):
+    """Désactive une watchlist (suppression logique)."""
+    try:
+        deactivated = _core_deactivate_watchlist(watchlist_id)
+        if not deactivated:
+            raise HTTPException(status_code=404, detail="Watchlist not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Erreur deactivate_watchlist: %s", e)
         raise HTTPException(status_code=500, detail="Internal DB error")
 
 
