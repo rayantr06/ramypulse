@@ -1,0 +1,360 @@
+<!-- Paste Stitch page here -->
+<!DOCTYPE html>
+
+<html class="dark" lang="fr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>RamyPulse - Watchlists</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Manrope:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary": "#4cd6ff",
+                        "on-secondary": "#2f3133",
+                        "on-primary-fixed": "#351000",
+                        "on-error-container": "#ffdad6",
+                        "error-container": "#93000a",
+                        "on-primary-container": "#4e1c00",
+                        "on-tertiary-fixed": "#001f28",
+                        "outline": "#ab897d",
+                        "primary-container": "#f56600",
+                        "on-background": "#e3e2e5",
+                        "background": "#121315",
+                        "tertiary-fixed": "#b7eaff",
+                        "on-secondary-fixed-variant": "#454749",
+                        "surface-container-low": "#1b1c1e",
+                        "surface-container-high": "#292a2c",
+                        "secondary-fixed": "#e2e2e5",
+                        "surface-container-highest": "#343537",
+                        "secondary-container": "#454749",
+                        "primary-fixed-dim": "#ffb693",
+                        "primary": "#ffb693",
+                        "on-surface": "#e3e2e5",
+                        "inverse-primary": "#a04100",
+                        "on-primary-fixed-variant": "#7a3000",
+                        "secondary": "#c6c6c9",
+                        "on-primary": "#561f00",
+                        "surface": "#121315",
+                        "surface-dim": "#121315",
+                        "inverse-surface": "#e3e2e5",
+                        "surface-variant": "#343537",
+                        "surface-tint": "#ffb693",
+                        "surface-container": "#1f2022",
+                        "inverse-on-surface": "#303033",
+                        "on-error": "#690005",
+                        "on-tertiary-container": "#00303c",
+                        "on-tertiary": "#003543",
+                        "on-surface-variant": "#e4beb1",
+                        "outline-variant": "#5b4137",
+                        "on-tertiary-fixed-variant": "#004e60",
+                        "tertiary-container": "#009fc3",
+                        "surface-container-lowest": "#0d0e10",
+                        "tertiary-fixed-dim": "#4cd6ff",
+                        "surface-bright": "#38393b",
+                        "secondary-fixed-dim": "#c6c6c9",
+                        "error": "#ffb4ab",
+                        "primary-fixed": "#ffdbcc",
+                        "on-secondary-container": "#b4b5b7",
+                        "on-secondary-fixed": "#1a1c1e"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "fontFamily": {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .headline-lg { font-family: 'Manrope', sans-serif; font-weight: 800; }
+        .title-sm { font-family: 'Manrope', sans-serif; font-weight: 600; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .glass-panel { background: rgba(56, 57, 59, 0.4); backdrop-filter: blur(20px); }
+    </style>
+</head>
+<body class="bg-surface-container-lowest text-on-surface flex min-h-screen">
+<!-- SideNavBar -->
+<aside class="h-screen w-64 flex flex-col fixed left-0 top-0 bg-[#121315] shadow-[0_0_24px_rgba(255,255,255,0.06)] py-6 px-4 z-50">
+<div class="mb-10 px-2">
+<span class="text-xl font-bold tracking-tighter text-[#ffb693] font-['Manrope']">RamyPulse</span>
+<p class="text-[10px] uppercase tracking-widest text-on-surface-variant/50 mt-1">Intelligence Center</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-gray-400 hover:bg-[#1c1e21] hover:text-white transition-all duration-200 ease-out rounded-sm" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="text-sm">Tableau de bord</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-gray-400 hover:bg-[#1c1e21] hover:text-white transition-all duration-200 ease-out rounded-sm" href="#">
+<span class="material-symbols-outlined" data-icon="explore">explore</span>
+<span class="text-sm">Explorateur</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-gray-400 hover:bg-[#1c1e21] hover:text-white transition-all duration-200 ease-out rounded-sm" href="#">
+<span class="material-symbols-outlined" data-icon="campaign">campaign</span>
+<span class="text-sm">Campagnes</span>
+</a>
+<!-- Active Navigation -->
+<a class="flex items-center gap-3 px-3 py-2 text-[#ffb693] font-bold bg-[#1c1e21] rounded-sm transition-all duration-200 ease-out" href="#">
+<span class="material-symbols-outlined" data-icon="visibility">visibility</span>
+<span class="text-sm">Watchlists</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-gray-400 hover:bg-[#1c1e21] hover:text-white transition-all duration-200 ease-out rounded-sm" href="#">
+<span class="material-symbols-outlined" data-icon="notifications_active">notifications_active</span>
+<span class="text-sm">Alertes</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-gray-400 hover:bg-[#1c1e21] hover:text-white transition-all duration-200 ease-out rounded-sm" href="#">
+<span class="material-symbols-outlined" data-icon="auto_awesome">auto_awesome</span>
+<span class="text-sm">Recommandations</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-gray-400 hover:bg-[#1c1e21] hover:text-white transition-all duration-200 ease-out rounded-sm" href="#">
+<span class="material-symbols-outlined" data-icon="settings_input_component">settings_input_component</span>
+<span class="text-sm">Admin Sources</span>
+</a>
+</nav>
+<div class="mt-auto pt-6 border-t border-white/5 space-y-1">
+<button class="w-full bg-gradient-to-r from-primary to-primary-container text-on-primary-fixed py-2.5 rounded-lg text-sm font-bold mb-4 flex items-center justify-center gap-2 active:opacity-80 transition-all">
+<span class="material-symbols-outlined text-sm" data-icon="add">add</span>
+                Générer Rapport
+            </button>
+<a class="flex items-center gap-3 px-3 py-2 text-gray-400 hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+<span class="text-sm">Aide</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-gray-400 hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="text-sm">Paramètres</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-64 flex-1 flex flex-col min-h-screen">
+<!-- TopNavBar -->
+<header class="h-16 px-8 flex justify-between items-center bg-[#121315]/80 backdrop-blur-xl sticky top-0 z-40">
+<div class="flex items-center flex-1 max-w-xl">
+<div class="relative w-full">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/50 text-xl" data-icon="search">search</span>
+<input class="w-full bg-surface-container-highest border-none rounded-lg pl-10 pr-4 py-2 text-sm focus:ring-1 focus:ring-primary/40 transition-all placeholder:text-on-surface-variant/40" placeholder="Rechercher une watchlist..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-4 text-on-surface-variant">
+<button class="material-symbols-outlined hover:text-white transition-colors" data-icon="language">language</button>
+<button class="material-symbols-outlined hover:text-white transition-colors" data-icon="grid_view">grid_view</button>
+<div class="relative">
+<button class="material-symbols-outlined hover:text-white transition-colors" data-icon="notifications">notifications</button>
+<span class="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full"></span>
+</div>
+</div>
+<div class="h-8 w-px bg-white/10"></div>
+<div class="flex items-center gap-3">
+<img alt="Admin profile" class="w-8 h-8 rounded-full border border-white/10" data-alt="Professional headshot of a business analyst in dark studio lighting with subtle rim light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB31b20aHDaL-heRdDgRFCy8jW6aEoqYfPiq3US6T_Pwc5aududEf-Lb6oTWtnWsO9dYcqfdX4_JcM1IaK-dTT4qQmGBSqiFvCyi5sW8Vpj7OuJJxu07EzTLpGcrZt0icwb3kzn7L0I679uAlsphG2r2KhZKeFBk_AacJw36sHL6Jmb5u_A2WfUvjLz8DzJ-yhDxtrsahnsN5mfP0FcnIEyaetdSl0twVxxEyqJO6aQSGHoFgfDhk39lGPgb3K7MkOj7vE9JHESi-7H"/>
+</div>
+</div>
+</header>
+<!-- Content Canvas -->
+<div class="p-8 flex gap-8">
+<!-- Left Side: Grid -->
+<div class="flex-1">
+<div class="flex justify-between items-end mb-8">
+<div>
+<span class="text-[10px] font-bold text-primary tracking-[0.2em] uppercase mb-1 block">SURVEILLANCE</span>
+<h1 class="headline-lg text-3xl tracking-tight">Watchlists</h1>
+</div>
+<!-- Toggle Filter -->
+<div class="bg-surface-container-high p-1 rounded-lg flex gap-1">
+<button class="px-4 py-1.5 text-xs font-semibold rounded-md bg-surface-bright text-white shadow-sm">Toutes</button>
+<button class="px-4 py-1.5 text-xs font-semibold rounded-md text-on-surface-variant hover:text-white transition-colors">Actives</button>
+<button class="px-4 py-1.5 text-xs font-semibold rounded-md text-on-surface-variant hover:text-white transition-colors">Inactives</button>
+</div>
+</div>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-2 gap-4">
+<!-- Watchlist Card 1 -->
+<div class="group bg-surface-container hover:bg-surface-container-high transition-all duration-300 p-5 rounded-xl border border-transparent hover:border-white/5 cursor-pointer relative overflow-hidden">
+<div class="absolute top-0 right-0 p-4">
+<div class="flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary shadow-[0_0_8px_#4cd6ff]"></span>
+<span class="text-[10px] font-medium text-tertiary">ACTIF</span>
+</div>
+</div>
+<span class="text-[10px] font-bold text-on-surface-variant tracking-wider uppercase mb-2 block">Région</span>
+<h3 class="title-sm text-lg text-on-surface mb-2">Ramy Citron (Tout Alger)</h3>
+<p class="text-xs text-on-surface-variant leading-relaxed mb-6 line-clamp-2">Analyse comparative des parts de marché et du sentiment consommateur sur la gamme Citron dans la zone urbaine d'Alger.</p>
+<div class="flex items-center justify-between">
+<div class="flex -space-x-2">
+<div class="w-6 h-6 rounded-full border-2 border-surface bg-surface-container-highest flex items-center justify-center text-[10px] font-bold">R</div>
+<div class="w-6 h-6 rounded-full border-2 border-surface bg-surface-container-highest flex items-center justify-center text-[10px] font-bold">A</div>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant/30 group-hover:text-primary transition-colors" data-icon="chevron_right">chevron_right</span>
+</div>
+</div>
+<!-- Watchlist Card 2 -->
+<div class="group bg-surface-container hover:bg-surface-container-high transition-all duration-300 p-5 rounded-xl border border-transparent hover:border-white/5 cursor-pointer relative">
+<div class="absolute top-0 right-0 p-4">
+<div class="flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary shadow-[0_0_8px_#4cd6ff]"></span>
+<span class="text-[10px] font-medium text-tertiary">ACTIF</span>
+</div>
+</div>
+<span class="text-[10px] font-bold text-on-surface-variant tracking-wider uppercase mb-2 block">Canal</span>
+<h3 class="title-sm text-lg text-on-surface mb-2">Disponibilité Oran</h3>
+<p class="text-xs text-on-surface-variant leading-relaxed mb-6 line-clamp-2">Monitoring de la présence en rayon et des ruptures de stock critiques dans les hypermarchés d'Oran.</p>
+<div class="flex items-center justify-between">
+<div class="flex -space-x-2">
+<div class="w-6 h-6 rounded-full border-2 border-surface bg-surface-container-highest flex items-center justify-center text-[10px] font-bold">M</div>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant/30 group-hover:text-primary transition-colors" data-icon="chevron_right">chevron_right</span>
+</div>
+</div>
+<!-- Watchlist Card 3 -->
+<div class="group bg-surface-container hover:bg-surface-container-high transition-all duration-300 p-5 rounded-xl border border-transparent hover:border-white/5 cursor-pointer relative">
+<div class="absolute top-0 right-0 p-4">
+<div class="flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-on-surface-variant/30"></span>
+<span class="text-[10px] font-medium text-on-surface-variant">INACTIF</span>
+</div>
+</div>
+<span class="text-[10px] font-bold text-on-surface-variant tracking-wider uppercase mb-2 block">Produit</span>
+<h3 class="title-sm text-lg text-on-surface mb-2">Ramy Fraise 250ml</h3>
+<p class="text-xs text-on-surface-variant leading-relaxed mb-6 line-clamp-2">Suivi du lancement produit et premiers retours consommateurs sur le format pocket 250ml Fraise.</p>
+<div class="flex items-center justify-between">
+<div class="flex -space-x-2">
+<div class="w-6 h-6 rounded-full border-2 border-surface bg-surface-container-highest flex items-center justify-center text-[10px] font-bold">S</div>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant/30 group-hover:text-primary transition-colors" data-icon="chevron_right">chevron_right</span>
+</div>
+</div>
+<!-- Add New Card (Empty State Trigger) -->
+<div class="group border-2 border-dashed border-white/5 hover:border-primary/20 hover:bg-primary/5 transition-all duration-300 p-5 rounded-xl flex flex-col items-center justify-center gap-3 cursor-pointer">
+<div class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-primary" data-icon="add">add</span>
+</div>
+<span class="text-xs font-semibold text-on-surface-variant group-hover:text-primary transition-colors">Créer une watchlist</span>
+</div>
+</div>
+</div>
+<!-- Right Side: Details Panel -->
+<aside class="w-[400px] flex flex-col gap-4">
+<div class="glass-panel rounded-xl p-6 border border-white/5 shadow-2xl">
+<div class="flex justify-between items-start mb-6">
+<div>
+<span class="text-[10px] font-bold text-primary tracking-widest uppercase mb-1 block">SÉLECTION</span>
+<h2 class="title-sm text-xl">Ramy Citron (Alger)</h2>
+</div>
+<button class="p-2 hover:bg-white/5 rounded-lg transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="more_vert">more_vert</span>
+</button>
+</div>
+<!-- Metrics Grid -->
+<div class="grid grid-cols-2 gap-4 mb-8">
+<div class="bg-surface-container-low p-4 rounded-lg">
+<span class="text-[10px] font-bold text-on-surface-variant/60 uppercase mb-2 block">Score NSS</span>
+<div class="flex items-baseline gap-2">
+<span class="text-3xl font-bold text-white tracking-tighter">45</span>
+<div class="flex items-center text-[10px] font-bold text-tertiary">
+<span class="material-symbols-outlined text-sm" data-icon="arrow_upward">arrow_upward</span>
+                                    5
+                                </div>
+</div>
+</div>
+<div class="bg-surface-container-low p-4 rounded-lg">
+<span class="text-[10px] font-bold text-on-surface-variant/60 uppercase mb-2 block">Volume Feedback</span>
+<div class="flex items-baseline gap-2">
+<span class="text-3xl font-bold text-white tracking-tighter">1.2k</span>
+<div class="flex items-center text-[10px] font-bold text-tertiary">
+<span class="material-symbols-outlined text-sm" data-icon="arrow_upward">arrow_upward</span>
+                                    300
+                                </div>
+</div>
+</div>
+</div>
+<!-- Aspect Breakdown -->
+<div class="space-y-5 mb-8">
+<div class="flex justify-between items-center mb-1">
+<span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Répartition par Aspect</span>
+<span class="text-[10px] text-on-surface-variant/40 italic">Mise à jour il y a 10m</span>
+</div>
+<div class="space-y-4">
+<!-- Goût -->
+<div>
+<div class="flex justify-between text-xs mb-1.5">
+<span class="text-on-surface/80">Goût</span>
+<span class="font-bold text-primary">85%</span>
+</div>
+<div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-gradient-to-r from-primary to-primary-container rounded-full" style="width: 85%"></div>
+</div>
+</div>
+<!-- Prix -->
+<div>
+<div class="flex justify-between text-xs mb-1.5">
+<span class="text-on-surface/80">Prix</span>
+<span class="font-bold text-primary">62%</span>
+</div>
+<div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-gradient-to-r from-primary to-primary-container rounded-full" style="width: 62%"></div>
+</div>
+</div>
+<!-- Disponibilité -->
+<div>
+<div class="flex justify-between text-xs mb-1.5">
+<span class="text-on-surface/80">Disponibilité</span>
+<span class="font-bold text-error">34%</span>
+</div>
+<div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-error rounded-full" style="width: 34%"></div>
+</div>
+</div>
+<!-- Emballage -->
+<div>
+<div class="flex justify-between text-xs mb-1.5">
+<span class="text-on-surface/80">Emballage</span>
+<span class="font-bold text-primary">78%</span>
+</div>
+<div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-gradient-to-r from-primary to-primary-container rounded-full" style="width: 78%"></div>
+</div>
+</div>
+<!-- Fraîcheur -->
+<div>
+<div class="flex justify-between text-xs mb-1.5">
+<span class="text-on-surface/80">Fraîcheur</span>
+<span class="font-bold text-primary">91%</span>
+</div>
+<div class="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-gradient-to-r from-primary to-primary-container rounded-full" style="width: 91%"></div>
+</div>
+</div>
+</div>
+</div>
+<button class="w-full py-3 bg-surface-container-highest hover:bg-surface-bright transition-colors rounded-lg text-xs font-bold uppercase tracking-widest text-on-surface">
+                        Voir les détails analytiques
+                    </button>
+</div>
+<!-- Secondary Info Card -->
+<div class="bg-surface-container p-6 rounded-xl border border-white/5">
+<h4 class="text-xs font-bold text-on-surface mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-tertiary text-sm" data-icon="insights">insights</span>
+                        Quick Insights - Alger
+                    </h4>
+<p class="text-[11px] text-on-surface-variant leading-relaxed">
+                        Le sentiment positif sur le <span class="text-white font-medium">Goût</span> est en hausse de 12% suite à la nouvelle campagne d'affichage dans le centre d'Alger. Attention aux retours sur la <span class="text-error font-medium">Disponibilité</span> dans le quartier d'Hydra.
+                    </p>
+</div>
+</aside>
+</div>
+</main>
+</body></html>

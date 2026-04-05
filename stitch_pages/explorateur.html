@@ -1,0 +1,420 @@
+<!-- Paste Stitch page here -->
+<!DOCTYPE html>
+
+<html class="dark" lang="fr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>RamyPulse - Explorateur</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;400;600;700;800&amp;family=Inter:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "tertiary": "#4cd6ff",
+                    "on-secondary": "#2f3133",
+                    "on-primary-fixed": "#351000",
+                    "on-error-container": "#ffdad6",
+                    "error-container": "#93000a",
+                    "on-tertiary-fixed": "#001f28",
+                    "on-primary-container": "#4e1c00",
+                    "on-background": "#e3e2e5",
+                    "background": "#121315",
+                    "outline": "#ab897d",
+                    "primary-container": "#f56600",
+                    "surface-container-low": "#1b1c1e",
+                    "surface-container-high": "#292a2c",
+                    "secondary-fixed": "#e2e2e5",
+                    "surface-container-highest": "#343537",
+                    "secondary-container": "#454749",
+                    "tertiary-fixed": "#b7eaff",
+                    "on-secondary-fixed-variant": "#454749",
+                    "primary": "#ffb693",
+                    "on-surface": "#e3e2e5",
+                    "inverse-primary": "#a04100",
+                    "primary-fixed-dim": "#ffb693",
+                    "on-primary-fixed-variant": "#7a3000",
+                    "secondary": "#c6c6c9",
+                    "on-primary": "#561f00",
+                    "surface-dim": "#121315",
+                    "inverse-surface": "#e3e2e5",
+                    "surface": "#121315",
+                    "on-error": "#690005",
+                    "surface-variant": "#343537",
+                    "surface-tint": "#ffb693",
+                    "surface-container": "#1f2022",
+                    "inverse-on-surface": "#303033",
+                    "tertiary-container": "#009fc3",
+                    "surface-container-lowest": "#0d0e10",
+                    "on-tertiary-container": "#00303c",
+                    "on-tertiary": "#003543",
+                    "on-surface-variant": "#e4beb1",
+                    "outline-variant": "#5b4137",
+                    "on-tertiary-fixed-variant": "#004e60",
+                    "surface-bright": "#38393b",
+                    "secondary-fixed-dim": "#c6c6c9",
+                    "tertiary-fixed-dim": "#4cd6ff",
+                    "error": "#ffb4ab",
+                    "on-secondary-container": "#b4b5b7",
+                    "on-secondary-fixed": "#1a1c1e",
+                    "primary-fixed": "#ffdbcc"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "fontFamily": {
+                    "headline": ["Manrope"],
+                    "body": ["Inter"],
+                    "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { background-color: #121315; color: #e3e2e5; font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .pulse-gradient { background: linear-gradient(135deg, #ffb693 0%, #f56600 100%); }
+        .glass-panel { background: rgba(56, 57, 59, 0.4); backdrop-filter: blur(20px); }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #121315; }
+        ::-webkit-scrollbar-thumb { background: #343537; border-radius: 10px; }
+    </style>
+</head>
+<body class="flex min-h-screen overflow-x-hidden">
+<!-- SideNavBar -->
+<aside class="h-screen w-64 fixed left-0 top-0 bg-[#121315] flex flex-col py-6 px-4 z-50">
+<div class="mb-10 px-4">
+<h1 class="text-xl font-black text-[#ffb693] tracking-tighter uppercase font-headline">RamyPulse</h1>
+<p class="text-[10px] text-on-surface-variant/60 font-bold tracking-widest uppercase mt-1">Marketing Intelligence</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 text-gray-500 hover:text-gray-300 hover:bg-[#1b1d20] transition-colors duration-200 font-headline text-sm tracking-tight scale-98 active:opacity-80" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span>Tableau de bord</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-[#ffb693] font-bold border-r-2 border-[#ffb693] bg-[#1b1d20] transition-colors duration-200 font-headline text-sm tracking-tight scale-98 active:opacity-80" href="#">
+<span class="material-symbols-outlined" data-icon="explore">explore</span>
+<span>Explorateur</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-gray-500 hover:text-gray-300 hover:bg-[#1b1d20] transition-colors duration-200 font-headline text-sm tracking-tight scale-98 active:opacity-80" href="#">
+<span class="material-symbols-outlined" data-icon="campaign">campaign</span>
+<span>Campagnes</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-gray-500 hover:text-gray-300 hover:bg-[#1b1d20] transition-colors duration-200 font-headline text-sm tracking-tight scale-98 active:opacity-80" href="#">
+<span class="material-symbols-outlined" data-icon="visibility">visibility</span>
+<span>Watchlists</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-gray-500 hover:text-gray-300 hover:bg-[#1b1d20] transition-colors duration-200 font-headline text-sm tracking-tight scale-98 active:opacity-80" href="#">
+<span class="material-symbols-outlined" data-icon="notifications_active">notifications_active</span>
+<span>Alertes</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-gray-500 hover:text-gray-300 hover:bg-[#1b1d20] transition-colors duration-200 font-headline text-sm tracking-tight scale-98 active:opacity-80" href="#">
+<span class="material-symbols-outlined" data-icon="auto_awesome">auto_awesome</span>
+<span>Recommandations</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-gray-500 hover:text-gray-300 hover:bg-[#1b1d20] transition-colors duration-200 font-headline text-sm tracking-tight scale-98 active:opacity-80" href="#">
+<span class="material-symbols-outlined" data-icon="settings_input_component">settings_input_component</span>
+<span>Admin Sources</span>
+</a>
+</nav>
+<div class="mt-auto px-4 py-4 border-t border-outline-variant/10">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center">
+<span class="material-symbols-outlined text-sm" data-icon="account_circle">account_circle</span>
+</div>
+<div class="flex flex-col">
+<span class="text-xs font-bold text-on-surface">Ammar</span>
+<span class="text-[10px] text-on-surface-variant">Brand Manager</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 ml-64 min-h-screen flex flex-col bg-surface-container-lowest">
+<!-- TopNavBar -->
+<header class="sticky top-0 z-40 bg-[#121315]/80 backdrop-blur-xl h-16 flex items-center justify-between pl-8 pr-8 shadow-[0px_24px_24px_0px_rgba(255,255,255,0.06)]">
+<div class="flex items-center gap-4 flex-1">
+<div class="relative w-full max-w-md">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-lg" data-icon="search">search</span>
+<input class="w-full bg-surface-container-highest border-none text-sm px-10 py-2 rounded-sm focus:ring-1 focus:ring-primary/40 placeholder:text-gray-500" placeholder="Rechercher..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="w-10 h-10 flex items-center justify-center hover:bg-[#1b1d20] rounded-sm transition-all text-gray-400">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center hover:bg-[#1b1d20] rounded-sm transition-all text-gray-400">
+<span class="material-symbols-outlined" data-icon="sensors">sensors</span>
+</button>
+<div class="w-8 h-8 rounded-sm bg-primary-container/20 overflow-hidden ml-2">
+<img alt="Ammar Profile Picture" class="w-full h-full object-cover" data-alt="close-up portrait of a professional male brand manager in a dark studio setting with cinematic rim lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAUDc40qMRyiV8UWWM_XR5r84zfooSxpAv-7ofLPS5SeXPE9E3LApvIgPsbXRjTFvqMnMLuuhRQzlk4TT0mY3Nine8eGkD1bkoXJ02ME0s7ebVZaXRQ6y4W9btmGyhzAxnzxrMAGzH2qOdB3G_2nPkjfKGTEbaKtyEV-2YbPZ2ex7_zcLUOfe20M59oR1mkw2YG0TbSBFmjaSABtbhgyst5U4astOMcjavSmo8HDkiASOFGwPdx3SYpdYXU5fOhc0qU6YAoyPANg8av"/>
+</div>
+</div>
+</header>
+<!-- Canvas Area -->
+<div class="p-8 space-y-8 max-w-7xl mx-auto w-full">
+<!-- Page Header -->
+<section>
+<h2 class="text-3xl font-extrabold font-headline tracking-tighter text-on-surface">Explorateur</h2>
+<p class="text-on-surface-variant font-body text-sm mt-1">Recherche sémantique et verbatims à travers l'écosystème digital</p>
+</section>
+<!-- Search & Filters Section -->
+<section class="space-y-6">
+<div class="relative group">
+<div class="absolute -inset-0.5 pulse-gradient rounded-xl blur opacity-10 group-focus-within:opacity-30 transition duration-1000"></div>
+<div class="relative flex items-center bg-surface-container-high p-2 rounded-xl">
+<span class="material-symbols-outlined ml-4 text-on-surface-variant" data-icon="psychology">psychology</span>
+<input class="flex-1 bg-transparent border-none text-on-surface placeholder:text-gray-600 px-4 py-4 focus:ring-0 text-lg" placeholder="Recherche en langage naturel (ex: 'Que pensent les clients du goût à Alger ?')" type="text"/>
+<button class="pulse-gradient text-on-primary-fixed font-bold px-6 py-3 rounded-lg flex items-center gap-2 transition-transform active:scale-95 shadow-lg">
+<span class="material-symbols-outlined text-xl" data-icon="search">search</span>
+                            Explorer
+                        </button>
+</div>
+</div>
+<!-- Source Toggles -->
+<div class="flex flex-wrap items-center gap-3">
+<span class="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mr-2">Sources :</span>
+<button class="flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container-highest text-primary border border-primary/20 text-xs font-semibold">
+<span class="material-symbols-outlined text-sm" data-icon="facebook">social_leaderboard</span> Facebook
+                    </button>
+<button class="flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface-variant text-xs font-semibold transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="location_on">location_on</span> Google Maps
+                    </button>
+<button class="flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface-variant text-xs font-semibold transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="video_library">video_library</span> YouTube
+                    </button>
+<button class="flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface-variant text-xs font-semibold transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="photo_camera">photo_camera</span> Instagram
+                    </button>
+<button class="flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface-variant text-xs font-semibold transition-colors border border-outline-variant/10">
+<span class="material-symbols-outlined text-sm" data-icon="file_upload">file_upload</span> Import
+                    </button>
+<div class="h-6 w-px bg-outline-variant/20 mx-2"></div>
+<button class="flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface-variant text-xs font-semibold transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="tune">tune</span> Filtrer
+                    </button>
+</div>
+</section>
+<!-- Search Results Bento-ish Layout -->
+<section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<!-- Snippet 1 -->
+<div class="bg-surface-container p-5 rounded-lg border border-outline-variant/5 hover:border-primary/20 transition-all group">
+<div class="flex justify-between items-start mb-4">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded bg-[#1877F2]/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-[#1877F2]" data-icon="facebook">social_leaderboard</span>
+</div>
+<span class="text-[10px] font-bold text-on-surface-variant uppercase">Facebook</span>
+</div>
+<span class="text-[10px] font-black text-tertiary bg-tertiary/10 px-2 py-1 rounded">98% PERTINENCE</span>
+</div>
+<p class="text-on-surface font-body italic mb-4 leading-relaxed line-clamp-2">"Le goût du Ramy Citron est exceptionnel, très frais!"</p>
+<div class="flex items-center justify-between">
+<span class="flex items-center gap-1.5 text-[10px] font-bold text-emerald-400 uppercase tracking-tight">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> très_positif
+                        </span>
+<button class="text-on-surface-variant hover:text-primary">
+<span class="material-symbols-outlined text-lg" data-icon="open_in_new">open_in_new</span>
+</button>
+</div>
+</div>
+<!-- Snippet 2 -->
+<div class="bg-surface-container p-5 rounded-lg border border-outline-variant/5 hover:border-primary/20 transition-all">
+<div class="flex justify-between items-start mb-4">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded bg-[#EA4335]/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-[#EA4335]" data-icon="location_on">location_on</span>
+</div>
+<span class="text-[10px] font-bold text-on-surface-variant uppercase">Google Maps</span>
+</div>
+<span class="text-[10px] font-black text-tertiary bg-tertiary/10 px-2 py-1 rounded">94% PERTINENCE</span>
+</div>
+<p class="text-on-surface font-body italic mb-4 leading-relaxed line-clamp-2">"Excellent jus pour accompagner les repas traditionnels."</p>
+<div class="flex items-center justify-between">
+<span class="flex items-center gap-1.5 text-[10px] font-bold text-emerald-500 uppercase tracking-tight">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> positif
+                        </span>
+<button class="text-on-surface-variant hover:text-primary">
+<span class="material-symbols-outlined text-lg" data-icon="open_in_new">open_in_new</span>
+</button>
+</div>
+</div>
+<!-- Snippet 3 -->
+<div class="bg-surface-container p-5 rounded-lg border border-outline-variant/5 hover:border-primary/20 transition-all">
+<div class="flex justify-between items-start mb-4">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded bg-[#E4405F]/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-[#E4405F]" data-icon="photo_camera">photo_camera</span>
+</div>
+<span class="text-[10px] font-bold text-on-surface-variant uppercase">Instagram</span>
+</div>
+<span class="text-[10px] font-black text-tertiary bg-tertiary/10 px-2 py-1 rounded">91% PERTINENCE</span>
+</div>
+<p class="text-on-surface font-body italic mb-4 leading-relaxed line-clamp-2">"Packaging très coloré qui attire l'œil en rayon."</p>
+<div class="flex items-center justify-between">
+<span class="flex items-center gap-1.5 text-[10px] font-bold text-emerald-500 uppercase tracking-tight">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> positif
+                        </span>
+<button class="text-on-surface-variant hover:text-primary">
+<span class="material-symbols-outlined text-lg" data-icon="open_in_new">open_in_new</span>
+</button>
+</div>
+</div>
+</section>
+<!-- All Verbatims Table -->
+<section class="bg-surface-container rounded-xl overflow-hidden border border-outline-variant/5">
+<div class="p-6 flex items-center justify-between">
+<div>
+<h3 class="text-lg font-bold font-headline text-on-surface">Tous les verbatims</h3>
+<p class="text-xs text-on-surface-variant mt-0.5">Base de données complète des interactions clients</p>
+</div>
+<div class="flex items-center gap-2">
+<button class="flex items-center gap-2 px-3 py-1.5 rounded bg-surface-container-highest text-on-surface-variant text-[10px] font-black uppercase tracking-widest hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined text-base" data-icon="download">download</span> Exporter
+                        </button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low border-y border-outline-variant/10">
+<th class="px-6 py-4 text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Date</th>
+<th class="px-6 py-4 text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Source</th>
+<th class="px-6 py-4 text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Aspect</th>
+<th class="px-6 py-4 text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Sentiment</th>
+<th class="px-6 py-4 text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Wilaya</th>
+<th class="px-6 py-4 text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Verbatim</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/5">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container-high transition-colors">
+<td class="px-6 py-5 whitespace-nowrap">
+<div class="flex flex-col">
+<span class="text-xs font-bold text-on-surface">Aujourd'hui</span>
+<span class="text-[10px] text-on-surface-variant">09:45</span>
+</div>
+</td>
+<td class="px-6 py-5 whitespace-nowrap">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[#1877F2] text-lg" data-icon="facebook">social_leaderboard</span>
+<span class="text-xs font-medium text-on-surface">Facebook</span>
+</div>
+</td>
+<td class="px-6 py-5 whitespace-nowrap">
+<span class="px-2 py-0.5 rounded-full bg-surface-container-highest text-[10px] font-bold text-on-surface border border-outline-variant/20">Goût</span>
+</td>
+<td class="px-6 py-5 whitespace-nowrap">
+<span class="flex items-center gap-1.5 text-[10px] font-bold text-emerald-500 uppercase">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Positif
+                                    </span>
+</td>
+<td class="px-6 py-5 whitespace-nowrap text-xs text-on-surface">Alger</td>
+<td class="px-6 py-5 text-sm text-on-surface-variant font-body">"J'adore le nouveau packaging du Ramy Fraise, très pratique."</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-container-high transition-colors">
+<td class="px-6 py-5 whitespace-nowrap">
+<div class="flex flex-col">
+<span class="text-xs font-bold text-on-surface">Hier</span>
+<span class="text-[10px] text-on-surface-variant">18:20</span>
+</div>
+</td>
+<td class="px-6 py-5 whitespace-nowrap">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[#EA4335] text-lg" data-icon="location_on">location_on</span>
+<span class="text-xs font-medium text-on-surface">Google Maps</span>
+</div>
+</td>
+<td class="px-6 py-5 whitespace-nowrap">
+<span class="px-2 py-0.5 rounded-full bg-surface-container-highest text-[10px] font-bold text-on-surface border border-outline-variant/20">Disponibilité</span>
+</td>
+<td class="px-6 py-5 whitespace-nowrap">
+<span class="flex items-center gap-1.5 text-[10px] font-black bg-red-600 text-white px-2.5 py-1 rounded-full uppercase shadow-[0_0_15px_rgba(220,38,38,0.4)]">
+<span class="w-1.5 h-1.5 rounded-full bg-white"></span> Négatif
+</span>
+</td>
+<td class="px-6 py-5 whitespace-nowrap text-xs text-on-surface">Oran</td>
+<td class="px-6 py-5 text-sm text-on-surface-variant font-body">"Impossible de trouver du Ramy Citron à Es Senia depuis 3 jours."</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-container-high transition-colors">
+<td class="px-6 py-5 whitespace-nowrap">
+<div class="flex flex-col">
+<span class="text-xs font-bold text-on-surface">Hier</span>
+<span class="text-[10px] text-on-surface-variant">14:10</span>
+</div>
+</td>
+<td class="px-6 py-5 whitespace-nowrap">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[#FF0000] text-lg" data-icon="video_library">video_library</span>
+<span class="text-xs font-medium text-on-surface">YouTube</span>
+</div>
+</td>
+<td class="px-6 py-5 whitespace-nowrap">
+<span class="px-2 py-0.5 rounded-full bg-surface-container-highest text-[10px] font-bold text-on-surface border border-outline-variant/20">Prix</span>
+</td>
+<td class="px-6 py-5 whitespace-nowrap">
+<span class="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase">
+<span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span> Neutre
+                                    </span>
+</td>
+<td class="px-6 py-5 whitespace-nowrap text-xs text-on-surface">Constantine</td>
+<td class="px-6 py-5 text-sm text-on-surface-variant font-body">"Le prix a augmenté un peu mais la qualité reste là."</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-surface-container-high transition-colors">
+<td class="px-6 py-5 whitespace-nowrap">
+<div class="flex flex-col">
+<span class="text-xs font-bold text-on-surface">12 Mai</span>
+<span class="text-[10px] text-on-surface-variant">10:00</span>
+</div>
+</td>
+<td class="px-6 py-5 whitespace-nowrap">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[#E4405F] text-lg" data-icon="photo_camera">photo_camera</span>
+<span class="text-xs font-medium text-on-surface">Instagram</span>
+</div>
+</td>
+<td class="px-6 py-5 whitespace-nowrap">
+<span class="px-2 py-0.5 rounded-full bg-surface-container-highest text-[10px] font-bold text-on-surface border border-outline-variant/20">Fraîcheur</span>
+</td>
+<td class="px-6 py-5 whitespace-nowrap">
+<span class="flex items-center gap-1.5 text-[10px] font-bold text-emerald-400 uppercase">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Très Positif
+                                    </span>
+</td>
+<td class="px-6 py-5 whitespace-nowrap text-xs text-on-surface">Béjaïa</td>
+<td class="px-6 py-5 text-sm text-on-surface-variant font-body">"Toujours aussi frais, parfait pour l'été à la plage."</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination -->
+<div class="p-6 border-t border-outline-variant/10 flex items-center justify-between">
+<span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Page 1 sur 45</span>
+<div class="flex items-center gap-2">
+<button class="w-8 h-8 flex items-center justify-center rounded bg-surface-container-high text-on-surface-variant hover:text-primary transition-colors disabled:opacity-30" disabled="">
+<span class="material-symbols-outlined" data-icon="chevron_left">chevron_left</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center rounded bg-surface-container-high text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- Contextual FAB -->
+<button class="fixed bottom-8 right-8 w-14 h-14 pulse-gradient rounded-full shadow-2xl flex items-center justify-center text-on-primary-fixed hover:scale-110 active:scale-95 transition-transform z-50">
+<span class="material-symbols-outlined text-2xl font-bold" data-icon="chat">chat</span>
+</button>
+</body></html>

@@ -1,0 +1,502 @@
+<!-- Paste Stitch page here -->
+<!DOCTYPE html>
+
+<html class="dark" lang="fr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&amp;family=Inter:wght@400;500;600&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-dim": "#121315",
+                        "secondary-container": "#454749",
+                        "error": "#ffb4ab",
+                        "surface-container-highest": "#343537",
+                        "inverse-on-surface": "#303033",
+                        "on-surface-variant": "#e4beb1",
+                        "on-secondary": "#2f3133",
+                        "surface-bright": "#38393b",
+                        "on-primary-fixed-variant": "#7a3000",
+                        "primary-fixed-dim": "#ffb693",
+                        "surface-variant": "#343537",
+                        "on-tertiary-container": "#00303c",
+                        "on-tertiary-fixed-variant": "#004e60",
+                        "tertiary": "#4cd6ff",
+                        "surface": "#121315",
+                        "primary-fixed": "#ffdbcc",
+                        "surface-container-lowest": "#0d0e10",
+                        "tertiary-fixed-dim": "#4cd6ff",
+                        "inverse-primary": "#a04100",
+                        "primary-container": "#f56600",
+                        "on-tertiary": "#003543",
+                        "primary": "#ffb693",
+                        "background": "#121315",
+                        "tertiary-container": "#009fc3",
+                        "secondary-fixed-dim": "#c6c6c9",
+                        "on-primary-container": "#4e1c00",
+                        "secondary": "#c6c6c9",
+                        "on-error-container": "#ffdad6",
+                        "on-error": "#690005",
+                        "inverse-surface": "#e3e2e5",
+                        "on-background": "#e3e2e5",
+                        "on-tertiary-fixed": "#001f28",
+                        "secondary-fixed": "#e2e2e5",
+                        "tertiary-fixed": "#b7eaff",
+                        "surface-container-high": "#292a2c",
+                        "on-secondary-container": "#b4b5b7",
+                        "on-secondary-fixed": "#1a1c1e",
+                        "outline": "#ab897d",
+                        "on-secondary-fixed-variant": "#454749",
+                        "on-primary-fixed": "#351000",
+                        "surface-tint": "#ffb693",
+                        "surface-container-low": "#1b1c1e",
+                        "on-surface": "#e3e2e5",
+                        "error-container": "#93000a",
+                        "on-primary": "#561f00",
+                        "surface-container": "#1f2022",
+                        "outline-variant": "#5b4137"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    fontFamily: {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        body {
+            background-color: #121315;
+            color: #e3e2e5;
+            font-family: 'Inter', sans-serif;
+        }
+        .glass-panel {
+            background: rgba(52, 53, 55, 0.4);
+            backdrop-filter: blur(20px);
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #121315;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #343537;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="flex min-h-screen">
+<!-- SideNavBar -->
+<aside class="flex flex-col h-screen py-6 px-4 gap-2 docked left-0 w-64 bg-[#1b1d20] border-none fixed z-50">
+<div class="flex items-center gap-3 mb-8 px-2">
+<div class="w-10 h-10 bg-gradient-to-br from-[#ffb693] to-[#f56600] rounded-sm flex items-center justify-center shadow-[0_0_15px_rgba(255,182,147,0.3)]">
+<span class="material-symbols-outlined text-[#351000]" style="font-variation-settings: 'FILL' 1;">insights</span>
+</div>
+<div>
+<h1 class="font-['Manrope'] tracking-tight headline-lg font-bold text-[#ffb693] text-xl tracking-tighter uppercase">RamyPulse</h1>
+<p class="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Intelligence Center</p>
+</div>
+</div>
+<nav class="flex-1 flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2.5 text-gray-500 font-medium hover:text-gray-200 hover:bg-[#1b1d20] transition-colors duration-200 rounded-sm" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm">Tableau de bord</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-gray-500 font-medium hover:text-gray-200 hover:bg-[#1b1d20] transition-colors duration-200 rounded-sm" href="#">
+<span class="material-symbols-outlined">explore</span>
+<span class="text-sm">Explorateur</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-gray-500 font-medium hover:text-gray-200 hover:bg-[#1b1d20] transition-colors duration-200 rounded-sm" href="#">
+<span class="material-symbols-outlined">campaign</span>
+<span class="text-sm">Campagnes</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-gray-500 font-medium hover:text-gray-200 hover:bg-[#1b1d20] transition-colors duration-200 rounded-sm" href="#">
+<span class="material-symbols-outlined">visibility</span>
+<span class="text-sm">Watchlists</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-gray-500 font-medium hover:text-gray-200 hover:bg-[#1b1d20] transition-colors duration-200 rounded-sm" href="#">
+<span class="material-symbols-outlined">notifications_active</span>
+<span class="text-sm">Alertes</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#ffb693] font-bold bg-[#1b1d20] rounded-sm transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+<span class="text-sm">Recommandations</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-gray-500 font-medium hover:text-gray-200 hover:bg-[#1b1d20] transition-colors duration-200 rounded-sm" href="#">
+<span class="material-symbols-outlined">settings_input_component</span>
+<span class="text-sm">Admin Sources</span>
+</a>
+</nav>
+<div class="mt-auto p-4 bg-surface-container rounded-lg">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-container-highest border border-outline-variant/20 overflow-hidden">
+<img alt="Profil Utilisateur" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAQ1kPWxnGrIH56CNvdr-B9_Bq0gaBxHJKbooVsH-uMSVhZu5sN8iCqfJlgfjf5XJYB7fRDOZsSW3JbL-xyVx_91c5V02iLZY91-44jvbZJPSpksKVrK0nAo2fBKcAOrMFX_KHdW2GbTmEGnIQi0iRid_s7ROVpmlrNGucXUk56iWRHBwZGn5yyIe6HzVTyCG47fvJYTSn6R075ZbgISExK3rFWlLWEBEi5qmW6IWKmRcHPrZ4CHGzk5MdscF_-jLP3CxklzOZcVbr2"/>
+</div>
+<div class="flex-1 overflow-hidden">
+<p class="text-xs font-bold truncate">Zinedine B.</p>
+<p class="text-[10px] text-gray-500">Analyste Senior</p>
+</div>
+<span class="material-symbols-outlined text-xs text-gray-500">settings</span>
+</div>
+</div>
+</aside>
+<!-- Main Canvas -->
+<main class="flex-1 ml-64 bg-surface-container-lowest min-h-screen relative">
+<!-- TopNavBar -->
+<header class="flex justify-between items-center px-8 py-3 w-full bg-[#121315]/80 backdrop-blur-md border-b border-white/5 sticky top-0 z-40">
+<div class="flex items-center gap-8 flex-1">
+<div class="relative w-full max-w-md">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">search</span>
+<input class="w-full bg-surface-container-highest/50 border-none text-sm py-2 pl-10 pr-4 rounded-sm focus:ring-1 focus:ring-primary/40 focus:bg-surface-bright transition-all" placeholder="Rechercher une recommandation..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4 ml-8">
+<button class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-white transition-all">
+<span class="material-symbols-outlined">help_outline</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-white transition-all">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<div class="h-6 w-[1px] bg-white/10 mx-2"></div>
+<div class="flex items-center gap-3">
+<span class="text-xs font-bold uppercase tracking-tighter text-[#ffb693]">Session Active</span>
+<div class="w-2 h-2 bg-tertiary rounded-full animate-pulse"></div>
+</div>
+</div>
+</header>
+<div class="p-8 max-w-7xl mx-auto space-y-8">
+<!-- Section 1: Générer -->
+<section>
+<header class="mb-6">
+<span class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/60">Module IA</span>
+<h2 class="font-headline font-extrabold text-3xl tracking-tight">Générer des recommandations</h2>
+</header>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<!-- Configuration Form -->
+<div class="lg:col-span-2 bg-surface-container rounded-lg p-6 space-y-6">
+<div class="grid grid-cols-2 gap-6">
+<div class="space-y-2">
+<label class="text-[10px] font-bold uppercase text-gray-500">Type de Déclencheur</label>
+<select class="w-full bg-surface-container-highest border-none text-sm py-3 px-4 rounded-sm focus:ring-1 focus:ring-primary/40">
+<option>Manuel</option>
+<option>Depuis une alerte</option>
+<option>Planifié (Cron)</option>
+</select>
+</div>
+<div class="space-y-2">
+<label class="text-[10px] font-bold uppercase text-gray-500">Fournisseur d'IA</label>
+<select class="w-full bg-surface-container-highest border-none text-sm py-3 px-4 rounded-sm focus:ring-1 focus:ring-primary/40">
+<option>Ollama Local</option>
+<option>Anthropic Claude</option>
+<option>OpenAI GPT</option>
+<option>Google Gemini</option>
+</select>
+</div>
+</div>
+<div class="space-y-2">
+<label class="text-[10px] font-bold uppercase text-gray-500">Nom du Modèle / Endpoint</label>
+<input class="w-full bg-surface-container-highest border-none text-sm py-3 px-4 rounded-sm focus:ring-1 focus:ring-primary/40" type="text" value="llama3-70b-instruct-q4_K_M"/>
+</div>
+<div class="flex items-center justify-between pt-4 border-t border-white/5">
+<div class="flex gap-4">
+<div class="px-3 py-1.5 bg-surface-container-high rounded-sm">
+<span class="text-[10px] font-bold text-gray-500 uppercase block">Tokens Estimés</span>
+<span class="text-sm font-bold text-tertiary">2.4k</span>
+</div>
+<div class="px-3 py-1.5 bg-surface-container-high rounded-sm">
+<span class="text-[10px] font-bold text-gray-500 uppercase block">Coût est.</span>
+<span class="text-sm font-bold text-white">0.00$</span>
+</div>
+</div>
+<button class="bg-gradient-to-r from-primary to-primary-container text-on-primary-container px-8 py-3 rounded-sm font-bold flex items-center gap-2 hover:opacity-90 active:scale-[0.98] transition-all">
+<span class="material-symbols-outlined text-sm">rocket_launch</span>
+<span>Générer</span>
+</button>
+</div>
+</div>
+<!-- Context Stats Bento -->
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-surface-container p-4 rounded-lg flex flex-col justify-between border-l-2 border-primary/20">
+<span class="material-symbols-outlined text-primary text-xl">query_stats</span>
+<div>
+<p class="text-2xl font-black font-headline tracking-tighter">45</p>
+<p class="text-[10px] font-bold uppercase text-gray-500">NSS Global</p>
+</div>
+</div>
+<div class="bg-surface-container p-4 rounded-lg flex flex-col justify-between border-l-2 border-tertiary/20">
+<span class="material-symbols-outlined text-tertiary text-xl">database</span>
+<div>
+<p class="text-2xl font-black font-headline tracking-tighter">1.2k</p>
+<p class="text-[10px] font-bold uppercase text-gray-500">Volume (m³)</p>
+</div>
+</div>
+<div class="bg-surface-container p-4 rounded-lg flex flex-col justify-between border-l-2 border-error/20">
+<span class="material-symbols-outlined text-error text-xl">warning</span>
+<div>
+<p class="text-2xl font-black font-headline tracking-tighter">4</p>
+<p class="text-[10px] font-bold uppercase text-gray-500">Alertes Actives</p>
+</div>
+</div>
+<div class="bg-surface-container p-4 rounded-lg flex flex-col justify-between overflow-hidden relative group">
+<div class="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<span class="material-symbols-outlined text-gray-500 text-xl">history</span>
+<div>
+<p class="text-lg font-bold font-headline leading-tight">Dernière run</p>
+<p class="text-[10px] font-bold uppercase text-gray-500">Il y a 2h</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Section 2: Recommandations Actives -->
+<section>
+<div class="flex justify-between items-end mb-6">
+<header>
+<span class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/60">Analyse en cours</span>
+<h2 class="font-headline font-extrabold text-3xl tracking-tight">Recommandations actives</h2>
+</header>
+<div class="flex gap-2">
+<button class="bg-surface-container-high px-4 py-2 rounded-sm text-xs font-bold hover:bg-surface-bright transition-colors">Tout Archiver</button>
+</div>
+</div>
+<!-- Main Recommendation Group -->
+<div class="bg-surface-container rounded-lg overflow-hidden border border-white/5">
+<!-- Group Header -->
+<div class="p-6 bg-surface-container-high/50 flex flex-wrap items-center justify-between gap-4">
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2">
+<span class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">3</span>
+<span class="text-sm font-bold">Actions recommandées</span>
+</div>
+<div class="h-4 w-[1px] bg-white/10"></div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-tertiary text-sm">verified</span>
+<span class="text-sm font-bold">92% Confiance</span>
+</div>
+</div>
+<div class="flex items-center gap-4 text-[10px] font-bold uppercase text-gray-500">
+<div class="flex items-center gap-1.5 bg-surface-dim px-2 py-1 rounded-sm">
+<span class="material-symbols-outlined text-xs">memory</span>
+<span>Anthropic Claude 3</span>
+</div>
+<span>Aujourd'hui, 14:32</span>
+<span class="material-symbols-outlined text-lg cursor-pointer hover:text-white">expand_more</span>
+</div>
+</div>
+<!-- Analysis Summary -->
+<div class="px-6 py-4 bg-surface-dim/40 border-b border-white/5">
+<p class="text-sm text-gray-300 leading-relaxed italic border-l-2 border-primary/40 pl-4">
+                            "L'analyse des flux logistiques sur la région Ouest indique un surstock critique sur les produits Ramy Orange 1L à Tlemcen. Parallèlement, une hausse de demande est détectée sur Oran suite à la campagne 'Sif Ramy'. Une réallocation est préconisée."
+                        </p>
+</div>
+<!-- Individual Sub-cards Bento Grid -->
+<div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- Recommendation 1 -->
+<div class="bg-surface-container-high rounded-lg p-5 flex flex-col h-full border border-transparent hover:border-primary/20 transition-all">
+<div class="flex justify-between items-start mb-4">
+<span class="px-2 py-0.5 bg-error/10 text-error text-[10px] font-black rounded-sm uppercase tracking-tighter">Urgent</span>
+<span class="material-symbols-outlined text-gray-500 text-sm">more_vert</span>
+</div>
+<h3 class="text-md font-bold font-headline mb-2">Ajuster le stock: Ramy Orange</h3>
+<p class="text-xs text-gray-400 mb-6 flex-1">Transférer 450 unités du hub Tlemcen vers Oran-Est pour éviter la péremption et répondre au pic local.</p>
+<div class="space-y-3 mb-6">
+<div class="flex justify-between items-center text-[11px]">
+<span class="text-gray-500 uppercase font-bold">Cible</span>
+<span class="text-white font-medium">Tlemcen → Oran</span>
+</div>
+<div class="flex justify-between items-center text-[11px]">
+<span class="text-gray-500 uppercase font-bold">Timing</span>
+<span class="text-white font-medium">&lt; 24 heures</span>
+</div>
+<div class="flex justify-between items-center text-[11px]">
+<span class="text-gray-500 uppercase font-bold">KPI Impact</span>
+<span class="text-tertiary font-bold">+12% Ventes</span>
+</div>
+</div>
+<div class="flex gap-2">
+<button class="flex-1 py-2 rounded-sm bg-primary/10 text-primary text-[11px] font-bold hover:bg-primary/20 transition-all">Appliquer</button>
+<button class="p-2 rounded-sm bg-surface-container-highest text-gray-400 hover:text-white transition-all">
+<span class="material-symbols-outlined text-sm">close</span>
+</button>
+</div>
+</div>
+<!-- Recommendation 2 -->
+<div class="bg-surface-container-high rounded-lg p-5 flex flex-col h-full border border-transparent hover:border-tertiary/20 transition-all">
+<div class="flex justify-between items-start mb-4">
+<span class="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-black rounded-sm uppercase tracking-tighter">Moyen</span>
+<span class="material-symbols-outlined text-gray-500 text-sm">more_vert</span>
+</div>
+<h3 class="text-md font-bold font-headline mb-2">Boost Promo Facebook</h3>
+<p class="text-xs text-gray-400 mb-6 flex-1">Augmenter le budget publicitaire de 15% sur le segment 'Familles' à Alger Centre pendant le week-end.</p>
+<div class="space-y-3 mb-6">
+<div class="flex justify-between items-center text-[11px]">
+<span class="text-gray-500 uppercase font-bold">Plateforme</span>
+<span class="text-white font-medium">Meta Ads</span>
+</div>
+<div class="flex justify-between items-center text-[11px]">
+<span class="text-gray-500 uppercase font-bold">Segment</span>
+<span class="text-white font-medium">Alger (C)</span>
+</div>
+<div class="flex justify-between items-center text-[11px]">
+<span class="text-gray-500 uppercase font-bold">Impact</span>
+<span class="text-tertiary font-bold">ROI est. 4.2x</span>
+</div>
+</div>
+<div class="flex gap-2">
+<button class="flex-1 py-2 rounded-sm bg-primary/10 text-primary text-[11px] font-bold hover:bg-primary/20 transition-all">Lancer</button>
+<button class="p-2 rounded-sm bg-surface-container-highest text-gray-400 hover:text-white transition-all">
+<span class="material-symbols-outlined text-sm">close</span>
+</button>
+</div>
+</div>
+<!-- Recommendation 3 -->
+<div class="bg-surface-container-high rounded-lg p-5 flex flex-col h-full border border-transparent hover:border-white/10 transition-all">
+<div class="flex justify-between items-start mb-4">
+<span class="px-2 py-0.5 bg-gray-500/10 text-gray-500 text-[10px] font-black rounded-sm uppercase tracking-tighter">Bas</span>
+<span class="material-symbols-outlined text-gray-500 text-sm">more_vert</span>
+</div>
+<h3 class="text-md font-bold font-headline mb-2">Maintenance Préventive</h3>
+<p class="text-xs text-gray-400 mb-6 flex-1">Planifier une inspection de la chaîne de remplissage L-3 à l'usine de Boumerdès (vibrations détectées).</p>
+<div class="space-y-3 mb-6">
+<div class="flex justify-between items-center text-[11px]">
+<span class="text-gray-500 uppercase font-bold">Usine</span>
+<span class="text-white font-medium">Boumerdès</span>
+</div>
+<div class="flex justify-between items-center text-[11px]">
+<span class="text-gray-500 uppercase font-bold">Risque</span>
+<span class="text-white font-medium">Arrêt prod.</span>
+</div>
+<div class="flex justify-between items-center text-[11px]">
+<span class="text-gray-500 uppercase font-bold">Urgence</span>
+<span class="text-white font-medium">3-5 Jours</span>
+</div>
+</div>
+<div class="flex gap-2">
+<button class="flex-1 py-2 rounded-sm bg-white/5 text-white text-[11px] font-bold hover:bg-white/10 transition-all">Archiver</button>
+<button class="p-2 rounded-sm bg-surface-container-highest text-error/60 hover:text-error transition-all">
+<span class="material-symbols-outlined text-sm">delete</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Section 3: Historique -->
+<section>
+<header class="mb-6">
+<span class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/60">Archives de l'IA</span>
+<h2 class="font-headline font-extrabold text-3xl tracking-tight">Historique des runs</h2>
+</header>
+<div class="bg-surface-container rounded-lg overflow-hidden">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-high/50">
+<th class="px-6 py-4 text-[10px] font-black uppercase text-gray-500 tracking-wider">Date</th>
+<th class="px-6 py-4 text-[10px] font-black uppercase text-gray-500 tracking-wider">Déclencheur</th>
+<th class="px-6 py-4 text-[10px] font-black uppercase text-gray-500 tracking-wider"># Recos</th>
+<th class="px-6 py-4 text-[10px] font-black uppercase text-gray-500 tracking-wider">Confiance</th>
+<th class="px-6 py-4 text-[10px] font-black uppercase text-gray-500 tracking-wider">Provider</th>
+<th class="px-6 py-4 text-[10px] font-black uppercase text-gray-500 tracking-wider">Modèle</th>
+<th class="px-6 py-4 text-[10px] font-black uppercase text-gray-500 tracking-wider">Statut</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-white/5">
+<tr class="hover:bg-surface-bright/30 transition-colors">
+<td class="px-6 py-4 text-xs font-medium text-white">20 Oct, 09:15</td>
+<td class="px-6 py-4">
+<span class="text-[10px] px-2 py-1 bg-surface-container-highest rounded-full text-gray-400">Planifié</span>
+</td>
+<td class="px-6 py-4 text-sm font-bold">12</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="w-12 h-1 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="bg-tertiary h-full" style="width: 88%"></div>
+</div>
+<span class="text-xs font-bold">88%</span>
+</div>
+</td>
+<td class="px-6 py-4 text-xs">Anthropic</td>
+<td class="px-6 py-4 text-xs text-gray-500 font-mono">claude-3-opus</td>
+<td class="px-6 py-4">
+<span class="flex items-center gap-1.5 text-[10px] font-bold text-tertiary">
+<span class="w-1.5 h-1.5 bg-tertiary rounded-full"></span>
+                                        COMPLÉTÉ
+                                    </span>
+</td>
+</tr>
+<tr class="hover:bg-surface-bright/30 transition-colors">
+<td class="px-6 py-4 text-xs font-medium text-white">19 Oct, 23:45</td>
+<td class="px-6 py-4">
+<span class="text-[10px] px-2 py-1 bg-surface-container-highest rounded-full text-error/60">Alerte</span>
+</td>
+<td class="px-6 py-4 text-sm font-bold">5</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="w-12 h-1 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="bg-primary h-full" style="width: 74%"></div>
+</div>
+<span class="text-xs font-bold">74%</span>
+</div>
+</td>
+<td class="px-6 py-4 text-xs">Ollama Local</td>
+<td class="px-6 py-4 text-xs text-gray-500 font-mono">mistral-7b</td>
+<td class="px-6 py-4">
+<span class="flex items-center gap-1.5 text-[10px] font-bold text-gray-500">
+<span class="w-1.5 h-1.5 bg-gray-500 rounded-full"></span>
+                                        ARCHIVÉ
+                                    </span>
+</td>
+</tr>
+<tr class="hover:bg-surface-bright/30 transition-colors">
+<td class="px-6 py-4 text-xs font-medium text-white">19 Oct, 18:20</td>
+<td class="px-6 py-4">
+<span class="text-[10px] px-2 py-1 bg-surface-container-highest rounded-full text-gray-400">Manuel</span>
+</td>
+<td class="px-6 py-4 text-sm font-bold">2</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="w-12 h-1 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="bg-tertiary h-full" style="width: 95%"></div>
+</div>
+<span class="text-xs font-bold">95%</span>
+</div>
+</td>
+<td class="px-6 py-4 text-xs">OpenAI</td>
+<td class="px-6 py-4 text-xs text-gray-500 font-mono">gpt-4o</td>
+<td class="px-6 py-4">
+<span class="flex items-center gap-1.5 text-[10px] font-bold text-error">
+<span class="w-1.5 h-1.5 bg-error rounded-full"></span>
+                                        ÉCHOUÉ
+                                    </span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</div>
+</main>
+<!-- Floating Action Button (Contextual) -->
+<div class="fixed bottom-8 right-8 z-50">
+<button class="w-14 h-14 bg-gradient-to-br from-primary to-primary-container rounded-sm shadow-[0_10px_30px_rgba(245,102,0,0.3)] flex items-center justify-center text-on-primary-container hover:scale-110 active:scale-95 transition-all">
+<span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+</button>
+</div>
+</body></html>

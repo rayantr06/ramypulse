@@ -1,0 +1,381 @@
+<!-- Paste Stitch page here -->
+<!DOCTYPE html>
+
+<html class="dark" lang="fr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>RamyPulse | Tableau de bord</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-lowest": "#0d0e10",
+                        "on-surface": "#e3e2e5",
+                        "on-background": "#e3e2e5",
+                        "surface-dim": "#121315",
+                        "on-secondary-container": "#b4b5b7",
+                        "on-surface-variant": "#e4beb1",
+                        "surface": "#121315",
+                        "surface-container-highest": "#343537",
+                        "inverse-on-surface": "#303033",
+                        "outline-variant": "#5b4137",
+                        "on-tertiary": "#003543",
+                        "error": "#ffb4ab",
+                        "on-error": "#690005",
+                        "surface-container": "#1f2022",
+                        "outline": "#ab897d",
+                        "surface-container-low": "#1b1c1e",
+                        "primary-container": "#f56600",
+                        "on-secondary": "#2f3133",
+                        "tertiary-container": "#009fc3",
+                        "on-error-container": "#ffdad6",
+                        "on-secondary-fixed": "#1a1c1e",
+                        "on-tertiary-fixed-variant": "#004e60",
+                        "on-primary-fixed-variant": "#7a3000",
+                        "primary-fixed-dim": "#ffb693",
+                        "tertiary-fixed-dim": "#4cd6ff",
+                        "on-tertiary-fixed": "#001f28",
+                        "surface-variant": "#343537",
+                        "on-primary-container": "#4e1c00",
+                        "secondary-fixed": "#e2e2e5",
+                        "secondary-fixed-dim": "#c6c6c9",
+                        "on-primary": "#561f00",
+                        "secondary": "#c6c6c9",
+                        "tertiary": "#4cd6ff",
+                        "secondary-container": "#454749",
+                        "on-tertiary-container": "#00303c",
+                        "tertiary-fixed": "#b7eaff",
+                        "error-container": "#93000a",
+                        "primary-fixed": "#ffdbcc",
+                        "on-secondary-fixed-variant": "#454749",
+                        "surface-container-high": "#292a2c",
+                        "surface-bright": "#38393b",
+                        "background": "#121315",
+                        "inverse-surface": "#e3e2e5",
+                        "surface-tint": "#ffb693",
+                        "inverse-primary": "#a04100",
+                        "on-primary-fixed": "#351000",
+                        "primary": "#ffb693"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "fontFamily": {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3, .brand-font { font-family: 'Manrope', sans-serif; }
+    </style>
+</head>
+<body class="bg-surface-container-lowest text-on-surface">
+<!-- SideNavBar -->
+<aside class="h-screen w-64 fixed left-0 top-0 bg-[#121315] flex flex-col py-6 px-4 z-50">
+<div class="mb-10">
+<h1 class="text-xl font-black text-[#ffb693] tracking-tighter">RamyPulse</h1>
+<p class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mt-1">Marketing Intelligence</p>
+</div>
+<nav class="flex-1 space-y-1">
+<!-- Active Tab: Tableau de bord -->
+<a class="flex items-center gap-3 px-3 py-2 text-[#ffb693] font-bold border-r-2 border-[#ffb693] bg-[#1b1d20] transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-['Manrope'] text-sm tracking-tight">Tableau de bord</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-gray-500 hover:text-gray-300 hover:bg-[#1b1d20] transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="explore">explore</span>
+<span class="font-['Manrope'] text-sm tracking-tight">Explorateur</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-gray-500 hover:text-gray-300 hover:bg-[#1b1d20] transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="campaign">campaign</span>
+<span class="font-['Manrope'] text-sm tracking-tight">Campagnes</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-gray-500 hover:text-gray-300 hover:bg-[#1b1d20] transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="visibility">visibility</span>
+<span class="font-['Manrope'] text-sm tracking-tight">Watchlists</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-gray-500 hover:text-gray-300 hover:bg-[#1b1d20] transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="notifications_active">notifications_active</span>
+<span class="font-['Manrope'] text-sm tracking-tight">Alertes</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-gray-500 hover:text-gray-300 hover:bg-[#1b1d20] transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="auto_awesome">auto_awesome</span>
+<span class="font-['Manrope'] text-sm tracking-tight">Recommandations</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-gray-500 hover:text-gray-300 hover:bg-[#1b1d20] transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="settings_input_component">settings_input_component</span>
+<span class="font-['Manrope'] text-sm tracking-tight">Admin Sources</span>
+</a>
+</nav>
+<div class="mt-auto pt-6 border-t border-gray-800/50">
+<div class="flex items-center gap-3 px-3 py-2">
+<span class="material-symbols-outlined text-gray-400" data-icon="account_circle">account_circle</span>
+<div class="overflow-hidden">
+<p class="font-['Manrope'] text-xs font-bold text-on-surface truncate">Ammar, Brand Manager</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Canvas -->
+<main class="pl-64 min-h-screen flex flex-col">
+<!-- TopNavBar -->
+<header class="sticky top-0 z-40 bg-[#121315]/80 backdrop-blur-xl h-16 flex items-center justify-end pl-8 pr-8 shadow-[0px_24px_24px_0px_rgba(255,255,255,0.06)]">
+<div class="flex items-center gap-6">
+<button class="relative text-gray-400 hover:bg-[#1b1d20] p-2 rounded-sm transition-all duration-200">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full"></span>
+</button>
+<button class="text-gray-400 hover:bg-[#1b1d20] p-2 rounded-sm transition-all duration-200">
+<span class="material-symbols-outlined" data-icon="sensors">sensors</span>
+</button>
+<div class="h-8 w-8 rounded-full bg-surface-container-high flex items-center justify-center overflow-hidden border border-outline-variant/20">
+<img alt="Ammar Profile Picture" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAbstAt_tWvE5h2NY5MXWK4cCBohfZE-lOubtu48ifibFEHoVqqeVJ_fHFTzlXlHddmZWQvql0Ju3QLkxMoVWrxOR3t5YOGyfN76aRZ4tCpJWEcv_RLehZlSe70OWTew5i4uU9L7yjtQydQQduRb1IrergO3YFDviqFbiyX8Z_qMG8HuJeaQaK0Dhv9pzeUTRyYN0052wCWxY_-uYhxnkRHcaknxa-Cz7QahA69bCRXYqfCMdhYTueYLZqVVZwZhHQDz4jRKR5FXWdK"/>
+</div>
+</div>
+</header>
+<!-- Content Grid -->
+<div class="p-8 space-y-8 flex-1">
+<div class="flex items-end justify-between">
+<div>
+<span class="text-[10px] font-bold text-primary uppercase tracking-widest block mb-1">Vue d'ensemble</span>
+<h2 class="text-3xl font-extrabold tracking-tight">Tableau de bord</h2>
+</div>
+<div class="flex gap-2">
+<div class="bg-surface-container px-3 py-1.5 rounded text-[11px] font-semibold text-on-surface-variant flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-tertiary"></span> Direct Temps Réel
+                    </div>
+<div class="bg-surface-container px-3 py-1.5 rounded text-[11px] font-semibold text-on-surface-variant">
+                        Algérie (Toutes régions)
+                    </div>
+</div>
+</div>
+<!-- Bento Grid Section 1: Health and Alerts -->
+<div class="grid grid-cols-12 gap-6">
+<!-- Brand Health Score -->
+<div class="col-span-12 lg:col-span-4 bg-surface-container p-6 rounded-xl flex flex-col items-center justify-center relative overflow-hidden group">
+<div class="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-50"></div>
+<span class="label-sm text-[10px] text-on-surface-variant font-bold uppercase tracking-widest absolute top-6 left-6">SANTÉ DE LA MARQUE</span>
+<div class="relative w-48 h-48 flex items-center justify-center mt-4">
+<svg class="w-full h-full transform -rotate-90">
+<circle class="text-surface-container-highest" cx="96" cy="96" fill="transparent" r="88" stroke="currentColor" stroke-width="8"></circle>
+<circle class="text-primary" cx="96" cy="96" fill="transparent" r="88" stroke="currentColor" stroke-dasharray="552.9" stroke-dashoffset="99.5" stroke-width="8"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="text-5xl font-black tracking-tighter text-on-surface">82</span>
+<span class="text-xs font-bold text-on-surface-variant">/ 100</span>
+</div>
+</div>
+<div class="mt-6 text-center">
+<p class="text-sm font-semibold text-tertiary flex items-center gap-1 justify-center">
+<span class="material-symbols-outlined text-sm" data-icon="trending_up">trending_up</span>
+                            Sentiment global en hausse (+4%)
+                        </p>
+<p class="text-[11px] text-gray-500 mt-1 italic">Basé sur 12.4k mentions ce mois</p>
+</div>
+</div>
+<!-- Critical Alerts -->
+<div class="col-span-12 lg:col-span-8 bg-surface-container p-6 rounded-xl flex flex-col">
+<div class="flex items-center justify-between mb-6">
+<span class="label-sm text-[10px] text-on-surface-variant font-bold uppercase tracking-widest">ALERTES CRITIQUES</span>
+<span class="px-2 py-0.5 bg-error-container text-error text-[10px] font-bold rounded">3 NOUVELLES</span>
+</div>
+<div class="space-y-3 flex-1">
+<!-- Alert Item -->
+<div class="flex items-center gap-4 p-4 bg-surface-container-low hover:bg-surface-container-high transition-colors duration-200 group">
+<div class="w-10 h-10 rounded-sm bg-error/10 flex items-center justify-center text-error">
+<span class="material-symbols-outlined" data-icon="sentiment_very_dissatisfied">sentiment_very_dissatisfied</span>
+</div>
+<div class="flex-1">
+<h4 class="text-sm font-bold text-on-surface">Sentiment Négatif: Ramy Citron à Oran</h4>
+<p class="text-xs text-gray-500">Incompatibilité détectée entre la campagne actuelle et le sentiment régional.</p>
+</div>
+<div class="text-right">
+<span class="text-[10px] font-bold text-error uppercase">Urgent</span>
+<p class="text-[10px] text-gray-600 mt-1">Il y a 14 min</p>
+</div>
+</div>
+<!-- Alert Item -->
+<div class="flex items-center gap-4 p-4 bg-surface-container-low hover:bg-surface-container-high transition-colors duration-200 group">
+<div class="w-10 h-10 rounded-sm bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" data-icon="monitoring">monitoring</span>
+</div>
+<div class="flex-1">
+<h4 class="text-sm font-bold text-on-surface">Spike de mentions: YouTube</h4>
+<p class="text-xs text-gray-500">Volume de contenu généré par les utilisateurs au-dessus de la normale (+45%).</p>
+</div>
+<div class="text-right">
+<span class="text-[10px] font-bold text-tertiary uppercase">Analyse</span>
+<p class="text-[10px] text-gray-600 mt-1">Il y a 2h</p>
+</div>
+</div>
+<!-- Alert Item -->
+<div class="flex items-center gap-4 p-4 bg-surface-container-low hover:bg-surface-container-high transition-colors duration-200 group">
+<div class="w-10 h-10 rounded-sm bg-surface-container-highest flex items-center justify-center text-gray-400">
+<span class="material-symbols-outlined" data-icon="sync_problem">sync_problem</span>
+</div>
+<div class="flex-1">
+<h4 class="text-sm font-bold text-on-surface">Erreur de synchro: Google Maps</h4>
+<p class="text-xs text-gray-500">Flux de données de points de vente interrompu pour la région Est (Constantine, Sétif).</p>
+</div>
+<div class="text-right">
+<span class="text-[10px] font-bold text-gray-500 uppercase">Système</span>
+<p class="text-[10px] text-gray-600 mt-1">Hier, 23:15</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Bento Grid Section 2: Recommendations and Market Data -->
+<div class="grid grid-cols-12 gap-6">
+<!-- Recommended Actions (AI) -->
+<div class="col-span-12 lg:col-span-12">
+<div class="flex items-center gap-4 mb-4">
+<span class="label-sm text-[10px] text-on-surface-variant font-bold uppercase tracking-widest">ACTIONS RECOMMANDÉES PAR L'IA</span>
+<div class="h-[1px] flex-1 bg-outline-variant/10"></div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- Action Card 1 -->
+<div class="bg-surface-container-low border border-outline-variant/10 p-6 hover:bg-surface-container-high transition-all duration-300 group">
+<div class="flex justify-between items-start mb-4">
+<div class="p-2 bg-primary/10 rounded-sm">
+<span class="material-symbols-outlined text-primary text-2xl" data-icon="forum">forum</span>
+</div>
+<div class="text-right">
+<span class="text-[10px] font-bold text-tertiary">CONFIANCE</span>
+<p class="text-xl font-black text-on-surface tracking-tighter">92%</p>
+</div>
+</div>
+<h4 class="text-base font-bold text-on-surface mb-3">Répondre aux commentaires à Alger</h4>
+<p class="text-sm text-gray-500 mb-8 leading-relaxed">Forte concentration de demandes non résolues concernant la disponibilité de Ramy Fraise à Alger-Centre.</p>
+<button class="w-full py-2.5 bg-gradient-to-r from-primary to-primary-container text-on-primary-fixed text-[11px] font-bold rounded-sm group-hover:scale-[1.02] transition-transform">EXÉCUTER L'ACTION</button>
+</div>
+<!-- Action Card 2 -->
+<div class="bg-surface-container-low border border-outline-variant/10 p-6 hover:bg-surface-container-high transition-all duration-300 group">
+<div class="flex justify-between items-start mb-4">
+<div class="p-2 bg-tertiary/10 rounded-sm">
+<span class="material-symbols-outlined text-tertiary text-2xl" data-icon="rocket_launch">rocket_launch</span>
+</div>
+<div class="text-right">
+<span class="text-[10px] font-bold text-tertiary">CONFIANCE</span>
+<p class="text-xl font-black text-on-surface tracking-tighter">88%</p>
+</div>
+</div>
+<h4 class="text-base font-bold text-on-surface mb-3">Lancer une campagne à Béjaïa</h4>
+<p class="text-sm text-gray-500 mb-8 leading-relaxed">Tendance estivale en hausse. Opportunité de dominer la part de voix (Share of Voice) sur le segment boisson fraîche.</p>
+<button class="w-full py-2.5 bg-gradient-to-r from-primary to-primary-container text-on-primary-fixed text-[11px] font-bold rounded-sm group-hover:scale-[1.02] transition-transform">GÉNÉRER LE BRIEF</button>
+</div>
+<!-- Action Card 3 -->
+<div class="bg-surface-container-low border border-outline-variant/10 p-6 hover:bg-surface-container-high transition-all duration-300 group">
+<div class="flex justify-between items-start mb-4">
+<div class="p-2 bg-on-surface-variant/10 rounded-sm">
+<span class="material-symbols-outlined text-on-surface-variant text-2xl" data-icon="inventory_2">inventory_2</span>
+</div>
+<div class="text-right">
+<span class="text-[10px] font-bold text-tertiary">CONFIANCE</span>
+<p class="text-xl font-black text-on-surface tracking-tighter">75%</p>
+</div>
+</div>
+<h4 class="text-base font-bold text-on-surface mb-3">Ajuster le stock: Ramy Orange</h4>
+<p class="text-sm text-gray-500 mb-8 leading-relaxed">Prédiction de rupture de stock à Tlemcen d'ici 48h basée sur les tendances de consommation locales.</p>
+<button class="w-full py-2.5 bg-gradient-to-r from-primary to-primary-container text-on-primary-fixed text-[11px] font-bold rounded-sm group-hover:scale-[1.02] transition-transform">COMMANDER STOCK</button>
+</div>
+</div>
+</div>
+<!-- Sales Performance by Product -->
+<div class="col-span-12 lg:col-span-7 bg-surface-container p-6 rounded-xl overflow-hidden relative">
+<span class="label-sm text-[10px] text-on-surface-variant font-bold uppercase tracking-widest block mb-6">VENTES PAR PRODUIT (7 JOURS)</span>
+<div class="space-y-6">
+<div class="relative">
+<div class="flex justify-between items-end mb-2">
+<span class="text-sm font-bold">Ramy Citron</span>
+<span class="text-xs text-tertiary font-bold">+12.4%</span>
+</div>
+<div class="h-2 bg-surface-container-highest w-full rounded-full overflow-hidden">
+<div class="h-full bg-primary" style="width: 78%"></div>
+</div>
+</div>
+<div class="relative">
+<div class="flex justify-between items-end mb-2">
+<span class="text-sm font-bold">Ramy Orange</span>
+<span class="text-xs text-error font-bold">-2.1%</span>
+</div>
+<div class="h-2 bg-surface-container-highest w-full rounded-full overflow-hidden">
+<div class="h-full bg-primary/60" style="width: 65%"></div>
+</div>
+</div>
+<div class="relative">
+<div class="flex justify-between items-end mb-2">
+<span class="text-sm font-bold">Ramy Fraise</span>
+<span class="text-xs text-tertiary font-bold">+8.7%</span>
+</div>
+<div class="h-2 bg-surface-container-highest w-full rounded-full overflow-hidden">
+<div class="h-full bg-primary/40" style="width: 42%"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Regional Heatmap Placeholder/Indicator -->
+<div class="col-span-12 lg:col-span-5 bg-surface-container p-6 rounded-xl flex flex-col">
+<span class="label-sm text-[10px] text-on-surface-variant font-bold uppercase tracking-widest block mb-4">DISTRIBUTION RÉGIONALE</span>
+<div class="flex-1 bg-surface-container-low rounded-sm relative overflow-hidden">
+<div class="absolute inset-0 grayscale opacity-20 hover:opacity-40 transition-opacity">
+<!-- Placeholder for a map or data graphic -->
+<div class="w-full h-full bg-gradient-to-br from-gray-800 to-black flex items-center justify-center">
+<span class="material-symbols-outlined text-6xl text-gray-700" data-icon="map">map</span>
+</div>
+</div>
+<div class="absolute inset-0 p-4 space-y-3 pointer-events-none">
+<div class="flex items-center justify-between text-[11px]">
+<span class="font-bold">Alger</span>
+<div class="flex items-center gap-2">
+<span class="w-12 h-1 bg-primary rounded-full"></span>
+<span class="text-gray-400">42%</span>
+</div>
+</div>
+<div class="flex items-center justify-between text-[11px]">
+<span class="font-bold">Oran</span>
+<div class="flex items-center gap-2">
+<span class="w-8 h-1 bg-primary/80 rounded-full"></span>
+<span class="text-gray-400">28%</span>
+</div>
+</div>
+<div class="flex items-center justify-between text-[11px]">
+<span class="font-bold">Constantine</span>
+<div class="flex items-center gap-2">
+<span class="w-5 h-1 bg-primary/60 rounded-full"></span>
+<span class="text-gray-400">15%</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Footer / Technical Stats -->
+<footer class="p-8 pt-0 flex justify-between items-center text-[10px] text-gray-600 font-bold uppercase tracking-widest">
+<div class="flex gap-4">
+<span>API Status: Normal</span>
+<span>Latency: 42ms</span>
+</div>
+<div>
+                © 2024 RamyPulse Intelligence Unit
+            </div>
+</footer>
+</main>
+</body></html>
