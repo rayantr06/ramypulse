@@ -11,6 +11,10 @@ from datetime import datetime
 
 import config
 import pandas as pd
+from core.notifications.notification_manager import (
+    send_email_notification,
+    send_slack_notification,
+)
 from core.security.secret_manager import resolve_secret
 
 logger = logging.getLogger(__name__)
@@ -175,6 +179,21 @@ def _should_auto_trigger(agent_config: dict, severity: str) -> bool:
     return _severity_rank(severity) >= _severity_rank(agent_config.get("auto_trigger_severity", "critical"))
 
 
+def _should_auto_notify(severity: str) -> bool:
+    """Indique si la severite respecte le seuil de notification automatique."""
+    cfg = _config_module()
+    minimum = getattr(cfg, "ALERT_NOTIFICATION_MIN_SEVERITY", "critical")
+    return _severity_rank(severity) >= _severity_rank(minimum)
+
+
+def _format_alert_notification_message(title: str, description: str, navigation_url: str | None) -> str:
+    """Construit un message simple reutilisable pour email et Slack."""
+    lines = [str(description or "").strip() or title]
+    if navigation_url:
+        lines.extend(["", f"Lien: {navigation_url}"])
+    return "\n".join(lines).strip()
+
+
 def _run_recommendation_auto_trigger(alert_id: str, severity: str) -> None:
     """Genere une recommandation automatiquement si la configuration le permet."""
     try:
@@ -220,6 +239,49 @@ def _run_recommendation_auto_trigger(alert_id: str, severity: str) -> None:
         logger.exception("Echec auto-trigger recommandation pour alerte %s", alert_id)
 
 
+def _run_notification_auto_trigger(
+    *,
+    alert_id: str,
+    client_id: str,
+    title: str,
+    description: str,
+    severity: str,
+    navigation_url: str | None,
+) -> None:
+    """Envoie les notifications auto configurees pour une alerte si le seuil le permet."""
+    try:
+        if not _should_auto_notify(severity):
+            return
+
+        cfg = _config_module()
+        email_recipient = getattr(cfg, "ALERT_NOTIFICATION_EMAIL_TO", "")
+        slack_reference = getattr(cfg, "ALERT_NOTIFICATION_SLACK_WEBHOOK_REFERENCE", "")
+        if not email_recipient and not resolve_secret(slack_reference):
+            return
+
+        message = _format_alert_notification_message(title, description, navigation_url)
+        if email_recipient:
+            send_email_notification(
+                title=f"RamyPulse Alert - {title}",
+                message=message,
+                recipient=email_recipient,
+                reference_id=alert_id,
+                notification_type="alert",
+                client_id=client_id,
+            )
+        if resolve_secret(slack_reference):
+            send_slack_notification(
+                title=f"RamyPulse Alert - {title}",
+                message=message,
+                webhook_url=slack_reference,
+                reference_id=alert_id,
+                notification_type="alert",
+                client_id=client_id,
+            )
+    except Exception:
+        logger.exception("Echec auto-notification pour alerte %s", alert_id)
+
+
 def _row_to_alert(row: sqlite3.Row | None) -> dict | None:
     """Convertit une ligne SQLite en dictionnaire d'alerte."""
     if row is None:
@@ -237,6 +299,7 @@ def create_alert(
     watchlist_id: str | None = None,
     dedup_key: str | None = None,
     navigation_url: str | None = None,
+    client_id: str | None = None,
 ) -> str | None:
     """Cree une alerte ou retourne None si la deduplication bloque un doublon."""
     if severity not in _VALID_SEVERITIES:
@@ -248,6 +311,8 @@ def create_alert(
 
     alert_rule_id = alert_payload.get("rule_id") or alert_payload.get("alert_rule_id")
     detected_at = _now()
+
+    effective_client_id = client_id or config.DEFAULT_CLIENT_ID
 
     with _get_connection() as connection:
         _ensure_alerts_table(connection)
@@ -287,7 +352,7 @@ def create_alert(
             """,
             (
                 alert_id,
-                config.DEFAULT_CLIENT_ID,
+                effective_client_id,
                 watchlist_id,
                 str(alert_rule_id) if alert_rule_id else None,
                 str(title).strip(),
@@ -305,6 +370,14 @@ def create_alert(
 
     logger.info("Alerte creee: %s", alert_id)
     _run_recommendation_auto_trigger(alert_id, severity)
+    _run_notification_auto_trigger(
+        alert_id=alert_id,
+        client_id=effective_client_id,
+        title=str(title).strip(),
+        description=str(description or "").strip(),
+        severity=severity,
+        navigation_url=navigation_url,
+    )
     return alert_id
 
 

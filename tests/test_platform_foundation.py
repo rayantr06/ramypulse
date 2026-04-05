@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sqlite3
 import sys
+import importlib
 from pathlib import Path
 
 import pandas as pd
@@ -19,6 +20,9 @@ def platform_db(tmp_path, monkeypatch):
     """Base SQLite temporaire pour les tests plateforme."""
     db_path = tmp_path / "platform.db"
     monkeypatch.setattr(config, "SQLITE_DB_PATH", db_path, raising=False)
+    current_config = importlib.import_module("config")
+    if current_config is not config:
+        monkeypatch.setattr(current_config, "SQLITE_DB_PATH", db_path, raising=False)
     return db_path
 
 
@@ -378,6 +382,63 @@ def test_health_checker_persiste_un_snapshot_source(platform_db) -> None:
 
     assert row is not None
     assert row[0] == result["health_score"]
+
+
+def test_health_checker_cree_une_alerte_unique_quand_la_sante_passe_sous_le_seuil(platform_db) -> None:
+    """Le cycle de sante doit remonter une alerte dedupee quand le score est degrade."""
+    from core.database import DatabaseManager
+    from core.ingestion.health_checker import compute_source_health
+    from core.ingestion.orchestrator import IngestionOrchestrator
+
+    database = DatabaseManager(str(platform_db))
+    database.create_tables()
+    database.close()
+
+    orchestrator = IngestionOrchestrator(db_path=str(platform_db))
+    source = orchestrator.create_source(
+        {
+            "client_id": "client-health",
+            "source_name": "Facebook Health Alert",
+            "platform": "facebook",
+            "source_type": "managed_page",
+            "owner_type": "owned",
+            "auth_mode": "public",
+            "freshness_sla_hours": 24,
+        }
+    )
+
+    first = compute_source_health(
+        source["source_id"],
+        db_path=str(platform_db),
+        client_id="client-health",
+        emit_alert=True,
+    )
+    second = compute_source_health(
+        source["source_id"],
+        db_path=str(platform_db),
+        client_id="client-health",
+        emit_alert=True,
+    )
+
+    assert first["alert_created"] == 1
+    assert first["alert_id"]
+    assert second["alert_created"] == 0
+    assert second["alert_id"] is None
+
+    with sqlite3.connect(platform_db) as connection:
+        connection.row_factory = sqlite3.Row
+        rows = connection.execute(
+            """
+            SELECT alert_id, title, severity, dedup_key, alert_payload
+            FROM alerts
+            ORDER BY detected_at DESC
+            """
+        ).fetchall()
+
+    assert len(rows) == 1
+    assert rows[0]["severity"] in {"critical", "high"}
+    assert rows[0]["dedup_key"] == f"source_health:{source['source_id']}"
+    assert "Facebook Health Alert" in rows[0]["title"]
 
 
 def test_orchestrator_resout_credential_ref_pour_la_sync(

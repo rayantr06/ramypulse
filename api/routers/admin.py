@@ -11,6 +11,7 @@ from fastapi import APIRouter, HTTPException, Query
 
 from config import DEFAULT_CLIENT_ID
 from api.schemas import (
+    AutomationCycleTrigger,
     NormalizationTrigger,
     SourceCreate,
     SourceSyncTrigger,
@@ -20,6 +21,7 @@ from core.ingestion.health_checker import compute_source_health
 from core.ingestion.orchestrator import IngestionOrchestrator
 from core.ingestion.scheduler import run_due_syncs
 from core.ingestion.source_admin_service import SourceAdminService
+from core.runtime.automation_runtime import run_automation_cycle
 
 logger = logging.getLogger(__name__)
 
@@ -190,4 +192,23 @@ def scheduler_tick(
         return run_due_syncs(client_id=client_id, now=now)
     except Exception as e:
         logger.error("Erreur scheduler_tick: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/runtime/cycle")
+def trigger_runtime_cycle(payload: AutomationCycleTrigger):
+    """Exécute un cycle one-shot du runtime d'automatisation."""
+    try:
+        cid = payload.client_id or DEFAULT_CLIENT_ID
+        return run_automation_cycle(
+            client_id=cid,
+            run_sync=payload.run_sync,
+            run_normalization=payload.run_normalization,
+            run_health=payload.run_health,
+            run_alerts=payload.run_alerts,
+            batch_size=payload.batch_size,
+            now=payload.now,
+        )
+    except Exception as e:
+        logger.error("Erreur trigger_runtime_cycle: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
