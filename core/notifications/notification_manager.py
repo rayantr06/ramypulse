@@ -65,6 +65,7 @@ def create_notification(
     channel: str,
     recipient: str | None = None,
     status: str = "unread",
+    client_id: str | None = None,
 ) -> str:
     """Persiste une notification et retourne son identifiant."""
     cfg = _config_module()
@@ -88,7 +89,7 @@ def create_notification(
             """,
             (
                 notification_id,
-                cfg.DEFAULT_CLIENT_ID,
+                client_id or cfg.DEFAULT_CLIENT_ID,
                 notification_type,
                 reference_id,
                 str(title).strip(),
@@ -148,6 +149,8 @@ def send_email_notification(
     message: str,
     recipient: str,
     reference_id: str | None = None,
+    notification_type: str = "report",
+    client_id: str | None = None,
 ) -> str:
     """Envoie une notification e-mail et la journalise."""
     cfg = _config_module()
@@ -181,13 +184,14 @@ def send_email_notification(
             pass
 
     return create_notification(
-        notification_type="report",
+        notification_type=notification_type,
         reference_id=reference_id,
         title=title,
         message=message,
         channel="email",
         recipient=recipient,
         status="sent",
+        client_id=client_id,
     )
 
 
@@ -196,6 +200,8 @@ def send_slack_notification(
     message: str,
     webhook_url: str,
     reference_id: str | None = None,
+    notification_type: str = "report",
+    client_id: str | None = None,
 ) -> str:
     """Envoie une notification Slack via webhook et la journalise."""
     resolved_webhook = resolve_secret(webhook_url)
@@ -210,11 +216,12 @@ def send_slack_notification(
     response.raise_for_status()
 
     return create_notification(
-        notification_type="report",
+        notification_type=notification_type,
         reference_id=reference_id,
         title=title,
         message=message,
         channel="slack",
         recipient=resolved_webhook,
         status="sent",
+        client_id=client_id,
     )

@@ -929,6 +929,41 @@ class TestAdmin:
             assert r.status_code == 200
             assert r.json()["status"] == "success"
 
+    def test_runtime_cycle_endpoint(self):
+        with patch(
+            "api.routers.admin.run_automation_cycle",
+            return_value={
+                "client_id": "client-runtime",
+                "sync": {"status": "skipped"},
+                "normalization": {"status": "success", "processed_count": 5},
+                "health": {"status": "success", "sources_checked": 2, "alerts_created": 1},
+                "alerts": {"status": "success", "alerts_created": 3},
+            },
+        ) as mocked_run:
+            r = client.post("/api/admin/runtime/cycle", json={
+                "client_id": "client-runtime",
+                "run_sync": False,
+                "run_normalization": True,
+                "run_health": True,
+                "run_alerts": True,
+                "batch_size": 50,
+                "now": "2026-04-05T10:00:00+00:00",
+            })
+
+        assert r.status_code == 200
+        data = r.json()
+        assert data["client_id"] == "client-runtime"
+        assert data["health"]["alerts_created"] == 1
+        mocked_run.assert_called_once_with(
+            client_id="client-runtime",
+            run_sync=False,
+            run_normalization=True,
+            run_health=True,
+            run_alerts=True,
+            batch_size=50,
+            now="2026-04-05T10:00:00+00:00",
+        )
+
     def test_scheduler_tick_runs_due_priority_source_only(self):
         client_id = f"client-{uuid.uuid4().hex[:8]}"
         coverage_key = f"owned:facebook:scheduler-priority-{uuid.uuid4().hex[:8]}"

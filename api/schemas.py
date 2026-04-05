@@ -317,6 +317,16 @@ class NormalizationTrigger(BaseModel):
     batch_size: int = 200
 
 
+class AutomationCycleTrigger(BaseModel):
+    client_id: str | None = None
+    run_sync: bool = True
+    run_normalization: bool = True
+    run_health: bool = True
+    run_alerts: bool = True
+    batch_size: int = 200
+    now: str | None = None
+
+
 class WatchlistCreate(BaseModel):
     name: str = Field(..., min_length=1)
     description: str = ""

@@ -216,6 +216,98 @@ def test_list_alerts_filtre_par_statut_et_severite(
     assert [alert["alert_id"] for alert in acknowledged] == [second_id]
 
 
+def test_create_alert_declenche_les_notifications_auto_si_la_severite_le_permet(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Une alerte critique doit envoyer les notifications configurees."""
+    _prepare_sqlite(monkeypatch, tmp_path)
+    alert_manager = _import_or_fail("core.alerts.alert_manager")
+
+    monkeypatch.setattr(config, "ALERT_NOTIFICATION_EMAIL_TO", "ops@example.com", raising=False)
+    monkeypatch.setattr(
+        config,
+        "ALERT_NOTIFICATION_SLACK_WEBHOOK_REFERENCE",
+        "https://hooks.slack.test/services/alerts",
+        raising=False,
+    )
+    monkeypatch.setattr(config, "ALERT_NOTIFICATION_MIN_SEVERITY", "high", raising=False)
+    monkeypatch.setattr(alert_manager, "_run_recommendation_auto_trigger", lambda *args, **kwargs: None)
+
+    email_calls: list[dict] = []
+    slack_calls: list[dict] = []
+    monkeypatch.setattr(
+        alert_manager,
+        "send_email_notification",
+        lambda **kwargs: email_calls.append(kwargs) or "notif-email-1",
+    )
+    monkeypatch.setattr(
+        alert_manager,
+        "send_slack_notification",
+        lambda **kwargs: slack_calls.append(kwargs) or "notif-slack-1",
+    )
+
+    alert_id = alert_manager.create_alert(
+        title="NSS critique",
+        description="Le NSS est sous le seuil",
+        severity="critical",
+        dedup_key="notify-critical-1",
+        alert_payload={"rule_id": "nss_critical_low", "current": -50.0},
+    )
+
+    assert alert_id is not None
+    assert len(email_calls) == 1
+    assert len(slack_calls) == 1
+    assert email_calls[0]["reference_id"] == alert_id
+    assert email_calls[0]["notification_type"] == "alert"
+    assert slack_calls[0]["reference_id"] == alert_id
+    assert slack_calls[0]["notification_type"] == "alert"
+
+
+def test_create_alert_ne_declenche_pas_de_notifications_sous_le_seuil(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Une alerte basse ne doit rien envoyer si le seuil auto est plus haut."""
+    _prepare_sqlite(monkeypatch, tmp_path)
+    alert_manager = _import_or_fail("core.alerts.alert_manager")
+
+    monkeypatch.setattr(config, "ALERT_NOTIFICATION_EMAIL_TO", "ops@example.com", raising=False)
+    monkeypatch.setattr(
+        config,
+        "ALERT_NOTIFICATION_SLACK_WEBHOOK_REFERENCE",
+        "https://hooks.slack.test/services/alerts",
+        raising=False,
+    )
+    monkeypatch.setattr(config, "ALERT_NOTIFICATION_MIN_SEVERITY", "high", raising=False)
+    monkeypatch.setattr(alert_manager, "_run_recommendation_auto_trigger", lambda *args, **kwargs: None)
+
+    email_calls: list[dict] = []
+    slack_calls: list[dict] = []
+    monkeypatch.setattr(
+        alert_manager,
+        "send_email_notification",
+        lambda **kwargs: email_calls.append(kwargs) or "notif-email-1",
+    )
+    monkeypatch.setattr(
+        alert_manager,
+        "send_slack_notification",
+        lambda **kwargs: slack_calls.append(kwargs) or "notif-slack-1",
+    )
+
+    alert_id = alert_manager.create_alert(
+        title="Alerte faible",
+        description="Bruit faible",
+        severity="low",
+        dedup_key="notify-low-1",
+        alert_payload={"rule_id": "volume_drop"},
+    )
+
+    assert alert_id is not None
+    assert email_calls == []
+    assert slack_calls == []
+
+
 def test_compute_watchlist_metrics_calcule_nss_et_deltas(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
