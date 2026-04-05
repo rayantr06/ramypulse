@@ -6,6 +6,7 @@ __pycache__/
 data/raw/
 data/processed/
 data/embeddings/
+data/secrets/
 data/*.db
 models/dziribert/
 models/whisper/

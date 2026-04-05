@@ -2,9 +2,12 @@ import type {
   ApiStatus,
   Alert,
   Campaign,
+  CampaignEngagementSummary,
+  CampaignPost,
   CampaignImpact,
   CampaignStats,
   ContextPreview,
+  CredentialSummary,
   DashboardAction,
   DashboardAlert,
   DashboardSummary,
@@ -13,6 +16,7 @@ import type {
   Recommendation,
   RecommendationItem,
   SearchResult,
+  SchedulerTickResult,
   Source,
   SyncRun,
   VerbatimsResponse,
@@ -144,6 +148,7 @@ export function mapCampaign(value: unknown): Campaign {
     target_regions: asStringArray(record.target_regions),
     keywords: asStringArray(record.keywords),
     budget_dza: record.budget_dza == null ? null : asNumber(record.budget_dza),
+    revenue_dza: record.revenue_dza == null ? null : asNumber(record.revenue_dza),
     start_date: asString(record.start_date) || null,
     end_date: asString(record.end_date) || null,
     pre_window_days: record.pre_window_days == null ? null : asNumber(record.pre_window_days),
@@ -390,6 +395,10 @@ export function mapAdminSource(value: unknown): Source {
     is_active: asNumber(record.is_active),
     sync_frequency_minutes: asNumber(record.sync_frequency_minutes),
     freshness_sla_hours: asNumber(record.freshness_sla_hours),
+    source_purpose: asString(record.source_purpose) || null,
+    source_priority: record.source_priority == null ? null : asNumber(record.source_priority),
+    coverage_key: asString(record.coverage_key) || null,
+    credential_id: asString(record.credential_id) || null,
     last_sync_at: asString(record.last_sync_at) || null,
     created_at: asString(record.created_at) || null,
     updated_at: asString(record.updated_at) || null,
@@ -432,6 +441,141 @@ export function mapAdminSyncRun(value: unknown): SyncRun {
     client_id: asString(record.client_id) || null,
     source_name: asString(record.source_name) || null,
     platform: asString(record.platform) || null,
+  };
+}
+
+export function mapCredentialSummary(value: unknown): CredentialSummary {
+  const record = asRecord(value);
+  return {
+    credential_id: asString(record.credential_id),
+    entity_type: asString(record.entity_type),
+    entity_name: asString(record.entity_name),
+    platform: asString(record.platform),
+    account_id: asString(record.account_id) || null,
+    app_id: asString(record.app_id) || null,
+    is_active: Boolean(asNumber(record.is_active)),
+    created_at: asString(record.created_at) || null,
+    updated_at: asString(record.updated_at) || null,
+  };
+}
+
+export function mapCampaignPost(value: unknown): CampaignPost {
+  const record = asRecord(value);
+  return {
+    post_id: asString(record.post_id),
+    campaign_id: asString(record.campaign_id) || null,
+    platform: asString(record.platform),
+    post_platform_id: asString(record.post_platform_id),
+    post_url: asString(record.post_url) || null,
+    entity_type: asString(record.entity_type) || null,
+    entity_name: asString(record.entity_name) || null,
+    credential_id: asString(record.credential_id) || null,
+    added_at: asString(record.added_at) || null,
+  };
+}
+
+function mapSentimentBreakdown(value: unknown): Record<string, number> {
+  return asNumberRecord(value);
+}
+
+function mapNegativeAspects(value: unknown): string[] {
+  return asStringArray(value);
+}
+
+function mapEngagementPost(value: unknown): CampaignEngagementSummary["posts"][number] {
+  const record = asRecord(value);
+  return {
+    post_id: asString(record.post_id),
+    platform: asString(record.platform),
+    post_url: asString(record.post_url) || null,
+    entity_type: asString(record.entity_type) || null,
+    entity_name: asString(record.entity_name) || null,
+    likes: asNumber(record.likes),
+    comments: asNumber(record.comments),
+    shares: asNumber(record.shares),
+    views: asNumber(record.views),
+    reach: asNumber(record.reach),
+    impressions: asNumber(record.impressions),
+    saves: asNumber(record.saves),
+    collected_at: asString(record.collected_at) || null,
+    signal_count: asNumber(record.signal_count),
+    sentiment_breakdown: mapSentimentBreakdown(record.sentiment_breakdown),
+    negative_aspects: mapNegativeAspects(record.negative_aspects),
+  };
+}
+
+function mapTopPerformer(
+  value: unknown,
+): CampaignEngagementSummary["top_performer"] {
+  if (!value) return null;
+  const record = asRecord(value);
+  return {
+    post_id: asString(record.post_id),
+    platform: asString(record.platform),
+    post_url: asString(record.post_url) || null,
+    entity_name: asString(record.entity_name) || null,
+    engagement: asNumber(record.engagement),
+    reach: asNumber(record.reach),
+    signal_count: asNumber(record.signal_count),
+    sentiment_breakdown: mapSentimentBreakdown(record.sentiment_breakdown),
+    negative_aspects: mapNegativeAspects(record.negative_aspects),
+  };
+}
+
+export function mapCampaignEngagementSummary(value: unknown): CampaignEngagementSummary {
+  const record = asRecord(value);
+  const totals = asRecord(record.totals);
+  return {
+    campaign_id: asString(record.campaign_id),
+    post_count: asNumber(record.post_count),
+    metrics_collected_count: asNumber(record.metrics_collected_count),
+    totals: {
+      likes: asNumber(totals.likes),
+      comments: asNumber(totals.comments),
+      shares: asNumber(totals.shares),
+      views: asNumber(totals.views),
+      reach: asNumber(totals.reach),
+      impressions: asNumber(totals.impressions),
+      saves: asNumber(totals.saves),
+    },
+    engagement_rate: record.engagement_rate == null ? null : asNumber(record.engagement_rate),
+    engagement_rate_note: asString(record.engagement_rate_note) || null,
+    roi_pct: record.roi_pct == null ? null : asNumber(record.roi_pct),
+    roi_note: asString(record.roi_note) || null,
+    budget_dza: record.budget_dza == null ? null : asNumber(record.budget_dza),
+    revenue_dza: record.revenue_dza == null ? null : asNumber(record.revenue_dza),
+    signal_count: asNumber(record.signal_count),
+    sentiment_breakdown: mapSentimentBreakdown(record.sentiment_breakdown),
+    negative_aspects: mapNegativeAspects(record.negative_aspects),
+    top_performer: mapTopPerformer(record.top_performer),
+    posts: asObjectArray(record.posts).map(mapEngagementPost),
+  };
+}
+
+export function mapSchedulerTickResult(value: unknown): SchedulerTickResult {
+  const record = asRecord(value);
+  return {
+    tick_at: asString(record.tick_at),
+    groups_processed: asNumber(record.groups_processed),
+    sources_scheduled: asNumber(record.sources_scheduled),
+    groups: asObjectArray(record.groups).map((group) => ({
+      coverage_key: asString(group.coverage_key),
+      winner_source_id: asString(group.winner_source_id) || null,
+      winner_status: asString(group.winner_status) || null,
+      attempts: asObjectArray(group.attempts).map((attempt) => ({
+        source_id: asString(attempt.source_id),
+        source_priority:
+          attempt.source_priority == null ? null : asNumber(attempt.source_priority),
+        status: asString(attempt.status),
+        records_fetched:
+          attempt.records_fetched == null ? null : asNumber(attempt.records_fetched),
+        records_inserted:
+          attempt.records_inserted == null ? null : asNumber(attempt.records_inserted),
+        records_failed:
+          attempt.records_failed == null ? null : asNumber(attempt.records_failed),
+        error: asString(attempt.error) || null,
+      })),
+    })),
   };
 }
 

@@ -28,12 +28,18 @@ function AppRouter() {
   );
 }
 
+function useHashLocationWithSearchStripped(): ReturnType<typeof useHashLocation> {
+  const [location, navigate] = useHashLocation();
+  const normalizedLocation = location.split("?")[0] || "/";
+  return [normalizedLocation, navigate];
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
-        <Router hook={useHashLocation}>
+        <Router hook={useHashLocationWithSearchStripped}>
           <AppRouter />
         </Router>
       </TooltipProvider>

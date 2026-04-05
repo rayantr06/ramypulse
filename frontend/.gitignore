@@ -2,3 +2,5 @@ node_modules/
 dist/
 .env
 *.db
+playwright-report/
+test-results/

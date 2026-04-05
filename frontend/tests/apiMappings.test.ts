@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import * as apiMappings from "../client/src/lib/apiMappings";
 import {
   buildCampaignCreatePayload,
   flattenProviderCatalog,
@@ -21,6 +22,10 @@ import {
   mapWatchlist,
   mapWatchlistMetrics,
 } from "../client/src/lib/apiMappings";
+
+const adminSourcesViewModel = await import("../client/src/lib/adminSourcesViewModel").catch(
+  () => ({}) as Record<string, unknown>,
+);
 
 test("mapDashboardSummary keeps the real API contract fields", () => {
   const summary = mapDashboardSummary({
@@ -318,4 +323,172 @@ test("mapAdminSource, run and snapshot use platform service field names", () => 
   assert.equal(source.source_name, "Facebook Ramy");
   assert.equal(run.sync_run_id, "run_1");
   assert.equal(snapshot.health_score, 82);
+});
+
+test("admin mappings expose governance and admin-ops contracts", () => {
+  assert.equal(typeof apiMappings.mapCredentialSummary, "function");
+  assert.equal(typeof apiMappings.mapCampaignPost, "function");
+  assert.equal(typeof apiMappings.mapCampaignEngagementSummary, "function");
+  assert.equal(typeof apiMappings.mapSchedulerTickResult, "function");
+
+  const source = mapAdminSource({
+    source_id: "src_governed",
+    source_name: "Instagram Ramy",
+    platform: "instagram",
+    source_type: "managed_page",
+    owner_type: "owned",
+    config_json: {},
+    is_active: 1,
+    sync_frequency_minutes: 60,
+    freshness_sla_hours: 24,
+    source_purpose: "campaign_engagement",
+    source_priority: 2,
+    coverage_key: "campaign:instagram:ramy-official",
+    credential_id: "cred_123",
+  });
+
+  assert.equal(source.source_purpose, "campaign_engagement");
+  assert.equal(source.source_priority, 2);
+  assert.equal(source.coverage_key, "campaign:instagram:ramy-official");
+  assert.equal(source.credential_id, "cred_123");
+
+  const credential = (apiMappings as any).mapCredentialSummary({
+    credential_id: "cred_123",
+    entity_type: "brand",
+    entity_name: "Ramy Official",
+    platform: "instagram",
+    account_id: "acct_1",
+    app_id: "app_1",
+    is_active: 1,
+    created_at: "2026-04-04T10:00:00Z",
+    updated_at: "2026-04-04T11:00:00Z",
+  });
+  assert.equal(credential.entity_name, "Ramy Official");
+  assert.equal(credential.is_active, true);
+
+  const post = (apiMappings as any).mapCampaignPost({
+    post_id: "post_1",
+    campaign_id: "camp_1",
+    platform: "instagram",
+    post_platform_id: "ig-post-1",
+    post_url: "https://instagram.com/p/ig-post-1",
+    entity_type: "brand",
+    entity_name: "Ramy Official",
+    credential_id: "cred_123",
+    added_at: "2026-04-04T12:00:00Z",
+  });
+  assert.equal(post.post_platform_id, "ig-post-1");
+  assert.equal(post.credential_id, "cred_123");
+
+  const engagement = (apiMappings as any).mapCampaignEngagementSummary({
+    campaign_id: "camp_1",
+    post_count: 1,
+    metrics_collected_count: 1,
+    totals: { likes: 10, comments: 4, shares: 2, views: 100, reach: 90, impressions: 120, saves: 3 },
+    engagement_rate: 17.78,
+    engagement_rate_note: "Basé sur portée réelle collectée via API",
+    roi_pct: null,
+    roi_note: "Non calculable",
+    budget_dza: 100000,
+    revenue_dza: null,
+    signal_count: 1,
+    sentiment_breakdown: { negatif: 1 },
+    negative_aspects: ["gout"],
+    top_performer: {
+      post_id: "post_1",
+      platform: "instagram",
+      post_url: "https://instagram.com/p/ig-post-1",
+      entity_name: "Ramy Official",
+      engagement: 16,
+      reach: 90,
+      signal_count: 1,
+      sentiment_breakdown: { negatif: 1 },
+      negative_aspects: ["gout"],
+    },
+    posts: [],
+  });
+  assert.equal(engagement.signal_count, 1);
+  assert.equal(engagement.top_performer?.negative_aspects[0], "gout");
+
+  const tick = (apiMappings as any).mapSchedulerTickResult({
+    tick_at: "2026-04-04T12:00:00Z",
+    groups_processed: 1,
+    sources_scheduled: 1,
+    groups: [
+      {
+        coverage_key: "owned:instagram:ramy-official",
+        winner_source_id: "src_1",
+        winner_status: "success",
+        attempts: [
+          {
+            source_id: "src_1",
+            source_priority: 1,
+            status: "success",
+            records_fetched: 5,
+            records_inserted: 5,
+            records_failed: 0,
+          },
+        ],
+      },
+    ],
+  });
+  assert.equal(tick.groups[0]?.attempts[0]?.records_inserted, 5);
+});
+
+test("admin sources view model resolves view and groups scheduler sources", () => {
+  assert.equal(typeof (adminSourcesViewModel as any).readAdminSourcesView, "function");
+  assert.equal(typeof (adminSourcesViewModel as any).buildSchedulerGroups, "function");
+
+  assert.equal(
+    (adminSourcesViewModel as any).readAdminSourcesView("#/admin-sources?view=credentials"),
+    "credentials",
+  );
+  assert.equal(
+    (adminSourcesViewModel as any).readAdminSourcesView("#/admin-sources?view=unknown"),
+    "sources",
+  );
+
+  const groups = (adminSourcesViewModel as any).buildSchedulerGroups(
+    [
+      {
+        source_id: "src_b",
+        source_name: "Secondary",
+        platform: "instagram",
+        source_type: "managed_page",
+        owner_type: "owned",
+        config_json: {},
+        is_active: 1,
+        sync_frequency_minutes: 60,
+        freshness_sla_hours: 24,
+        source_purpose: "owned_content",
+        source_priority: 2,
+        coverage_key: "owned:instagram:ramy",
+        credential_id: null,
+        last_sync_at: "2026-04-04T11:45:00Z",
+      },
+      {
+        source_id: "src_a",
+        source_name: "Primary",
+        platform: "instagram",
+        source_type: "managed_page",
+        owner_type: "owned",
+        config_json: {},
+        is_active: 1,
+        sync_frequency_minutes: 60,
+        freshness_sla_hours: 24,
+        source_purpose: "owned_content",
+        source_priority: 1,
+        coverage_key: "owned:instagram:ramy",
+        credential_id: "cred_1",
+        last_sync_at: "2026-04-04T10:00:00Z",
+      },
+    ],
+    new Date("2026-04-04T12:00:00Z"),
+  );
+
+  assert.equal(groups.length, 1);
+  assert.equal(groups[0]?.coverageKey, "owned:instagram:ramy");
+  assert.equal(groups[0]?.sources[0]?.sourceId, "src_a");
+  assert.equal(groups[0]?.sources[0]?.isDue, true);
+  assert.equal(groups[0]?.sources[1]?.isDue, false);
 });

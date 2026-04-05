@@ -8,6 +8,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const pagesDir = path.resolve(__dirname, "../client/src/pages");
 const componentsDir = path.resolve(__dirname, "../client/src/components");
+const adminComponentsDir = path.resolve(__dirname, "../client/src/components/admin");
 
 function readPage(name) {
   return readFileSync(path.join(pagesDir, name), "utf8");
@@ -15,6 +16,10 @@ function readPage(name) {
 
 function readComponent(name) {
   return readFileSync(path.join(componentsDir, name), "utf8");
+}
+
+function readAdminComponent(name) {
+  return readFileSync(path.join(adminComponentsDir, name), "utf8");
 }
 
 function contains(source, text) {
@@ -129,17 +134,24 @@ test("Explorateur keeps Stitch relative date and sentiment labels", () => {
 });
 
 test("AdminSources keeps Stitch labels and dedicated admin shell", () => {
-  const source = readPage("AdminSources.tsx");
-  contains(source, "function AdminShell");
-  contains(source, "RamyPulse Admin");
-  contains(source, "STITCH_AVATARS.admin.alt");
-  contains(source, "COMMAND CENTER");
-  contains(source, "New Pipeline");
-  contains(source, "SOURCES DE DONNÉES");
-  contains(source, "PIPELINE TRACE & DÉBIT");
-  lacks(source, "import { AppShell }");
-  lacks(source, "SOURCES DE DONNEES");
-  lacks(source, "PIPELINE TRACE & DEBIT");
+  const page = readPage("AdminSources.tsx");
+  const ops = readAdminComponent("AdminSourcesOps.tsx");
+  contains(page, "function AdminShell");
+  contains(page, "RamyPulse Admin");
+  contains(page, "STITCH_AVATARS.admin.alt");
+  contains(page, "COMMAND CENTER");
+  contains(page, "New Pipeline");
+  lacks(page, "import { AppShell }");
+  contains(ops, "Gouvernance source");
+  contains(ops, "Credentials");
+  contains(ops, "Campaign Ops");
+  contains(ops, "Scheduler");
+  contains(ops, "Run due syncs");
+  contains(ops, "Retirer le post");
+  contains(ops, "SOURCES DE DONNÉES");
+  contains(ops, "PIPELINE TRACE & DÉBIT");
+  lacks(ops, "SOURCES DE DONNEES");
+  lacks(ops, "PIPELINE TRACE & DEBIT");
 });
 
 test("Shared product shell keeps Stitch branding and avatar", () => {

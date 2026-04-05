@@ -654,6 +654,37 @@ class TestAdmin:
         assert r.status_code == 200
         assert isinstance(r.json(), list)
 
+    def test_list_sources_and_trace_expose_governance_fields(self):
+        coverage_key = f"owned:instagram:gov-{uuid.uuid4().hex[:8]}"
+        r_create = client.post("/api/admin/sources", json={
+            "source_name": "Governed Source",
+            "platform": "instagram",
+            "source_type": "managed_page",
+            "owner_type": "owned",
+            "source_purpose": "owned_content",
+            "source_priority": 1,
+            "coverage_key": coverage_key,
+            "credential_id": "cred-governed-001",
+        })
+        assert r_create.status_code == 200
+        source_id = r_create.json()["source_id"]
+
+        r_list = client.get("/api/admin/sources")
+        assert r_list.status_code == 200
+        row = next(item for item in r_list.json() if item["source_id"] == source_id)
+        assert row["source_purpose"] == "owned_content"
+        assert row["source_priority"] == 1
+        assert row["coverage_key"] == coverage_key
+        assert row["credential_id"] == "cred-governed-001"
+
+        r_trace = client.get(f"/api/admin/sources/{source_id}")
+        assert r_trace.status_code == 200
+        trace = r_trace.json()
+        assert trace["source_purpose"] == "owned_content"
+        assert trace["source_priority"] == 1
+        assert trace["coverage_key"] == coverage_key
+        assert trace["credential_id"] == "cred-governed-001"
+
     def test_get_source_trace(self):
         # Create one first
         r_create = client.post("/api/admin/sources", json={
@@ -1075,6 +1106,42 @@ class TestSocialMetrics:
         assert isinstance(posts, list)
         assert len(posts) == 1
         assert posts[0]["post_platform_id"] == "post-abc-001"
+
+    def test_delete_campaign_post_removes_post_and_metrics(self):
+        campaign_id = _seed_campaign("Delete Campaign Post")
+        r_post = client.post(f"/api/social-metrics/campaigns/{campaign_id}/posts", json={
+            "platform": "instagram",
+            "post_platform_id": "delete-post-001",
+            "post_url": "https://instagram.com/p/delete-post-001",
+        })
+        assert r_post.status_code == 201
+        post_id = r_post.json()["post_id"]
+
+        r_metric = client.post(f"/api/social-metrics/posts/{post_id}/metrics/manual", json={
+            "likes": 10,
+            "comments": 5,
+            "shares": 1,
+            "reach": 100,
+        })
+        assert r_metric.status_code == 200
+
+        r_delete = client.delete(f"/api/social-metrics/posts/{post_id}")
+        assert r_delete.status_code == 204
+
+        r_posts = client.get(f"/api/social-metrics/campaigns/{campaign_id}/posts")
+        assert r_posts.status_code == 200
+        assert r_posts.json() == []
+
+        with _get_connection() as conn:
+            metric_rows = conn.execute(
+                "SELECT COUNT(*) AS count FROM post_engagement_metrics WHERE post_id = ?",
+                [post_id],
+            ).fetchone()
+        assert metric_rows["count"] == 0
+
+    def test_delete_campaign_post_404(self):
+        r = client.delete("/api/social-metrics/posts/post-does-not-exist")
+        assert r.status_code == 404
 
     def test_get_campaign_engagement_empty(self):
         """Retourne une structure vide si aucun post lié."""

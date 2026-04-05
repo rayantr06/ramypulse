@@ -131,6 +131,30 @@ def list_campaign_posts(campaign_id: str):
         raise HTTPException(status_code=500, detail="Internal DB error")
 
 
+@router.delete("/posts/{post_id}", status_code=204)
+def delete_campaign_post(post_id: str):
+    """Supprime un post de campagne et ses métriques associées."""
+    try:
+        with _get_db() as conn:
+            conn.execute(
+                "DELETE FROM post_engagement_metrics WHERE post_id = ?",
+                [post_id],
+            )
+            post_cursor = conn.execute(
+                "DELETE FROM campaign_posts WHERE post_id = ?",
+                [post_id],
+            )
+            if post_cursor.rowcount == 0:
+                conn.rollback()
+                raise HTTPException(status_code=404, detail="Campaign post not found")
+            conn.commit()
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error("Erreur delete_campaign_post : %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
 @router.post("/campaigns/{campaign_id}/collect")
 def collect_campaign_metrics(campaign_id: str):
     """Déclenche une collecte Graph API pour les posts liés."""

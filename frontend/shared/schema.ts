@@ -60,6 +60,7 @@ export interface Campaign {
   target_regions: string[];
   keywords: string[];
   budget_dza?: number | null;
+  revenue_dza?: number | null;
   start_date?: string | null;
   end_date?: string | null;
   pre_window_days?: number | null;
@@ -219,6 +220,10 @@ export interface Source {
   is_active: number;
   sync_frequency_minutes: number;
   freshness_sla_hours: number;
+  source_purpose?: string | null;
+  source_priority?: number | null;
+  coverage_key?: string | null;
+  credential_id?: string | null;
   last_sync_at?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
@@ -233,6 +238,111 @@ export interface Source {
   raw_document_count?: number | null;
   normalized_count?: number | null;
   enriched_count?: number | null;
+}
+
+export interface CredentialSummary {
+  credential_id: string;
+  entity_type: string;
+  entity_name: string;
+  platform: string;
+  account_id?: string | null;
+  app_id?: string | null;
+  is_active: boolean;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+export interface CampaignPost {
+  post_id: string;
+  campaign_id?: string | null;
+  platform: string;
+  post_platform_id: string;
+  post_url?: string | null;
+  entity_type?: string | null;
+  entity_name?: string | null;
+  credential_id?: string | null;
+  added_at?: string | null;
+}
+
+export interface CampaignEngagementPost {
+  post_id: string;
+  platform: string;
+  post_url?: string | null;
+  entity_type?: string | null;
+  entity_name?: string | null;
+  likes: number;
+  comments: number;
+  shares: number;
+  views: number;
+  reach: number;
+  impressions: number;
+  saves: number;
+  collected_at?: string | null;
+  signal_count: number;
+  sentiment_breakdown: Record<string, number>;
+  negative_aspects: string[];
+}
+
+export interface CampaignTopPerformer {
+  post_id: string;
+  platform: string;
+  post_url?: string | null;
+  entity_name?: string | null;
+  engagement: number;
+  reach: number;
+  signal_count: number;
+  sentiment_breakdown: Record<string, number>;
+  negative_aspects: string[];
+}
+
+export interface CampaignEngagementSummary {
+  campaign_id: string;
+  post_count: number;
+  metrics_collected_count: number;
+  totals: {
+    likes: number;
+    comments: number;
+    shares: number;
+    views: number;
+    reach: number;
+    impressions: number;
+    saves: number;
+  };
+  engagement_rate?: number | null;
+  engagement_rate_note?: string | null;
+  roi_pct?: number | null;
+  roi_note?: string | null;
+  budget_dza?: number | null;
+  revenue_dza?: number | null;
+  signal_count: number;
+  sentiment_breakdown: Record<string, number>;
+  negative_aspects: string[];
+  top_performer?: CampaignTopPerformer | null;
+  posts: CampaignEngagementPost[];
+}
+
+export interface SchedulerAttemptResult {
+  source_id: string;
+  source_priority?: number | null;
+  status: string;
+  records_fetched?: number | null;
+  records_inserted?: number | null;
+  records_failed?: number | null;
+  error?: string | null;
+}
+
+export interface SchedulerGroupResult {
+  coverage_key: string;
+  winner_source_id?: string | null;
+  winner_status?: string | null;
+  attempts: SchedulerAttemptResult[];
+}
+
+export interface SchedulerTickResult {
+  tick_at: string;
+  groups_processed: number;
+  sources_scheduled: number;
+  groups: SchedulerGroupResult[];
 }
 
 export interface SyncRun {

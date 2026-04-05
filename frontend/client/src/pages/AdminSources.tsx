@@ -5,8 +5,27 @@ import {
   mapAdminHealthSnapshot,
   mapAdminSource,
   mapAdminSyncRun,
+  mapCampaign,
+  mapCampaignEngagementSummary,
+  mapCampaignPost,
+  mapCredentialSummary,
+  mapSchedulerTickResult,
 } from "@/lib/apiMappings";
-import { Link } from "wouter";
+import type {
+  Campaign,
+  CampaignEngagementSummary,
+  CampaignPost,
+  CredentialSummary,
+  SchedulerTickResult,
+  Source,
+} from "@shared/schema";
+import {
+  buildSchedulerGroups,
+  readAdminSourcesView,
+  type AdminSourcesView,
+} from "@/lib/adminSourcesViewModel";
+import AdminSourcesOps from "@/components/admin/AdminSourcesOps";
+import { Link, useLocation } from "wouter";
 import { STITCH_AVATARS } from "@/lib/stitchAssets";
 
 interface SourceView {
@@ -24,11 +43,16 @@ interface SourceView {
   configText: string;
   frequencyMin: number;
   slaHours: number;
+  sourcePurpose: string;
+  sourcePriority: number;
+  coverageKey: string;
+  credentialId: string;
   rawCount: number;
   normalizedCount: number;
   enrichedCount: number;
   lastSyncStatus: string;
   latestHealthComputedAt: string;
+  lastSyncAt: string;
 }
 
 interface SyncRunView {
@@ -65,6 +89,44 @@ interface SourceFormState {
   sync_frequency_minutes: number;
   freshness_sla_hours: number;
   is_active: boolean;
+  source_purpose: string;
+  source_priority: number;
+  coverage_key: string;
+  credential_id: string;
+}
+
+interface CredentialFormState {
+  entity_type: string;
+  entity_name: string;
+  platform: string;
+  account_id: string;
+  access_token: string;
+  app_id: string;
+  app_secret: string;
+  extra_config_text: string;
+}
+
+interface CampaignPostFormState {
+  platform: string;
+  post_platform_id: string;
+  post_url: string;
+  entity_type: string;
+  entity_name: string;
+  credential_id: string;
+}
+
+interface MetricsFormState {
+  likes: string;
+  comments: string;
+  shares: string;
+  views: string;
+  reach: string;
+  impressions: string;
+  saves: string;
+}
+
+interface RevenueFormState {
+  revenue_dza: string;
 }
 
 const PLATFORM_OPTIONS = [
@@ -79,6 +141,27 @@ const OWNER_OPTIONS = [
   { value: "owned", label: "Owned" },
   { value: "market", label: "Market" },
   { value: "competitor", label: "Competitor" },
+];
+
+const SOURCE_PURPOSE_OPTIONS = [
+  { value: "owned_content", label: "Owned Content" },
+  { value: "campaign_engagement", label: "Campaign Engagement" },
+  { value: "market_monitoring", label: "Market Monitoring" },
+  { value: "competitor_monitoring", label: "Competitor Monitoring" },
+  { value: "manual_evidence", label: "Manual Evidence" },
+  { value: "bulk_import", label: "Bulk Import" },
+];
+
+const ADMIN_VIEWS: Array<{ id: AdminSourcesView; label: string }> = [
+  { id: "sources", label: "Sources" },
+  { id: "credentials", label: "Credentials" },
+  { id: "campaign-ops", label: "Campaign Ops" },
+  { id: "scheduler", label: "Scheduler" },
+];
+
+const CREDENTIAL_ENTITY_OPTIONS = [
+  { value: "brand", label: "Brand" },
+  { value: "influencer", label: "Influencer" },
 ];
 
 function defaultSourceType(platform: string): string {
@@ -129,11 +212,16 @@ function mapSourceView(value: unknown): SourceView {
     configText: stringifyConfig(source.config_json),
     frequencyMin: source.sync_frequency_minutes,
     slaHours: source.freshness_sla_hours,
+    sourcePurpose: source.source_purpose || "owned_content",
+    sourcePriority: Number(source.source_priority ?? 3),
+    coverageKey: source.coverage_key || "",
+    credentialId: source.credential_id || "",
     rawCount: Number(source.raw_document_count ?? 0),
     normalizedCount: Number(source.normalized_count ?? 0),
     enrichedCount: Number(source.enriched_count ?? 0),
     lastSyncStatus: source.last_sync_status || "unknown",
     latestHealthComputedAt: source.latest_health_computed_at || "",
+    lastSyncAt: source.last_sync_at || "",
   };
 }
 
@@ -185,6 +273,10 @@ function formFromSource(source: SourceView): SourceFormState {
     sync_frequency_minutes: source.frequencyMin,
     freshness_sla_hours: source.slaHours,
     is_active: source.isActive,
+    source_purpose: source.sourcePurpose,
+    source_priority: source.sourcePriority,
+    coverage_key: source.coverageKey,
+    credential_id: source.credentialId,
   };
 }
 
@@ -197,7 +289,85 @@ function blankForm(): SourceFormState {
     sync_frequency_minutes: 60,
     freshness_sla_hours: 24,
     is_active: true,
+    source_purpose: "owned_content",
+    source_priority: 1,
+    coverage_key: "",
+    credential_id: "",
   };
+}
+
+function blankCredentialForm(): CredentialFormState {
+  return {
+    entity_type: "brand",
+    entity_name: "",
+    platform: "instagram",
+    account_id: "",
+    access_token: "",
+    app_id: "",
+    app_secret: "",
+    extra_config_text: "{}",
+  };
+}
+
+function blankCampaignPostForm(): CampaignPostFormState {
+  return {
+    platform: "instagram",
+    post_platform_id: "",
+    post_url: "",
+    entity_type: "brand",
+    entity_name: "",
+    credential_id: "",
+  };
+}
+
+function blankMetricsForm(): MetricsFormState {
+  return {
+    likes: "0",
+    comments: "0",
+    shares: "0",
+    views: "0",
+    reach: "0",
+    impressions: "0",
+    saves: "0",
+  };
+}
+
+function blankRevenueForm(): RevenueFormState {
+  return { revenue_dza: "" };
+}
+
+function parseOptionalJsonObject(value: string): Record<string, unknown> {
+  if (!value.trim()) return {};
+  const parsed = JSON.parse(value);
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("extra_config doit être un objet JSON");
+  }
+  return parsed as Record<string, unknown>;
+}
+
+function parseMetricInput(value: string): number {
+  const numeric = Number(value || 0);
+  return Number.isFinite(numeric) ? numeric : 0;
+}
+
+function buildMetricsPayload(form: MetricsFormState): Record<string, number> {
+  return {
+    likes: parseMetricInput(form.likes),
+    comments: parseMetricInput(form.comments),
+    shares: parseMetricInput(form.shares),
+    views: parseMetricInput(form.views),
+    reach: parseMetricInput(form.reach),
+    impressions: parseMetricInput(form.impressions),
+    saves: parseMetricInput(form.saves),
+  };
+}
+
+function compactNumber(value: number): string {
+  return value >= 1000 ? `${(value / 1000).toFixed(1)}k` : `${value}`;
+}
+
+function currentHashLocation() {
+  return typeof window === "undefined" ? "#/admin-sources" : window.location.hash || "#/admin-sources";
 }
 
 function HealthBar({ pct }: { pct: number }) {
@@ -247,7 +417,10 @@ function SnapshotLevelDot({ level }: { level: string }) {
 
 function AdminShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="bg-background text-on-surface font-body selection:bg-primary-container selection:text-on-primary-container min-h-screen">
+    <div
+      className="bg-background text-on-surface font-body selection:bg-primary-container selection:text-on-primary-container min-h-screen"
+      data-testid="admin-shell-canvas"
+    >
       <nav className="bg-[#121315] text-[#ffb693] font-headline tracking-tight font-bold text-lg flex justify-between items-center w-full px-6 py-3 h-16 fixed top-0 z-50">
         <div className="text-xl font-black text-[#ffb693] tracking-tighter">RamyPulse Admin</div>
         <div className="hidden md:flex items-center gap-8">
@@ -339,7 +512,7 @@ function AdminShell({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function AdminSources() {
+function LegacyAdminSources() {
   const queryClientHook = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isCreateMode, setIsCreateMode] = useState(false);
@@ -857,6 +1030,14 @@ export default function AdminSources() {
           </div>
         </div>
       </div>
+    </AdminShell>
+  );
+}
+
+export default function AdminSources() {
+  return (
+    <AdminShell>
+      <AdminSourcesOps />
     </AdminShell>
   );
 }
