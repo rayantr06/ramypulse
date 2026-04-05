@@ -154,6 +154,15 @@ test("AdminSources keeps Stitch labels and dedicated admin shell", () => {
   lacks(ops, "PIPELINE TRACE & DEBIT");
 });
 
+test("AdminSources page no longer carries legacy admin logic", () => {
+  const page = readPage("AdminSources.tsx");
+  lacks(page, "function LegacyAdminSources");
+  lacks(page, "interface SourceFormState");
+  lacks(page, "function mapSourceView");
+  lacks(page, "function buildLastSync");
+  contains(page, "<AdminSourcesOps />");
+});
+
 test("Shared product shell keeps Stitch branding and avatar", () => {
   const appShell = readComponent("AppShell.tsx");
   const sidebar = readComponent("Sidebar.tsx");
