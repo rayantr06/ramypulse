@@ -133,6 +133,12 @@ test("Explorateur keeps Stitch relative date and sentiment labels", () => {
   contains(source, "Négatif");
 });
 
+test("Explorateur exposes a visible in-page RAG insight block for the demo path", () => {
+  const source = readPage("Explorateur.tsx");
+  contains(source, "RAG Insight");
+  contains(source, 'data-testid="explorer-ai-insight"');
+});
+
 test("AdminSources keeps Stitch labels and dedicated admin shell", () => {
   const page = readPage("AdminSources.tsx");
   const ops = readAdminComponent("AdminSourcesOps.tsx");

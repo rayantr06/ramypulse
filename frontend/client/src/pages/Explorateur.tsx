@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
+import { buildExplorerAiView } from "@/lib/explorerAiView";
 import { apiRequest } from "@/lib/queryClient";
 import {
   mapExplorerSearchResults,
@@ -22,6 +23,7 @@ interface SearchResultView {
   content: string;
   relevance_score: number;
   sentiment: string;
+  aspect: string;
   wilaya: string;
   created_at: string;
 }
@@ -138,6 +140,7 @@ function mapSearchView(value: unknown): SearchResultView[] {
     content: result.text,
     relevance_score: Math.round(result.score),
     sentiment: formatSentimentLabel(result.sentiment_label || "neutre"),
+    aspect: result.aspect || "n/a",
     wilaya: "n/a",
     created_at: "",
   }));
@@ -210,6 +213,10 @@ export default function Explorateur() {
   };
 
   const searchResults = results ?? [];
+  const aiInsight = useMemo(
+    () => buildExplorerAiView(searchResults, activeSearch),
+    [searchResults, activeSearch],
+  );
   const verbatimsData = useMemo(() => {
     return (
       verbatims ?? {
@@ -303,6 +310,43 @@ export default function Explorateur() {
         </section>
 
         {(activeSearch || searchResults.length > 0) && (
+          <>
+            {aiInsight ? (
+              <div
+                className="bg-surface-container rounded-xl border border-tertiary/15 overflow-hidden"
+                data-testid="explorer-ai-insight"
+              >
+                <div className="px-5 py-4 border-b border-outline-variant/10 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-tertiary">
+                      RAG Insight
+                    </p>
+                    <p className="text-xs text-on-surface-variant mt-1">
+                      SynthÃ¨se IA ancrÃ©e dans les rÃ©sultats actuels
+                    </p>
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-on-surface-variant">
+                    {aiInsight.coverageLabel}
+                  </span>
+                </div>
+                <div className="p-5 grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-5">
+                  <div>
+                    <p className="text-sm leading-relaxed text-on-surface">{aiInsight.summary}</p>
+                  </div>
+                  <div className="space-y-2">
+                    {aiInsight.bullets.map((bullet, index) => (
+                      <div
+                        key={`${bullet}-${index}`}
+                        className="bg-surface-container-high rounded-lg px-3 py-2 text-xs text-on-surface-variant"
+                      >
+                        {bullet}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
           <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {searchLoading ? (
               Array.from({ length: 3 }).map((_, index) => (
@@ -319,7 +363,7 @@ export default function Explorateur() {
               searchResults.map((result) => (
                 <div
                   key={result.id}
-                  className="bg-surface-container p-5 rounded-lg border border-outline-variant/5 hover:border-primary/20 transition-all group cursor-pointer"
+                  className="bg-surface-container p-5 rounded-lg border border-outline-variant/5 hover:border-primary/20 transition-all group"
                   data-testid={`search-result-${result.id}`}
                 >
                   <div className="flex justify-between items-start mb-4">
@@ -343,10 +387,10 @@ export default function Explorateur() {
                       {result.relevance_score}% PERTINENCE
                     </span>
                   </div>
-                  <p className="text-on-surface text-sm italic mb-4 leading-relaxed line-clamp-2">
+                  <p className="text-on-surface text-sm italic mb-3 leading-relaxed line-clamp-2">
                     {result.content}
                   </p>
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-3">
                     <span
                       className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-tight ${getSentimentClass(result.sentiment)}`}
                     >
@@ -355,14 +399,15 @@ export default function Explorateur() {
                       ></span>
                       {result.sentiment}
                     </span>
-                    <button className="text-on-surface-variant hover:text-primary transition-colors">
-                      <span className="material-symbols-outlined text-lg">open_in_new</span>
-                    </button>
+                    <span className="text-[10px] font-bold uppercase tracking-wide text-on-surface-variant">
+                      {result.aspect}
+                    </span>
                   </div>
                 </div>
               ))
             )}
           </section>
+          </>
         )}
 
         <section className="bg-surface-container rounded-xl overflow-hidden border border-outline-variant/5">
@@ -499,10 +544,6 @@ export default function Explorateur() {
           </div>
         </section>
       </div>
-
-      <button className="fixed bottom-8 right-8 w-14 h-14 pulse-gradient rounded-full shadow-2xl flex items-center justify-center text-on-primary-fixed hover:scale-110 active:scale-95 transition-transform z-50">
-        <span className="material-symbols-outlined text-xl font-bold">chat</span>
-      </button>
     </AppShell>
   );
 }
