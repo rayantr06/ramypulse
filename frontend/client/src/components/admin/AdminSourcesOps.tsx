@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useLocation } from "wouter";
 
 import type {
   Campaign,
@@ -147,7 +146,27 @@ const ADMIN_VIEWS: Array<{ id: AdminSourcesView; label: string }> = [
 ];
 
 function currentHashLocation() {
-  return typeof window === "undefined" ? "#/admin-sources" : window.location.hash || "#/admin-sources";
+  return typeof window === "undefined"
+    ? "#/admin-sources?view=sources"
+    : window.location.hash || "#/admin-sources?view=sources";
+}
+
+function navigateToAdminView(view: AdminSourcesView) {
+  if (typeof window === "undefined") return;
+
+  const oldURL = window.location.href;
+  const url = new URL(oldURL);
+  url.search = "";
+  url.hash = `/admin-sources?view=${view}`;
+  const newURL = url.toString();
+
+  history.pushState(history.state, "", newURL);
+
+  const event =
+    typeof HashChangeEvent !== "undefined"
+      ? new HashChangeEvent("hashchange", { oldURL, newURL })
+      : new Event("hashchange");
+  dispatchEvent(event);
 }
 
 function labelFromOptions(value: string, options: Array<{ value: string; label: string }>): string {
@@ -367,11 +386,22 @@ function SnapshotLevelDot({ level }: { level: string }) {
 
 export default function AdminSourcesOps() {
   const queryClientHook = useQueryClient();
-  const [location, setLocation] = useLocation();
-  const activeView = useMemo<AdminSourcesView>(
-    () => readAdminSourcesView(currentHashLocation() || `#${location}`),
-    [location],
+  const [activeView, setActiveView] = useState<AdminSourcesView>(() =>
+    readAdminSourcesView(currentHashLocation()),
   );
+
+  useEffect(() => {
+    const syncViewFromHash = () => {
+      setActiveView(readAdminSourcesView(currentHashLocation()));
+    };
+
+    syncViewFromHash();
+    if (typeof window === "undefined") return;
+
+    window.addEventListener("hashchange", syncViewFromHash);
+    return () => window.removeEventListener("hashchange", syncViewFromHash);
+  }, []);
+
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
@@ -855,7 +885,7 @@ export default function AdminSourcesOps() {
         {ADMIN_VIEWS.map((view) => (
           <button
             key={view.id}
-            onClick={() => setLocation(`/admin-sources?view=${view.id}`)}
+            onClick={() => navigateToAdminView(view.id)}
             data-testid={`admin-view-${view.id}`}
             className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${activeView === view.id ? "bg-primary text-on-primary shadow-lg shadow-primary/15" : "bg-surface-container text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high"}`}
           >

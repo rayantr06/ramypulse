@@ -412,3 +412,19 @@ test("admin scheduler view keeps Stitch shell", async ({ page }) => {
   await openAdminView(page, "scheduler");
   await expect(page).toHaveScreenshot("admin-scheduler-view.png");
 });
+
+test("admin subview tabs keep the hash route when navigating", async ({ page }) => {
+  await openAdminView(page, "sources");
+
+  await page.getByTestId("admin-view-credentials").click();
+  await expect(page).toHaveURL(/#\/admin-sources\?view=credentials$/);
+  await expect(page.getByTestId("admin-ops-canvas")).toHaveAttribute("data-view", "credentials");
+
+  await page.getByTestId("admin-view-campaign-ops").click();
+  await expect(page).toHaveURL(/#\/admin-sources\?view=campaign-ops$/);
+  await expect(page.getByTestId("admin-ops-canvas")).toHaveAttribute("data-view", "campaign-ops");
+
+  await page.getByTestId("admin-view-scheduler").click();
+  await expect(page).toHaveURL(/#\/admin-sources\?view=scheduler$/);
+  await expect(page.getByTestId("admin-ops-canvas")).toHaveAttribute("data-view", "scheduler");
+});
