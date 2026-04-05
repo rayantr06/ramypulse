@@ -146,3 +146,50 @@ def deactivate_credential(credential_id: str) -> bool:
         )
         conn.commit()
     return cursor.rowcount > 0
+
+
+def update_credential_token(
+    credential_id: str,
+    *,
+    new_access_token: str,
+    extra_config_updates: dict | None = None,
+) -> bool:
+    """Update the access token (and optionally extra_config fields) for a credential.
+
+    Returns True if the credential was found and updated, False otherwise.
+    """
+    with _get_conn() as conn:
+        row = conn.execute(
+            "SELECT extra_config FROM platform_credentials WHERE credential_id = ?",
+            [credential_id],
+        ).fetchone()
+        if not row:
+            return False
+
+        # Store the new token via secret_manager
+        new_token_ref = store_secret(
+            new_access_token,
+            label=f"refreshed_token:{credential_id}",
+        )
+
+        # Merge extra_config updates
+        try:
+            existing_extra = json.loads(row["extra_config"] or "{}")
+        except (TypeError, ValueError):
+            existing_extra = {}
+        if extra_config_updates:
+            existing_extra.update(extra_config_updates)
+
+        now = datetime.now().isoformat()
+        conn.execute(
+            """
+            UPDATE platform_credentials
+            SET access_token_ref = ?, extra_config = ?, updated_at = ?
+            WHERE credential_id = ?
+            """,
+            [new_token_ref, json.dumps(existing_extra, ensure_ascii=False), now, credential_id],
+        )
+        conn.commit()
+
+    logger.info("Token updated for credential %s", credential_id)
+    return True
