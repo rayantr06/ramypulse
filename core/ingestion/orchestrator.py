@@ -14,6 +14,7 @@ from core.connectors.source_config import parse_source_config, resolve_credentia
 from core.connectors.facebook_connector import FacebookConnector
 from core.connectors.google_maps_connector import GoogleMapsConnector
 from core.connectors.instagram_connector import InstagramConnector
+from core.connectors.token_refresh import refresh_if_needed
 from core.connectors.youtube_connector import YouTubeConnector
 from core.database import DatabaseManager
 from core.ingestion.content_identity import (
@@ -195,11 +196,15 @@ class IngestionOrchestrator:
 
         sync_run_id = self._start_sync_run(source_id, run_mode)
         try:
+            # Refresh Meta token if needed before fetching
+            credential_id = source.get("credential_id")
+            if credential_id:
+                refresh_if_needed(credential_id)
+
             connector = self._select_connector(source)
             source_config = parse_source_config(source)
             # Resolve credentials: credential_id > credential_ref > runtime
             resolved_from_credential_id = {}
-            credential_id = source.get("credential_id")
             if credential_id:
                 from core.social_metrics.credential_manager import get_credential
                 cred_record = get_credential(credential_id)

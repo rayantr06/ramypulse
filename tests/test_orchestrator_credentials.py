@@ -103,3 +103,49 @@ class TestCredentialIdResolution:
             result = orchestrator.run_source_sync(source["source_id"])
 
         assert result["status"] == "success"
+
+
+from unittest.mock import patch
+
+
+class TestTokenRefreshDuringSync:
+    def test_refresh_called_for_source_with_credential_id(self):
+        cred_id = _create_test_credential("token_to_refresh")
+        orchestrator = IngestionOrchestrator()
+
+        source = orchestrator.create_source({
+            "source_name": "IG Refresh Test",
+            "platform": "instagram",
+            "source_type": "api",
+            "owner_type": "brand",
+            "credential_id": cred_id,
+            "config_json": json.dumps({"fetch_mode": "api", "profile_id": "17841400123456789"}),
+        })
+
+        with (
+            patch("core.ingestion.orchestrator.refresh_if_needed") as mock_refresh,
+            patch.object(orchestrator._connectors["instagram"], "fetch_documents", return_value=[]),
+        ):
+            mock_refresh.return_value = False
+            orchestrator.run_source_sync(source["source_id"])
+
+        mock_refresh.assert_called_once_with(cred_id)
+
+    def test_refresh_not_called_without_credential_id(self):
+        orchestrator = IngestionOrchestrator()
+
+        source = orchestrator.create_source({
+            "source_name": "IG No Cred Test",
+            "platform": "instagram",
+            "source_type": "batch_import",
+            "owner_type": "brand",
+            "config_json": json.dumps({"fetch_mode": "snapshot"}),
+        })
+
+        with (
+            patch("core.ingestion.orchestrator.refresh_if_needed") as mock_refresh,
+            patch.object(orchestrator._connectors["import"], "fetch_documents", return_value=[]),
+        ):
+            orchestrator.run_source_sync(source["source_id"])
+
+        mock_refresh.assert_not_called()
