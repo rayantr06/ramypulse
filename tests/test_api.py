@@ -29,7 +29,44 @@ _db.create_tables()
 
 from api.main import app
 
-client = TestClient(app)
+# Create a test API key for authenticated requests
+from core.security.auth import create_api_key as _create_test_key
+_test_key_id, _test_raw_key = _create_test_key(client_id="ramy_client_001", label="test_suite")
+_AUTH_HEADERS = {"X-API-Key": _test_raw_key}
+
+_raw_client = TestClient(app)
+
+
+class _AuthClient:
+    """Wrapper that auto-injects X-API-Key on every request."""
+
+    def __init__(self, tc: TestClient, headers: dict):
+        self._tc = tc
+        self._headers = headers
+
+    def _merge(self, kwargs: dict) -> dict:
+        h = dict(self._headers)
+        h.update(kwargs.pop("headers", {}))
+        kwargs["headers"] = h
+        return kwargs
+
+    def get(self, url, **kw):
+        return self._tc.get(url, **self._merge(kw))
+
+    def post(self, url, **kw):
+        return self._tc.post(url, **self._merge(kw))
+
+    def put(self, url, **kw):
+        return self._tc.put(url, **self._merge(kw))
+
+    def patch(self, url, **kw):
+        return self._tc.patch(url, **self._merge(kw))
+
+    def delete(self, url, **kw):
+        return self._tc.delete(url, **self._merge(kw))
+
+
+client = _AuthClient(_raw_client, _AUTH_HEADERS)
 
 
 # ---------------------------------------------------------------------------
@@ -366,7 +403,7 @@ class TestCampaigns:
 
         impact_client = TestClient(app, raise_server_exceptions=False)
         with patch("api.routers.campaigns.load_annotated", return_value=mock_df):
-            r = impact_client.get(f"/api/campaigns/{cid}/impact")
+            r = impact_client.get(f"/api/campaigns/{cid}/impact", headers=_AUTH_HEADERS)
 
         assert r.status_code == 200
         data = r.json()

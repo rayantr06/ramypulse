@@ -470,6 +470,19 @@ _SCHEMA_STATEMENTS = {
             UNIQUE(client_id, canonical_key)
         )
     """,
+    "api_keys": """
+        CREATE TABLE IF NOT EXISTS api_keys (
+            key_id       TEXT PRIMARY KEY,
+            client_id    TEXT NOT NULL,
+            key_hash     TEXT NOT NULL,
+            key_prefix   TEXT NOT NULL,
+            label        TEXT,
+            scopes       TEXT DEFAULT '["*"]',
+            is_active    INTEGER DEFAULT 1,
+            created_at   TEXT NOT NULL,
+            last_used_at TEXT
+        )
+    """,
 }
 
 
@@ -1096,6 +1109,46 @@ def _seed_default_client(connection: sqlite3.Connection) -> None:
         )
 
 
+def _seed_default_api_key(connection: sqlite3.Connection) -> None:
+    """Generate an initial API key for ramy_client_001 if none exists."""
+    if not _table_exists(connection, "api_keys"):
+        return
+    row = connection.execute("SELECT 1 FROM api_keys LIMIT 1").fetchone()
+    if row is not None:
+        return
+
+    from core.security.auth import generate_raw_key, hash_key
+    import uuid
+    from datetime import datetime
+
+    raw_key = generate_raw_key()
+    key_id = f"key-{uuid.uuid4().hex[:12]}"
+    now = datetime.now().isoformat()
+
+    connection.execute(
+        """
+        INSERT INTO api_keys (
+            key_id, client_id, key_hash, key_prefix, label,
+            scopes, is_active, created_at, last_used_at
+        ) VALUES (?, ?, ?, ?, ?, ?, 1, ?, NULL)
+        """,
+        (
+            key_id,
+            DEFAULT_CLIENT_ID,
+            hash_key(raw_key),
+            raw_key[:12],
+            "initial_seed_key",
+            '["*"]',
+            now,
+        ),
+    )
+    logger.warning(
+        "Initial API key generated for %s: %s — Store it securely.",
+        DEFAULT_CLIENT_ID,
+        raw_key,
+    )
+
+
 def _migrate_campaigns_add_revenue_if_needed(connection: sqlite3.Connection) -> None:
     """Ajoute la colonne revenue_dza dans campaigns si elle est absente."""
     if not _table_exists(connection, "campaigns"):
@@ -1305,6 +1358,7 @@ class DatabaseManager:
             _seed_default_client(connection)
             _seed_default_alert_rules(connection)
             _seed_default_client_agent_config(connection)
+            _seed_default_api_key(connection)
             connection.commit()
         finally:
             connection.execute("PRAGMA foreign_keys = ON")

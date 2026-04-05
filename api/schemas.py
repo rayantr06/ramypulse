@@ -380,3 +380,31 @@ class ManualMetricsInput(BaseModel):
 
 class CampaignRevenuePatch(BaseModel):
     revenue_dza: int = Field(ge=0)
+
+
+# ---------------------------------------------------------------------------
+# Auth
+# ---------------------------------------------------------------------------
+
+class ApiKeyCreate(BaseModel):
+    client_id: str = "ramy_client_001"
+    label: str | None = None
+
+
+class ApiKeyResponse(BaseModel):
+    key_id: str
+    client_id: str
+    key_prefix: str
+    label: str | None = None
+    is_active: bool = True
+    created_at: str | None = None
+    last_used_at: str | None = None
+
+
+class ApiKeyCreatedResponse(BaseModel):
+    key_id: str
+    client_id: str
+    key_prefix: str
+    label: str | None = None
+    api_key: str
+    warning: str = "Store this key securely. It will not be shown again."

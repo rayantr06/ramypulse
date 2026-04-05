@@ -42,6 +42,7 @@ EXPECTED_TABLES = {
     "campaign_posts",
     "post_engagement_metrics",
     "content_items",
+    "api_keys",
 }
 
 
