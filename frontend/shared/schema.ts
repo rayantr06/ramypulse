@@ -86,6 +86,29 @@ export interface CampaignStats {
   quarter_label: string;
 }
 
+export interface CampaignOverviewTopPerformer {
+  campaign_id: string;
+  campaign_name?: string | null;
+  influencer_handle?: string | null;
+  platform?: string | null;
+  status?: string | null;
+  budget_dza?: number | null;
+  roi_pct?: number | null;
+  engagement_rate?: number | null;
+  signal_count: number;
+  sentiment_breakdown: Record<string, number>;
+  negative_aspects: string[];
+  selection_basis?: string | null;
+}
+
+export interface CampaignOverview {
+  quarterly_budget_committed: number;
+  quarterly_budget_allocation: number;
+  quarter_label: string;
+  active_campaigns_count: number;
+  top_performer?: CampaignOverviewTopPerformer | null;
+}
+
 // Alerts
 export interface Alert {
   alert_id: string;

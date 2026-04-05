@@ -5,8 +5,8 @@ import { apiRequest } from "@/lib/queryClient";
 import {
   buildCampaignCreatePayload,
   mapCampaign,
+  mapCampaignOverview,
   mapCampaignImpact,
-  mapCampaignStats,
 } from "@/lib/apiMappings";
 import { STITCH_AVATARS } from "@/lib/stitchAssets";
 
@@ -65,6 +65,21 @@ interface CampaignStatsView {
   quarterlyBudgetCommitted: number;
   quarterlyBudgetAllocation: number;
   quarterLabel: string;
+  activeCampaignsCount: number;
+  topPerformer: {
+    campaign_id: string;
+    campaign_name: string | null;
+    influencer_handle: string | null;
+    platform: string | null;
+    status: string | null;
+    budget_dza: number | null;
+    roi_pct: number | null;
+    engagement_rate: number | null;
+    signal_count: number;
+    sentiment_breakdown: Record<string, number>;
+    negative_aspects: string[];
+    selection_basis: string | null;
+  } | null;
 }
 
 function normalizeStatus(status: string | null | undefined): string {
@@ -110,11 +125,28 @@ function mapCampaignImpactView(value: unknown): CampaignImpactView {
 }
 
 function mapCampaignStatsView(value: unknown): CampaignStatsView {
-  const stats = mapCampaignStats(value);
+  const stats = mapCampaignOverview(value);
   return {
     quarterlyBudgetCommitted: stats.quarterly_budget_committed,
     quarterlyBudgetAllocation: stats.quarterly_budget_allocation,
     quarterLabel: stats.quarter_label,
+    activeCampaignsCount: stats.active_campaigns_count,
+    topPerformer: stats.top_performer
+      ? {
+          campaign_id: stats.top_performer.campaign_id,
+          campaign_name: stats.top_performer.campaign_name ?? null,
+          influencer_handle: stats.top_performer.influencer_handle ?? null,
+          platform: stats.top_performer.platform ?? null,
+          status: stats.top_performer.status ?? null,
+          budget_dza: stats.top_performer.budget_dza ?? null,
+          roi_pct: stats.top_performer.roi_pct ?? null,
+          engagement_rate: stats.top_performer.engagement_rate ?? null,
+          signal_count: stats.top_performer.signal_count,
+          sentiment_breakdown: stats.top_performer.sentiment_breakdown,
+          negative_aspects: stats.top_performer.negative_aspects,
+          selection_basis: stats.top_performer.selection_basis ?? null,
+        }
+      : null,
   };
 }
 
@@ -126,6 +158,11 @@ function formatBudget(value: number | null): string {
 function formatDelta(value: number | null): string {
   if (value == null) return "n/a";
   return `${value > 0 ? "+" : ""}${value}`;
+}
+
+function formatPct(value: number | null): string | null {
+  if (value == null) return null;
+  return `${value > 0 ? "+" : ""}${value}%`;
 }
 
 function safeRatio(value: number | null, max: number | null): number {
@@ -224,9 +261,9 @@ export default function Campagnes() {
   });
 
   const { data: stats } = useQuery<CampaignStatsView>({
-    queryKey: ["/api/campaigns/stats"],
+    queryKey: ["/api/campaigns/overview"],
     queryFn: async () => {
-      const res = await apiRequest("GET", "/api/campaigns/stats");
+      const res = await apiRequest("GET", "/api/campaigns/overview");
       return mapCampaignStatsView(await res.json());
     },
   });
@@ -289,6 +326,8 @@ export default function Campagnes() {
     quarterlyBudgetCommitted: 0,
     quarterlyBudgetAllocation: 0,
     quarterLabel: "Trimestre courant",
+    activeCampaignsCount: 0,
+    topPerformer: null,
   };
 
   const activeNss = impactData.during_campaign_nss;
@@ -310,8 +349,16 @@ export default function Campagnes() {
     100,
     quarterlyAllocation > 0 ? Math.round((totalBudget / quarterlyAllocation) * 100) : 0,
   );
-  const topPerformer =
-    allCampaigns.find((campaign) => campaign.status === "ACTIVE") ?? allCampaigns[0] ?? null;
+  const topPerformer = statsData.topPerformer;
+  const topPerformerMetrics = [
+    topPerformer?.roi_pct != null ? `ROI ${formatPct(topPerformer.roi_pct)}` : null,
+    topPerformer?.engagement_rate != null
+      ? `Engagement ${formatPct(topPerformer.engagement_rate)}`
+      : null,
+    topPerformer && topPerformer.signal_count > 0
+      ? `${topPerformer.signal_count} signaux`
+      : null,
+  ].filter(Boolean);
 
   return (
     <AppShell
@@ -629,9 +676,7 @@ export default function Campagnes() {
                 <div>
                   <h3 className="font-headline font-bold text-lg">Suivi des Campagnes</h3>
                   <p className="text-xs text-on-surface-variant">
-                    {
-                      allCampaigns.filter((campaign) => campaign.status === "ACTIVE").length
-                    }{" "}
+                    {statsData.activeCampaignsCount}{" "}
                     campagnes actives sur le marché algérien
                   </p>
                 </div>
@@ -817,17 +862,35 @@ export default function Campagnes() {
                   </div>
                   <div>
                     <h4 className="font-headline font-bold text-lg">
-                      {topPerformer?.influencer || "@aucun_influenceur"}
+                      {topPerformer?.influencer_handle ||
+                        topPerformer?.campaign_name ||
+                        "Aucune campagne prioritaire"}
                     </h4>
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-on-surface-variant">
-                        {topPerformer?.type || "Campagne"}
+                        {topPerformer?.campaign_name || "Campagne"}
                       </span>
                       <span className="w-1 h-1 bg-on-surface-variant rounded-full"></span>
                       <span className="text-xs text-tertiary">
                         {topPerformer?.platform || "Plateforme non renseignée"}
                       </span>
                     </div>
+                    {topPerformerMetrics.length > 0 ? (
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        {topPerformerMetrics.map((metric) => (
+                          <span
+                            key={metric}
+                            className="px-2 py-1 rounded-sm bg-surface-container-high text-[10px] font-bold uppercase tracking-widest text-on-surface-variant"
+                          >
+                            {metric}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="mt-3 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+                        BasÃ© sur {topPerformer?.selection_basis || "budget_dza"}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>

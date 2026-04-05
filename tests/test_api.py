@@ -273,6 +273,48 @@ class TestCampaigns:
         )
         assert "quarter_label" in data
 
+    def test_campaign_overview_returns_top_performer_bundle(self):
+        today = date.today()
+        quarter_start_month = ((today.month - 1) // 3) * 3 + 1
+        quarter_date = today.replace(month=quarter_start_month, day=1).isoformat()
+
+        top_id = _seed_campaign("Overview Winner", status="active")
+        other_id = _seed_campaign("Overview Secondary", status="active")
+        _seed_campaign("Overview Planned", status="planned")
+
+        with _get_connection() as conn:
+            conn.execute(
+                """
+                UPDATE campaigns
+                SET start_date = ?, budget_dza = ?, influencer_handle = ?, platform = ?
+                WHERE campaign_id = ?
+                """,
+                (quarter_date, 1500000, "@winner", "instagram", top_id),
+            )
+            conn.execute(
+                """
+                UPDATE campaigns
+                SET start_date = ?, budget_dza = ?, influencer_handle = ?, platform = ?
+                WHERE campaign_id = ?
+                """,
+                (quarter_date, 500000, "@secondary", "facebook", other_id),
+            )
+            conn.commit()
+
+        r = client.get("/api/campaigns/overview")
+        assert r.status_code == 200
+        data = r.json()
+        assert "quarterly_budget_committed" in data
+        assert "quarterly_budget_allocation" in data
+        assert "quarter_label" in data
+        assert data["active_campaigns_count"] >= 2
+        assert data["top_performer"]["campaign_id"] == top_id
+        assert data["top_performer"]["influencer_handle"] == "@winner"
+        assert data["top_performer"]["platform"] == "instagram"
+        assert data["top_performer"]["budget_dza"] == 1500000
+        assert data["top_performer"]["roi_pct"] is None
+        assert data["top_performer"]["engagement_rate"] is None
+
     def test_get_campaign_detail(self):
         cid = _seed_campaign("Detail Test")
         r = client.get(f"/api/campaigns/{cid}")

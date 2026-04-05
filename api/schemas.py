@@ -151,6 +151,29 @@ class CampaignStats(BaseModel):
     quarter_label: str
 
 
+class CampaignOverviewTopPerformer(BaseModel):
+    campaign_id: str
+    campaign_name: str | None = None
+    influencer_handle: str | None = None
+    platform: str | None = None
+    status: str | None = None
+    budget_dza: int | None = None
+    roi_pct: float | None = None
+    engagement_rate: float | None = None
+    signal_count: int = 0
+    sentiment_breakdown: dict[str, int] = Field(default_factory=dict)
+    negative_aspects: list[str] = Field(default_factory=list)
+    selection_basis: str | None = None
+
+
+class CampaignOverview(BaseModel):
+    quarterly_budget_committed: int = 0
+    quarterly_budget_allocation: int = 0
+    quarter_label: str
+    active_campaigns_count: int = 0
+    top_performer: CampaignOverviewTopPerformer | None = None
+
+
 # ---------------------------------------------------------------------------
 # Recommendations
 # ---------------------------------------------------------------------------

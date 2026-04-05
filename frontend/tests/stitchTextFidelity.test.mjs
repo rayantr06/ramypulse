@@ -112,7 +112,7 @@ test("Campagnes keeps Stitch structure while dropping fake performance numbers",
   contains(source, "Ramy Pulse Pro");
   contains(source, "Influenceur Algerien");
   contains(source, "allocation trimestrielle");
-  contains(source, "/api/campaigns/stats");
+  contains(source, "/api/campaigns/overview");
   lacks(source, "6_320_000");
   lacks(source, "ROI 4.2x");
   lacks(source, "+18% Engagement");

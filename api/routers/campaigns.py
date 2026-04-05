@@ -1,50 +1,16 @@
 import logging
-from calendar import monthrange
-from datetime import date, datetime
 from typing import Any, Dict
 
 from fastapi import APIRouter, HTTPException
 
 from api.data_loader import load_annotated
-from api.schemas import CampaignCreate, CampaignStats, CampaignStatusUpdate
-from core.campaigns import campaign_manager
+from api.schemas import CampaignCreate, CampaignOverview, CampaignStats, CampaignStatusUpdate
+from core.campaigns import campaign_manager, overview_service
 from core.campaigns.impact_calculator import compute_campaign_impact
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/campaigns", tags=["Campaigns"])
-
-
-def _parse_campaign_date(value: str | None) -> date | None:
-    if not value:
-        return None
-
-    candidate = str(value).strip()
-    if not candidate:
-        return None
-
-    try:
-        return datetime.fromisoformat(candidate.replace("Z", "+00:00")).date()
-    except ValueError:
-        try:
-            return date.fromisoformat(candidate[:10])
-        except ValueError:
-            return None
-
-
-def _quarter_bounds(today: date | None = None) -> tuple[date, date, str]:
-    current = today or date.today()
-    quarter_start_month = ((current.month - 1) // 3) * 3 + 1
-    quarter_end_month = quarter_start_month + 2
-    start = date(current.year, quarter_start_month, 1)
-    end = date(current.year, quarter_end_month, monthrange(current.year, quarter_end_month)[1])
-    quarter_index = ((quarter_start_month - 1) // 3) + 1
-    return start, end, f"T{quarter_index} {current.year}"
-
-
-def _campaign_reference_date(campaign: dict[str, Any]) -> date | None:
-    return _parse_campaign_date(campaign.get("start_date"))
-
 
 @router.post("", response_model=Dict[str, Any])
 def create_campaign(data: CampaignCreate):
@@ -72,39 +38,24 @@ def list_campaigns(status: str = None, platform: str = None):
 def get_campaign_stats():
     """Expose les stats budget reelles du trimestre courant."""
     try:
-        campaigns = campaign_manager.list_campaigns(limit=1000)
-        quarter_start, quarter_end, quarter_label = _quarter_bounds()
-
-        quarter_campaigns = []
-        for campaign in campaigns:
-            reference_date = _campaign_reference_date(campaign)
-            if reference_date is None:
-                continue
-            if not (quarter_start <= reference_date <= quarter_end):
-                continue
-            if campaign.get("status") == "cancelled":
-                continue
-            budget = campaign.get("budget_dza")
-            if budget in (None, ""):
-                continue
-            quarter_campaigns.append(campaign)
-
-        quarterly_budget_allocation = sum(
-            int(campaign.get("budget_dza") or 0) for campaign in quarter_campaigns
-        )
-        quarterly_budget_committed = sum(
-            int(campaign.get("budget_dza") or 0)
-            for campaign in quarter_campaigns
-            if campaign.get("status") in {"active", "completed"}
-        )
-
+        stats = overview_service.get_quarter_budget_stats()
         return CampaignStats(
-            quarterly_budget_committed=quarterly_budget_committed,
-            quarterly_budget_allocation=quarterly_budget_allocation,
-            quarter_label=quarter_label,
+            quarterly_budget_committed=stats["quarterly_budget_committed"],
+            quarterly_budget_allocation=stats["quarterly_budget_allocation"],
+            quarter_label=stats["quarter_label"],
         )
     except Exception as exc:
         logger.error("Erreur get_campaign_stats: %s", exc)
+        raise HTTPException(status_code=500, detail="Erreur interne")
+
+
+@router.get("/overview", response_model=CampaignOverview)
+def get_campaign_overview():
+    """Expose le bundle métier de la page Campagnes."""
+    try:
+        return CampaignOverview(**overview_service.get_campaigns_overview())
+    except Exception as exc:
+        logger.error("Erreur get_campaign_overview: %s", exc)
         raise HTTPException(status_code=500, detail="Erreur interne")
 
 

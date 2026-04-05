@@ -2,6 +2,7 @@ import type {
   ApiStatus,
   Alert,
   Campaign,
+  CampaignOverview,
   CampaignEngagementSummary,
   CampaignPost,
   CampaignImpact,
@@ -214,6 +215,39 @@ export function mapCampaignStats(value: unknown): CampaignStats {
     quarterly_budget_committed: asNumber(record.quarterly_budget_committed),
     quarterly_budget_allocation: asNumber(record.quarterly_budget_allocation),
     quarter_label: asString(record.quarter_label),
+  };
+}
+
+export function mapCampaignOverview(value: unknown): CampaignOverview {
+  const record = asRecord(value);
+  const topPerformer = asRecord(record.top_performer);
+  const hasTopPerformer = Object.keys(topPerformer).length > 0;
+
+  return {
+    quarterly_budget_committed: asNumber(record.quarterly_budget_committed),
+    quarterly_budget_allocation: asNumber(record.quarterly_budget_allocation),
+    quarter_label: asString(record.quarter_label),
+    active_campaigns_count: asNumber(record.active_campaigns_count),
+    top_performer: hasTopPerformer
+      ? {
+          campaign_id: asString(topPerformer.campaign_id),
+          campaign_name: asString(topPerformer.campaign_name) || null,
+          influencer_handle: asString(topPerformer.influencer_handle) || null,
+          platform: asString(topPerformer.platform) || null,
+          status: asString(topPerformer.status) || null,
+          budget_dza:
+            topPerformer.budget_dza == null ? null : asNumber(topPerformer.budget_dza),
+          roi_pct: topPerformer.roi_pct == null ? null : asNumber(topPerformer.roi_pct),
+          engagement_rate:
+            topPerformer.engagement_rate == null
+              ? null
+              : asNumber(topPerformer.engagement_rate),
+          signal_count: asNumber(topPerformer.signal_count),
+          sentiment_breakdown: asNumberRecord(topPerformer.sentiment_breakdown),
+          negative_aspects: asStringArray(topPerformer.negative_aspects),
+          selection_basis: asString(topPerformer.selection_basis) || null,
+        }
+      : null,
   };
 }
 

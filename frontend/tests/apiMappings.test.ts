@@ -11,6 +11,7 @@ import {
   mapAdminSyncRun,
   mapAlert,
   mapCampaign,
+  mapCampaignOverview,
   mapCampaignImpact,
   mapContextPreview,
   mapDashboardActions,
@@ -147,6 +148,36 @@ test("mapCampaignImpact preserves the phased impact structure", () => {
 
   assert.equal(impact.phases.active.nss, 24);
   assert.equal(impact.uplift_nss, 12);
+});
+
+test("mapCampaignOverview preserves the overview top performer bundle", () => {
+  const overview = mapCampaignOverview({
+    quarterly_budget_committed: 1250000,
+    quarterly_budget_allocation: 2000000,
+    quarter_label: "T2 2026",
+    active_campaigns_count: 3,
+    top_performer: {
+      campaign_id: "camp_1",
+      campaign_name: "Rifka Summer Push",
+      influencer_handle: "@rifka.bjm",
+      platform: "instagram",
+      status: "active",
+      budget_dza: 1250000,
+      roi_pct: 34.4,
+      engagement_rate: 6.84,
+      signal_count: 14,
+      sentiment_breakdown: { positive: 9, neutral: 3, negative: 2 },
+      negative_aspects: ["disponibilite", "prix"],
+      selection_basis: "engagement_rate",
+    },
+  });
+
+  assert.equal(overview.quarterly_budget_committed, 1250000);
+  assert.equal(overview.active_campaigns_count, 3);
+  assert.equal(overview.top_performer?.campaign_id, "camp_1");
+  assert.equal(overview.top_performer?.roi_pct, 34.4);
+  assert.equal(overview.top_performer?.negative_aspects[0], "disponibilite");
+  assert.equal(overview.top_performer?.selection_basis, "engagement_rate");
 });
 
 test("mapAlert preserves real backend statuses and severities", () => {
