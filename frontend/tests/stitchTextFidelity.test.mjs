@@ -172,6 +172,11 @@ test("Shared product shell keeps Stitch branding and avatar", () => {
   contains(sidebar, "Ammar, Brand Manager");
 });
 
+test("Shared product shell marks decorative controls as demo-disabled", () => {
+  const appShell = readComponent("AppShell.tsx");
+  contains(appShell, "demoDisabledProps");
+});
+
 test("Pages wire Stitch-specific header avatars", () => {
   contains(readPage("Watchlists.tsx"), "STITCH_AVATARS.watchlists.src");
   contains(readPage("Explorateur.tsx"), "STITCH_AVATARS.explorateur.src");
