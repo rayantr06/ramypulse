@@ -42,6 +42,10 @@ class TestProtectedEndpoints:
         # FastAPI returns 422 when a required header is missing
         assert resp.status_code == 422
 
+    def test_admin_requires_auth(self):
+        resp = client.get("/api/admin/sources")
+        assert resp.status_code == 422
+
     def test_bad_key_returns_401(self):
         resp = client.get(
             "/api/dashboard/summary",

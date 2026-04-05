@@ -49,4 +49,4 @@ app.include_router(social_metrics.router, prefix="/api", dependencies=_auth)
 app.include_router(auth.router, prefix="/api", dependencies=_auth)
 
 # --- Admin routes (no auth in this lot — will be added at integration) ---
-app.include_router(admin.router, prefix="/api")
+app.include_router(admin.router, prefix="/api", dependencies=_auth)
