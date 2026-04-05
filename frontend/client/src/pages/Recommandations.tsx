@@ -566,11 +566,8 @@ export default function Recommandations() {
                     className="bg-surface-container-high rounded-lg p-5 flex flex-col h-full border border-transparent hover:border-primary/20 transition-all"
                     data-testid={`reco-card-${recommendation.id}`}
                   >
-                    <div className="flex justify-between items-start mb-4">
+                    <div className="flex items-start mb-4">
                       <PriorityBadge priority={recommendation.priority} />
-                      <span className="material-symbols-outlined text-gray-500 text-sm cursor-pointer hover:text-white transition-colors">
-                        more_vert
-                      </span>
                     </div>
                     <h3 className="text-sm font-bold font-headline mb-2">
                       {recommendation.title}

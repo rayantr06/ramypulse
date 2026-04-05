@@ -67,6 +67,11 @@ test("Recommandations keeps Stitch active analysis cards and actions", () => {
   contains(source, "Actions recommandées");
 });
 
+test("Recommandations removes the decorative more_vert control", () => {
+  const source = readPage("Recommandations.tsx");
+  lacks(source, "more_vert");
+});
+
 test("Watchlists keeps Stitch CTA copy", () => {
   const source = readPage("Watchlists.tsx");
   contains(source, "Créer une watchlist");
@@ -116,6 +121,12 @@ test("Campagnes keeps Stitch structure while dropping fake performance numbers",
   lacks(source, "6_320_000");
   lacks(source, "ROI 4.2x");
   lacks(source, "+18% Engagement");
+});
+
+test("Campagnes wires the main CTA to the real create form and marks export as demo-disabled", () => {
+  const source = readPage("Campagnes.tsx");
+  contains(source, "scrollIntoView");
+  contains(source, 'demoDisabledProps("campaign-export")');
 });
 
 test("Explorateur keeps Stitch search copy", () => {
