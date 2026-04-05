@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Link } from "wouter";
 
 import AdminSourcesOps from "@/components/admin/AdminSourcesOps";
+import { demoDisabledProps } from "@/lib/demoMode";
 import { STITCH_AVATARS } from "@/lib/stitchAssets";
 
 function AdminShell({ children }: { children: ReactNode }) {
@@ -21,18 +22,30 @@ function AdminShell({ children }: { children: ReactNode }) {
           <a className="text-[#ffb693] border-b-2 border-[#ffb693] pb-1 hover:text-white transition-colors duration-200 active:scale-95">
             Ingestion
           </a>
-          <a className="text-gray-400 font-medium hover:text-white transition-colors duration-200 active:scale-95">
+          <a
+            className="text-gray-400/70 font-medium transition-colors duration-200 cursor-default"
+            {...demoDisabledProps("admin-top-pipelines")}
+          >
             Pipelines
           </a>
-          <a className="text-gray-400 font-medium hover:text-white transition-colors duration-200 active:scale-95">
+          <a
+            className="text-gray-400/70 font-medium transition-colors duration-200 cursor-default"
+            {...demoDisabledProps("admin-top-logs")}
+          >
             Logs
           </a>
         </div>
         <div className="flex items-center gap-4">
-          <span className="material-symbols-outlined hover:text-white transition-colors cursor-pointer">
+          <span
+            className="material-symbols-outlined text-[#ffb693]/75 transition-colors cursor-default"
+            {...demoDisabledProps("admin-top-notifications")}
+          >
             notifications
           </span>
-          <span className="material-symbols-outlined hover:text-white transition-colors cursor-pointer">
+          <span
+            className="material-symbols-outlined text-[#ffb693]/75 transition-colors cursor-default"
+            {...demoDisabledProps("admin-top-settings")}
+          >
             settings
           </span>
           <img
@@ -54,34 +67,53 @@ function AdminShell({ children }: { children: ReactNode }) {
           <nav className="flex-1 space-y-1">
             {[
               { label: "Sources", icon: "database", active: true },
-              { label: "Connectors", icon: "alt_route" },
-              { label: "Health", icon: "analytics" },
-              { label: "Validation", icon: "fact_check" },
-              { label: "Archive", icon: "inventory_2" },
+              {
+                label: "Connectors",
+                icon: "alt_route",
+                demoKey: "admin-sidebar-connectors",
+              },
+              { label: "Health", icon: "analytics", demoKey: "admin-sidebar-health" },
+              {
+                label: "Validation",
+                icon: "fact_check",
+                demoKey: "admin-sidebar-validation",
+              },
+              { label: "Archive", icon: "inventory_2", demoKey: "admin-sidebar-archive" },
             ].map((item) => (
               <a
                 key={item.label}
                 className={`flex items-center gap-3 px-3 py-2 rounded-sm transition-all duration-200 ease-out ${
                   item.active
                     ? "text-[#ffb693] bg-[#1c1e21]"
-                    : "text-gray-500 hover:bg-[#1c1e21] hover:text-white"
+                    : "text-gray-500/70 cursor-default"
                 }`}
+                {...(item.demoKey ? demoDisabledProps(item.demoKey) : {})}
               >
                 <span className="material-symbols-outlined">{item.icon}</span>
                 <span>{item.label}</span>
               </a>
             ))}
           </nav>
-          <button className="mt-4 bg-gradient-to-r from-primary to-primary-container text-on-primary-fixed px-4 py-3 rounded-lg flex items-center justify-center gap-2 font-bold shadow-lg hover:brightness-110 active:scale-95 transition-all">
+          <button
+            className="mt-4 bg-gradient-to-r from-primary to-primary-container text-on-primary-fixed px-4 py-3 rounded-lg flex items-center justify-center gap-2 font-bold shadow-lg transition-all opacity-80 cursor-default"
+            type="button"
+            {...demoDisabledProps("admin-new-pipeline")}
+          >
             <span className="material-symbols-outlined">add</span>
             New Pipeline
           </button>
           <div className="mt-auto pt-4 space-y-1 border-t border-white/5">
-            <a className="flex items-center gap-3 px-3 py-2 text-gray-500 hover:text-white transition-all">
+            <a
+              className="flex items-center gap-3 px-3 py-2 text-gray-500/70 transition-all cursor-default"
+              {...demoDisabledProps("admin-support")}
+            >
               <span className="material-symbols-outlined">help</span>
               <span>Support</span>
             </a>
-            <a className="flex items-center gap-3 px-3 py-2 text-gray-500 hover:text-white transition-all">
+            <a
+              className="flex items-center gap-3 px-3 py-2 text-gray-500/70 transition-all cursor-default"
+              {...demoDisabledProps("admin-docs")}
+            >
               <span className="material-symbols-outlined">description</span>
               <span>Documentation</span>
             </a>

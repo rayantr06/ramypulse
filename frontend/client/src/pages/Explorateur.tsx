@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
+import { demoDisabledProps } from "@/lib/demoMode";
 import { buildExplorerAiView } from "@/lib/explorerAiView";
 import { apiRequest } from "@/lib/queryClient";
 import {
@@ -302,7 +303,11 @@ export default function Explorateur() {
               );
             })}
             <div className="h-6 w-px bg-outline-variant/20 mx-1"></div>
-            <button className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface-variant text-xs font-semibold transition-colors">
+            <button
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-container text-on-surface-variant/70 text-xs font-semibold transition-colors cursor-default"
+              type="button"
+              {...demoDisabledProps("explorer-filter")}
+            >
               <span className="material-symbols-outlined text-sm">tune</span>
               Filtrer
             </button>
@@ -420,7 +425,11 @@ export default function Explorateur() {
                 Base de données complète des interactions clients
               </p>
             </div>
-            <button className="flex items-center gap-2 px-3 py-1.5 rounded bg-surface-container-highest text-on-surface-variant text-[10px] font-black uppercase tracking-widest hover:text-on-surface transition-colors">
+            <button
+              className="flex items-center gap-2 px-3 py-1.5 rounded bg-surface-container-highest text-on-surface-variant/70 text-[10px] font-black uppercase tracking-widest transition-colors cursor-default"
+              type="button"
+              {...demoDisabledProps("explorer-export")}
+            >
               <span className="material-symbols-outlined text-base">download</span>
               Exporter
             </button>
@@ -461,7 +470,7 @@ export default function Explorateur() {
                   verbatimsData.items.map((verbatim) => (
                     <tr
                       key={verbatim.id}
-                      className="hover:bg-surface-container-high transition-colors cursor-pointer"
+                      className="hover:bg-surface-container-high transition-colors"
                       data-testid={`verbatim-row-${verbatim.id}`}
                     >
                       <td className="px-6 py-4 whitespace-nowrap">

@@ -150,6 +150,12 @@ test("Explorateur exposes a visible in-page RAG insight block for the demo path"
   contains(source, 'data-testid="explorer-ai-insight"');
 });
 
+test("Explorateur marks decorative filter and export controls as demo-disabled", () => {
+  const source = readPage("Explorateur.tsx");
+  contains(source, 'demoDisabledProps("explorer-filter")');
+  contains(source, 'demoDisabledProps("explorer-export")');
+});
+
 test("AdminSources keeps Stitch labels and dedicated admin shell", () => {
   const page = readPage("AdminSources.tsx");
   const ops = readAdminComponent("AdminSourcesOps.tsx");
@@ -169,6 +175,21 @@ test("AdminSources keeps Stitch labels and dedicated admin shell", () => {
   contains(ops, "PIPELINE TRACE & DÉBIT");
   lacks(ops, "SOURCES DE DONNEES");
   lacks(ops, "PIPELINE TRACE & DEBIT");
+});
+
+test("AdminSources marks decorative shell controls as demo-disabled", () => {
+  const page = readPage("AdminSources.tsx");
+  contains(page, 'demoDisabledProps("admin-top-pipelines")');
+  contains(page, 'demoDisabledProps("admin-top-logs")');
+  contains(page, 'demoDisabledProps("admin-top-notifications")');
+  contains(page, 'demoDisabledProps("admin-top-settings")');
+  contains(page, 'demoKey: "admin-sidebar-connectors"');
+  contains(page, 'demoKey: "admin-sidebar-health"');
+  contains(page, 'demoKey: "admin-sidebar-validation"');
+  contains(page, 'demoKey: "admin-sidebar-archive"');
+  contains(page, 'demoDisabledProps("admin-new-pipeline")');
+  contains(page, 'demoDisabledProps("admin-support")');
+  contains(page, 'demoDisabledProps("admin-docs")');
 });
 
 test("AdminSources page no longer carries legacy admin logic", () => {
@@ -201,4 +222,18 @@ test("Pages wire Stitch-specific header avatars", () => {
   contains(readPage("Alertes.tsx"), "STITCH_AVATARS.alertes.src");
   contains(readPage("Campagnes.tsx"), "STITCH_AVATARS.campagnes.src");
   contains(readPage("AdminSources.tsx"), "STITCH_AVATARS.admin.src");
+});
+
+test("Demo video script documents the exact recorded path", async () => {
+  const source = readFileSync(path.resolve(__dirname, "../../docs/demo-video-script.md"), "utf8");
+  contains(source, "# Demo Video Script");
+  contains(source, "#/");
+  contains(source, "#/explorateur");
+  contains(source, "#/alertes");
+  contains(source, "#/recommandations");
+  contains(source, "#/campagnes");
+  contains(source, "#/admin-sources?view=sources");
+  contains(source, "#/admin-sources?view=scheduler");
+  contains(source, "RAG Insight");
+  contains(source, "Run due syncs");
 });
