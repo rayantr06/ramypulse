@@ -197,8 +197,24 @@ class IngestionOrchestrator:
         try:
             connector = self._select_connector(source)
             source_config = parse_source_config(source)
+            # Resolve credentials: credential_id > credential_ref > runtime
+            resolved_from_credential_id = {}
+            credential_id = source.get("credential_id")
+            if credential_id:
+                from core.social_metrics.credential_manager import get_credential
+                cred_record = get_credential(credential_id)
+                if cred_record:
+                    resolved_from_credential_id = {
+                        k: v for k, v in {
+                            "access_token": cred_record.get("access_token"),
+                            "account_id": cred_record.get("account_id"),
+                            "app_id": cred_record.get("app_id"),
+                            "app_secret": cred_record.get("app_secret"),
+                        }.items() if v is not None
+                    }
             credentials_payload = {
                 **resolve_credentials(source_config),
+                **resolved_from_credential_id,
                 **(credentials or {}),
             }
             documents = connector.fetch_documents(
