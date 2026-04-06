@@ -46,6 +46,22 @@ test("Campaigns exposes a real create path and tags export as shell-only", () =>
   assert.ok(source.includes('demoDisabledProps("campaign-export")'));
 });
 
+test("Business pages do not regress to inert header search handlers", () => {
+  for (const pageName of [
+    "Watchlists.tsx",
+    "Alertes.tsx",
+    "Recommandations.tsx",
+    "Campagnes.tsx",
+  ]) {
+    const source = readPage(pageName);
+    assert.ok(
+      !source.includes("onSearch={() => {}}"),
+      `${pageName} still uses an inert search handler`,
+    );
+    assert.ok(source.includes("onSearch={setSearchQuery}"), `${pageName} does not wire header search`);
+  }
+});
+
 test("Admin shell tags every non-operational control instead of leaving naked links", () => {
   const source = readPage("AdminSources.tsx");
   assert.ok(source.includes('demoDisabledProps("admin-top-pipelines")'));

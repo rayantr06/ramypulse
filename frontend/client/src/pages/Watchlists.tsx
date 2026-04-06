@@ -4,6 +4,7 @@ import { AppShell } from "@/components/AppShell";
 import { apiRequest } from "@/lib/queryClient";
 import { buildWatchlistCreatePayload, type WatchlistFormInput } from "@/lib/apiMappings";
 import { mapWatchlist, mapWatchlistMetrics } from "@/lib/apiMappings";
+import { filterWatchlistViews } from "@/lib/pageSearchFilters";
 import { STITCH_AVATARS } from "@/lib/stitchAssets";
 
 type TabFilter = "Toutes" | "Actives" | "Inactives";
@@ -92,6 +93,7 @@ export default function Watchlists() {
   const [tab, setTab] = useState<TabFilter>("Toutes");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [createForm, setCreateForm] = useState<WatchlistFormInput>({
     name: "",
     description: "",
@@ -125,19 +127,16 @@ export default function Watchlists() {
   const allWatchlists = watchlistsQuery.data ?? [];
 
   const filtered = useMemo(() => {
-    return allWatchlists.filter((watchlist) => {
+    const tabFiltered = allWatchlists.filter((watchlist) => {
       if (tab === "Actives") return watchlist.is_active;
       if (tab === "Inactives") return !watchlist.is_active;
       return true;
     });
-  }, [allWatchlists, tab]);
+    return filterWatchlistViews(tabFiltered, searchQuery);
+  }, [allWatchlists, searchQuery, tab]);
 
   const selectedWatchlist =
-    filtered.find((watchlist) => watchlist.id === selectedId) ||
-    allWatchlists.find((watchlist) => watchlist.id === selectedId) ||
-    filtered[0] ||
-    allWatchlists[0] ||
-    null;
+    filtered.find((watchlist) => watchlist.id === selectedId) || filtered[0] || null;
 
   const metricsQuery = useQuery({
     queryKey: ["/api/watchlists", selectedWatchlist?.id, "metrics"],
@@ -194,7 +193,7 @@ export default function Watchlists() {
   return (
     <AppShell
       headerSearchPlaceholder="Rechercher une watchlist..."
-      onSearch={() => {}}
+      onSearch={setSearchQuery}
       avatarSrc={STITCH_AVATARS.watchlists.src}
       avatarAlt={STITCH_AVATARS.watchlists.alt}
     >

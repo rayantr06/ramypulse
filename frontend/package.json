@@ -11,7 +11,7 @@
     "check:build": "npm run check && npm run build",
     "test:visual": "npm run build && playwright test tests/visual",
     "test:golden": "npm run build && playwright test tests/e2e/productGoldenPaths.spec.ts",
-    "test:quality": "node --test tests/pageContracts.test.mjs && npx tsx --test tests/uiPayloadContracts.test.ts tests/explorerAiView.test.ts && node --test tests/interactiveSurfaceAudit.test.mjs && node --test tests/stitchTextFidelity.test.mjs && npm run test:golden"
+    "test:quality": "node --test tests/pageContracts.test.mjs && npx tsx --test tests/pageSearchFilters.test.ts tests/uiPayloadContracts.test.ts tests/explorerAiView.test.ts && node --test tests/interactiveSurfaceAudit.test.mjs && node --test tests/stitchTextFidelity.test.mjs && npm run test:golden"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

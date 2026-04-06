@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
 import { demoDisabledProps } from "@/lib/demoMode";
@@ -9,6 +9,7 @@ import {
   mapCampaignOverview,
   mapCampaignImpact,
 } from "@/lib/apiMappings";
+import { filterCampaignViews } from "@/lib/pageSearchFilters";
 import { STITCH_AVATARS } from "@/lib/stitchAssets";
 
 const CAMPAIGN_ROW_AVATARS = [
@@ -229,6 +230,7 @@ export default function Campagnes() {
   const [currentPage, setCurrentPage] = useState(1);
   const [isComposerOpen, setIsComposerOpen] = useState(true);
   const [selectedCampaign, setSelectedCampaign] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [keywords, setKeywords] = useState<string[]>([]);
   const [newKeyword, setNewKeyword] = useState("");
   const createFormSectionRef = useRef<HTMLDivElement | null>(null);
@@ -301,14 +303,25 @@ export default function Campagnes() {
 
   const allCampaigns = campaigns ?? [];
   const filteredCampaigns = useMemo(() => {
-    return allCampaigns.filter((campaign) => {
+    const tabFiltered = allCampaigns.filter((campaign) => {
       if (filter === "ACTIVES") return campaign.status === "ACTIVE";
       if (filter === "ARCHIVES") {
         return campaign.status === "TERMINEE" || campaign.status === "ANNULEE";
       }
       return true;
     });
-  }, [allCampaigns, filter]);
+    return filterCampaignViews(tabFiltered, searchQuery);
+  }, [allCampaigns, filter, searchQuery]);
+
+  useEffect(() => {
+    if (!filteredCampaigns.length) {
+      setSelectedCampaign(null);
+      return;
+    }
+    if (!selectedCampaign || !filteredCampaigns.some((campaign) => campaign.id === selectedCampaign)) {
+      setSelectedCampaign(filteredCampaigns[0]?.id ?? null);
+    }
+  }, [filteredCampaigns, selectedCampaign]);
 
   const totalPages = Math.max(1, Math.ceil(filteredCampaigns.length / ROWS_PER_PAGE));
   const safeCurrentPage = Math.min(currentPage, totalPages);
@@ -378,7 +391,7 @@ export default function Campagnes() {
   return (
     <AppShell
       headerSearchPlaceholder="Rechercher une campagne..."
-      onSearch={() => {}}
+      onSearch={setSearchQuery}
       avatarSrc={STITCH_AVATARS.campagnes.src}
       avatarAlt={STITCH_AVATARS.campagnes.alt}
       sidebarFooterAvatarSrc={STITCH_AVATARS.campagnes.src}
