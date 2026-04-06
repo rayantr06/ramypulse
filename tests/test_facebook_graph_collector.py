@@ -46,6 +46,11 @@ class TestCollectPostMetrics:
             metrics = facebook_graph_collector.collect_post_metrics(
                 "fb_post_001", access_token="tok123"
             )
+        mock_get.assert_called_once_with(
+            "fb_post_001",
+            access_token="tok123",
+            fields="id,reactions.summary(true),comments.summary(true),shares",
+        )
         assert metrics["likes"] == 42
         assert metrics["comments"] == 5
         assert metrics["shares"] == 3
