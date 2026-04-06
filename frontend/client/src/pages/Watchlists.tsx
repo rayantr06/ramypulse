@@ -2,7 +2,9 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
 import { apiRequest } from "@/lib/queryClient";
+import { buildWatchlistCreatePayload, type WatchlistFormInput } from "@/lib/apiMappings";
 import { mapWatchlist, mapWatchlistMetrics } from "@/lib/apiMappings";
+import { filterWatchlistViews } from "@/lib/pageSearchFilters";
 import { STITCH_AVATARS } from "@/lib/stitchAssets";
 
 type TabFilter = "Toutes" | "Actives" | "Inactives";
@@ -91,10 +93,18 @@ export default function Watchlists() {
   const [tab, setTab] = useState<TabFilter>("Toutes");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [createForm, setCreateForm] = useState({
+  const [searchQuery, setSearchQuery] = useState("");
+  const [createForm, setCreateForm] = useState<WatchlistFormInput>({
     name: "",
     description: "",
     scope_type: "product",
+    product: "",
+    wilaya: "",
+    channel: "",
+    aspect: "",
+    sentiment: "",
+    period_days: 7,
+    min_volume: 10,
   });
 
   const queryClient = useQueryClient();
@@ -117,19 +127,16 @@ export default function Watchlists() {
   const allWatchlists = watchlistsQuery.data ?? [];
 
   const filtered = useMemo(() => {
-    return allWatchlists.filter((watchlist) => {
+    const tabFiltered = allWatchlists.filter((watchlist) => {
       if (tab === "Actives") return watchlist.is_active;
       if (tab === "Inactives") return !watchlist.is_active;
       return true;
     });
-  }, [allWatchlists, tab]);
+    return filterWatchlistViews(tabFiltered, searchQuery);
+  }, [allWatchlists, searchQuery, tab]);
 
   const selectedWatchlist =
-    filtered.find((watchlist) => watchlist.id === selectedId) ||
-    allWatchlists.find((watchlist) => watchlist.id === selectedId) ||
-    filtered[0] ||
-    allWatchlists[0] ||
-    null;
+    filtered.find((watchlist) => watchlist.id === selectedId) || filtered[0] || null;
 
   const metricsQuery = useQuery({
     queryKey: ["/api/watchlists", selectedWatchlist?.id, "metrics"],
@@ -147,18 +154,28 @@ export default function Watchlists() {
 
   const createMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/watchlists", {
-        name: createForm.name.trim(),
-        description: createForm.description.trim(),
-        scope_type: createForm.scope_type,
-        filters: {},
-      });
+      const res = await apiRequest(
+        "POST",
+        "/api/watchlists",
+        buildWatchlistCreatePayload(createForm),
+      );
       return res.json();
     },
     onSuccess: (data: { watchlist_id: string }) => {
       queryClient.invalidateQueries({ queryKey: ["/api/watchlists"] });
       setShowCreateForm(false);
-      setCreateForm({ name: "", description: "", scope_type: "product" });
+      setCreateForm({
+        name: "",
+        description: "",
+        scope_type: "product",
+        product: "",
+        wilaya: "",
+        channel: "",
+        aspect: "",
+        sentiment: "",
+        period_days: 7,
+        min_volume: 10,
+      });
       setSelectedId(data.watchlist_id);
     },
   });
@@ -176,7 +193,7 @@ export default function Watchlists() {
   return (
     <AppShell
       headerSearchPlaceholder="Rechercher une watchlist..."
-      onSearch={() => {}}
+      onSearch={setSearchQuery}
       avatarSrc={STITCH_AVATARS.watchlists.src}
       avatarAlt={STITCH_AVATARS.watchlists.alt}
     >
@@ -288,13 +305,86 @@ export default function Watchlists() {
                   <select
                     className="w-full bg-surface-container-highest border-none rounded-sm text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
                     value={createForm.scope_type}
-                    onChange={(e) => setCreateForm({ ...createForm, scope_type: e.target.value })}
+                    onChange={(e) =>
+                      setCreateForm({
+                        ...createForm,
+                        scope_type: e.target.value as WatchlistFormInput["scope_type"],
+                      })
+                    }
                   >
                     <option value="product">Produit</option>
                     <option value="region">Région</option>
                     <option value="channel">Canal</option>
                     <option value="cross_dimension">Multi-dimension</option>
                   </select>
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      className="w-full bg-surface-container-highest border-none rounded-sm text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
+                      placeholder="Produit"
+                      value={createForm.product}
+                      onChange={(e) =>
+                        setCreateForm({ ...createForm, product: e.target.value })
+                      }
+                    />
+                    <input
+                      className="w-full bg-surface-container-highest border-none rounded-sm text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
+                      placeholder="Wilaya"
+                      value={createForm.wilaya}
+                      onChange={(e) =>
+                        setCreateForm({ ...createForm, wilaya: e.target.value })
+                      }
+                    />
+                    <input
+                      className="w-full bg-surface-container-highest border-none rounded-sm text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
+                      placeholder="Canal"
+                      value={createForm.channel}
+                      onChange={(e) =>
+                        setCreateForm({ ...createForm, channel: e.target.value })
+                      }
+                    />
+                    <input
+                      className="w-full bg-surface-container-highest border-none rounded-sm text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
+                      placeholder="Aspect"
+                      value={createForm.aspect}
+                      onChange={(e) =>
+                        setCreateForm({ ...createForm, aspect: e.target.value })
+                      }
+                    />
+                    <input
+                      className="w-full bg-surface-container-highest border-none rounded-sm text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
+                      placeholder="Sentiment"
+                      value={createForm.sentiment}
+                      onChange={(e) =>
+                        setCreateForm({ ...createForm, sentiment: e.target.value })
+                      }
+                    />
+                    <input
+                      className="w-full bg-surface-container-highest border-none rounded-sm text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
+                      type="number"
+                      min={1}
+                      placeholder="Jours"
+                      value={createForm.period_days}
+                      onChange={(e) =>
+                        setCreateForm({
+                          ...createForm,
+                          period_days: Number(e.target.value),
+                        })
+                      }
+                    />
+                    <input
+                      className="w-full bg-surface-container-highest border-none rounded-sm text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
+                      type="number"
+                      min={0}
+                      placeholder="Volume min."
+                      value={createForm.min_volume}
+                      onChange={(e) =>
+                        setCreateForm({
+                          ...createForm,
+                          min_volume: Number(e.target.value),
+                        })
+                      }
+                    />
+                  </div>
                   <div className="flex gap-2">
                     <button
                       disabled={!createForm.name.trim() || createMutation.isPending}

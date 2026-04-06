@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { Sidebar } from "./Sidebar";
+import { demoDisabledProps } from "@/lib/demoMode";
 import { STITCH_AVATARS } from "@/lib/stitchAssets";
 import { demoDisabledProps } from "@/lib/demoMode";
 

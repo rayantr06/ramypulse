@@ -9,6 +9,7 @@ import {
   mapContextPreview,
   mapRecommendation,
 } from "@/lib/apiMappings";
+import { filterRecommendationViews } from "@/lib/pageSearchFilters";
 import { STITCH_AVATARS } from "@/lib/stitchAssets";
 
 interface RecommendationContextView {
@@ -206,6 +207,7 @@ export default function Recommandations() {
     provider: "",
     model: "",
   });
+  const [searchQuery, setSearchQuery] = useState("");
 
   const { data: providersRaw } = useQuery<ProviderGroup[]>({
     queryKey: ["/api/recommendations/providers"],
@@ -290,7 +292,10 @@ export default function Recommandations() {
     estimated_cost_usd: null,
   };
 
-  const recos = recommendations ?? [];
+  const recos = useMemo(
+    () => filterRecommendationViews(recommendations ?? [], searchQuery),
+    [recommendations, searchQuery],
+  );
   const activeRecos = recos.filter((recommendation) => recommendation.status === "active");
   const latestRecommendation = recos[0] ?? null;
   const lastRunLabel = formatRelativeRunLabel(latestRecommendation?.created_at);
@@ -315,7 +320,7 @@ export default function Recommandations() {
   return (
     <AppShell
       headerSearchPlaceholder="Rechercher une recommandation..."
-      onSearch={() => {}}
+      onSearch={setSearchQuery}
       avatarSrc={STITCH_AVATARS.recommandations.src}
       avatarAlt={STITCH_AVATARS.recommandations.alt}
     >
@@ -697,7 +702,10 @@ export default function Recommandations() {
 
       <div className="fixed bottom-8 right-8 z-50">
         <Link href="/explorateur">
-          <a className="w-14 h-14 bg-gradient-to-br from-primary to-primary-container rounded-sm shadow-[0_10px_30px_rgba(245,102,0,0.3)] flex items-center justify-center text-on-primary-container hover:scale-110 active:scale-95 transition-all">
+          <a
+            className="w-14 h-14 bg-gradient-to-br from-primary to-primary-container rounded-sm shadow-[0_10px_30px_rgba(245,102,0,0.3)] flex items-center justify-center text-on-primary-container hover:scale-110 active:scale-95 transition-all"
+            data-testid="recommendations-ai-shortcut"
+          >
             <span
               className="material-symbols-outlined text-2xl"
               style={{ fontVariationSettings: "'FILL' 1" }}
