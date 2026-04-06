@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { Sidebar } from "./Sidebar";
+import { demoDisabledProps } from "@/lib/demoMode";
 import { STITCH_AVATARS } from "@/lib/stitchAssets";
 
 interface AppShellProps {
@@ -64,16 +65,23 @@ export function AppShell({
             {hasSearch ? (
               <>
                 <div className="flex items-center gap-4 text-on-surface-variant">
-                  <button className="material-symbols-outlined hover:text-white transition-colors">
+                  <button
+                    className="material-symbols-outlined hover:text-white transition-colors"
+                    {...demoDisabledProps("language")}
+                  >
                     language
                   </button>
-                  <button className="material-symbols-outlined hover:text-white transition-colors">
+                  <button
+                    className="material-symbols-outlined hover:text-white transition-colors"
+                    {...demoDisabledProps("grid_view")}
+                  >
                     grid_view
                   </button>
                   <div className="relative">
                     <button
                       className="material-symbols-outlined hover:text-white transition-colors"
                       data-testid="btn-notifications"
+                      {...demoDisabledProps("notifications")}
                     >
                       notifications
                     </button>
@@ -87,11 +95,15 @@ export function AppShell({
                 <button
                   className="relative text-gray-400 hover:bg-[#1b1d20] p-2 rounded-sm transition-all duration-200"
                   data-testid="btn-notifications"
+                  {...demoDisabledProps("notifications")}
                 >
                   <span className="material-symbols-outlined">notifications</span>
                   <span className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full"></span>
                 </button>
-                <button className="text-gray-400 hover:bg-[#1b1d20] p-2 rounded-sm transition-all duration-200">
+                <button
+                  className="text-gray-400 hover:bg-[#1b1d20] p-2 rounded-sm transition-all duration-200"
+                  {...demoDisabledProps("sensors")}
+                >
                   <span className="material-symbols-outlined">sensors</span>
                 </button>
               </>

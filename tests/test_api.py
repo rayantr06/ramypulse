@@ -676,6 +676,37 @@ class TestExplorer:
         assert "results" in data
         assert data["query"] == "ramy"
 
+    def test_search_falls_back_to_annotated_corpus_when_faiss_is_missing(self):
+        mock_df = pd.DataFrame(
+            {
+                "text": ["gout excellent ramy", "prix trop eleve"],
+                "sentiment_label": ["positif", "negatif"],
+                "channel": ["facebook", "facebook"],
+                "aspect": ["gout", "prix"],
+                "timestamp": ["2026-04-01T10:00:00Z", "2026-04-01T11:00:00Z"],
+                "source_url": ["https://fb/1", "https://fb/2"],
+            }
+        )
+
+        from api.routers import explorer as explorer_router
+
+        previous = explorer_router._retriever
+        explorer_router._retriever = None
+        try:
+            with patch("api.routers.explorer.os.path.exists", return_value=False), patch(
+                "api.routers.explorer.load_annotated", return_value=mock_df
+            ):
+                r = client.get("/api/explorer/search?q=gout")
+        finally:
+            explorer_router._retriever = previous
+
+        assert r.status_code == 200
+        data = r.json()
+        assert data["total"] >= 1
+        assert data["results"][0]["aspect"] == "gout"
+        assert data["results"][0]["sentiment_label"] == "positif"
+        assert data["results"][0]["source_url"] == "https://fb/1"
+
     def test_search_empty_query_returns_400(self):
         r = client.get("/api/explorer/search?q=")
         assert r.status_code == 400

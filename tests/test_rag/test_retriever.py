@@ -102,6 +102,38 @@ def test_retrieve_corpus_vide_retourne_liste_vide() -> None:
     assert results == []
 
 
+def test_bm25_fallback_works_with_metadata_even_without_dense_index() -> None:
+    """Sans vecteurs FAISS mais avec metadata, BM25 doit encore renvoyer des résultats."""
+    vs = VectorStore()
+    vs.metadata = [
+        {
+            "text": "gout excellent ramy",
+            "channel": "facebook",
+            "source_url": "http://fb/1",
+            "timestamp": "2024-01-01",
+            "aspect": "gout",
+            "sentiment_label": "positif",
+        },
+        {
+            "text": "prix trop eleve",
+            "channel": "facebook",
+            "source_url": "http://fb/2",
+            "timestamp": "2024-01-02",
+            "aspect": "prix",
+            "sentiment_label": "negatif",
+        },
+    ]
+
+    embedder = _mock_embedder()
+    retriever = Retriever(vs, embedder)
+    results = retriever.search("gout", top_k=2)
+
+    assert len(results) >= 1
+    assert results[0]["source_url"] == "http://fb/1"
+    assert results[0]["aspect"] == "gout"
+    embedder.embed_query.assert_not_called()
+
+
 def test_resultats_tries_par_score_decroissant() -> None:
     """Les résultats doivent être triés du score RRF le plus élevé au plus bas."""
     retriever = Retriever(_make_store(10), _mock_embedder())

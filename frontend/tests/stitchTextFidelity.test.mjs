@@ -67,6 +67,16 @@ test("Recommandations keeps Stitch active analysis cards and actions", () => {
   contains(source, "Actions recommandées");
 });
 
+test("Recommandations removes the decorative more_vert control", () => {
+  const source = readPage("Recommandations.tsx");
+  lacks(source, "more_vert");
+});
+
+test("Recommandations routes the floating AI shortcut to Explorateur", () => {
+  const source = readPage("Recommandations.tsx");
+  contains(source, 'href="/explorateur"');
+});
+
 test("Watchlists keeps Stitch CTA copy", () => {
   const source = readPage("Watchlists.tsx");
   contains(source, "Créer une watchlist");
@@ -118,11 +128,19 @@ test("Campagnes keeps Stitch structure while dropping fake performance numbers",
   lacks(source, "+18% Engagement");
 });
 
+test("Campagnes wires the main CTA to the real create form and marks export as demo-disabled", () => {
+  const source = readPage("Campagnes.tsx");
+  contains(source, "scrollIntoView");
+  contains(source, 'demoDisabledProps("campaign-export")');
+});
+
 test("Explorateur keeps Stitch search copy", () => {
   const source = readPage("Explorateur.tsx");
   contains(source, "Recherche sémantique et verbatims à travers l'écosystème digital");
   contains(source, "Que pensent les clients du goût à Alger ?");
   contains(source, "Base de données complète des interactions clients");
+  contains(source, "Synthèse IA ancrée dans les résultats actuels");
+  lacks(source, "SynthÃ¨se IA ancrÃ©e dans les rÃ©sultats actuels");
 });
 
 test("Explorateur keeps Stitch relative date and sentiment labels", () => {
@@ -131,6 +149,26 @@ test("Explorateur keeps Stitch relative date and sentiment labels", () => {
   contains(source, "Hier");
   contains(source, "Très Positif");
   contains(source, "Négatif");
+});
+
+test("Explorateur exposes a visible in-page RAG insight block for the demo path", () => {
+  const source = readPage("Explorateur.tsx");
+  contains(source, "RAG Insight");
+  contains(source, 'data-testid="explorer-ai-insight"');
+  contains(source, "Voir la source");
+});
+
+test("Explorateur marks decorative filter and export controls as demo-disabled", () => {
+  const source = readPage("Explorateur.tsx");
+  contains(source, 'demoDisabledProps("explorer-filter")');
+  contains(source, 'demoDisabledProps("explorer-export")');
+});
+
+test("Explorateur restores real source links instead of decorative result actions", () => {
+  const source = readPage("Explorateur.tsx");
+  contains(source, "result.source_url");
+  contains(source, "target=\"_blank\"");
+  contains(source, "open_in_new");
 });
 
 test("AdminSources keeps Stitch labels and dedicated admin shell", () => {
@@ -154,6 +192,21 @@ test("AdminSources keeps Stitch labels and dedicated admin shell", () => {
   lacks(ops, "PIPELINE TRACE & DEBIT");
 });
 
+test("AdminSources marks decorative shell controls as demo-disabled", () => {
+  const page = readPage("AdminSources.tsx");
+  contains(page, 'demoDisabledProps("admin-top-pipelines")');
+  contains(page, 'demoDisabledProps("admin-top-logs")');
+  contains(page, 'demoDisabledProps("admin-top-notifications")');
+  contains(page, 'demoDisabledProps("admin-top-settings")');
+  contains(page, 'demoKey: "admin-sidebar-connectors"');
+  contains(page, 'demoKey: "admin-sidebar-health"');
+  contains(page, 'demoKey: "admin-sidebar-validation"');
+  contains(page, 'demoKey: "admin-sidebar-archive"');
+  contains(page, 'demoDisabledProps("admin-new-pipeline")');
+  contains(page, 'demoDisabledProps("admin-support")');
+  contains(page, 'demoDisabledProps("admin-docs")');
+});
+
 test("AdminSources page no longer carries legacy admin logic", () => {
   const page = readPage("AdminSources.tsx");
   lacks(page, "function LegacyAdminSources");
@@ -172,6 +225,11 @@ test("Shared product shell keeps Stitch branding and avatar", () => {
   contains(sidebar, "Ammar, Brand Manager");
 });
 
+test("Shared product shell marks decorative controls as demo-disabled", () => {
+  const appShell = readComponent("AppShell.tsx");
+  contains(appShell, "demoDisabledProps");
+});
+
 test("Pages wire Stitch-specific header avatars", () => {
   contains(readPage("Watchlists.tsx"), "STITCH_AVATARS.watchlists.src");
   contains(readPage("Explorateur.tsx"), "STITCH_AVATARS.explorateur.src");
@@ -179,4 +237,18 @@ test("Pages wire Stitch-specific header avatars", () => {
   contains(readPage("Alertes.tsx"), "STITCH_AVATARS.alertes.src");
   contains(readPage("Campagnes.tsx"), "STITCH_AVATARS.campagnes.src");
   contains(readPage("AdminSources.tsx"), "STITCH_AVATARS.admin.src");
+});
+
+test("Demo video script documents the exact recorded path", async () => {
+  const source = readFileSync(path.resolve(__dirname, "../../docs/demo-video-script.md"), "utf8");
+  contains(source, "# Demo Video Script");
+  contains(source, "#/");
+  contains(source, "#/explorateur");
+  contains(source, "#/alertes");
+  contains(source, "#/recommandations");
+  contains(source, "#/campagnes");
+  contains(source, "#/admin-sources?view=sources");
+  contains(source, "#/admin-sources?view=scheduler");
+  contains(source, "RAG Insight");
+  contains(source, "Run due syncs");
 });
