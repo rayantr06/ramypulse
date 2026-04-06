@@ -4,6 +4,8 @@ from __future__ import annotations
 import sqlite3
 from unittest import mock
 
+import pytest
+
 from core.social_metrics import facebook_graph_collector
 
 
@@ -75,7 +77,7 @@ class TestCollectPostMetrics:
             metrics = facebook_graph_collector.collect_post_metrics(
                 "fb_post_002", access_token="tok123"
             )
-        assert isinstance(metrics, dict)
+        assert metrics == {}
 
 
 class TestSaveMetrics:
@@ -106,3 +108,40 @@ class TestSaveMetrics:
         ):
             metric_id = facebook_graph_collector.save_metrics("post_001", {"likes": 5})
         assert metric_id.startswith("met-")
+
+
+class TestCollectAndSave:
+    def test_raises_value_error_on_empty_metrics(self):
+        """collect_and_save lève ValueError si aucune métrique collectée."""
+        with mock.patch(
+            "core.social_metrics.facebook_graph_collector.meta_graph_get"
+        ) as mock_get:
+            mock_get.return_value = {"id": "fb_post_003"}
+            with pytest.raises(ValueError, match="Aucune métrique"):
+                facebook_graph_collector.collect_and_save(
+                    "fb_post_003", access_token="tok123"
+                )
+
+    def test_returns_metric_id_and_metrics_on_success(self):
+        """collect_and_save retourne metric_id + métriques après persistance."""
+        api_response = {
+            "id": "fb_post_004",
+            "reactions": {"summary": {"total_count": 7}},
+            "comments": {"summary": {"total_count": 2}},
+            "shares": {"count": 1},
+        }
+        conn = _make_db()
+        with mock.patch(
+            "core.social_metrics.facebook_graph_collector.meta_graph_get"
+        ) as mock_get, mock.patch(
+            "core.social_metrics.facebook_graph_collector._get_conn",
+            return_value=conn,
+        ):
+            mock_get.return_value = api_response
+            result = facebook_graph_collector.collect_and_save(
+                "fb_post_004", access_token="tok123"
+            )
+        assert result["metric_id"].startswith("met-")
+        assert result["likes"] == 7
+        assert result["comments"] == 2
+        assert result["shares"] == 1
