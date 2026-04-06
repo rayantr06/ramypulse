@@ -289,101 +289,131 @@ export default function Watchlists() {
               {showCreateForm ? (
                 <div className="border-2 border-primary/20 bg-primary/5 p-5 rounded-xl flex flex-col gap-4">
                   <p className="text-xs font-bold text-primary uppercase tracking-widest">Nouvelle watchlist</p>
-                  <input
-                    className="w-full bg-surface-container-highest border-none rounded-sm text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
-                    placeholder="Nom de la watchlist"
-                    value={createForm.name}
-                    onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
-                    data-testid="input-watchlist-name"
-                  />
-                  <input
-                    className="w-full bg-surface-container-highest border-none rounded-sm text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
-                    placeholder="Description (optionnel)"
-                    value={createForm.description}
-                    onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
-                  />
-                  <select
-                    className="w-full bg-surface-container-highest border-none rounded-sm text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
-                    value={createForm.scope_type}
-                    onChange={(e) =>
-                      setCreateForm({
-                        ...createForm,
-                        scope_type: e.target.value as WatchlistFormInput["scope_type"],
-                      })
-                    }
-                  >
-                    <option value="product">Produit</option>
-                    <option value="region">Région</option>
-                    <option value="channel">Canal</option>
-                    <option value="cross_dimension">Multi-dimension</option>
-                  </select>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Nom</label>
                     <input
                       className="w-full bg-surface-container-highest border-none rounded-sm text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
-                      placeholder="Produit"
-                      value={createForm.product}
-                      onChange={(e) =>
-                        setCreateForm({ ...createForm, product: e.target.value })
-                      }
+                      placeholder="Nom de la watchlist"
+                      value={createForm.name}
+                      onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+                      data-testid="input-watchlist-name"
                     />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Description</label>
                     <input
                       className="w-full bg-surface-container-highest border-none rounded-sm text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
-                      placeholder="Wilaya"
-                      value={createForm.wilaya}
-                      onChange={(e) =>
-                        setCreateForm({ ...createForm, wilaya: e.target.value })
-                      }
+                      placeholder="Description (optionnel)"
+                      value={createForm.description}
+                      onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
                     />
-                    <input
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Type (Scope)</label>
+                    <select
                       className="w-full bg-surface-container-highest border-none rounded-sm text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
-                      placeholder="Canal"
-                      value={createForm.channel}
-                      onChange={(e) =>
-                        setCreateForm({ ...createForm, channel: e.target.value })
-                      }
-                    />
-                    <input
-                      className="w-full bg-surface-container-highest border-none rounded-sm text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
-                      placeholder="Aspect"
-                      value={createForm.aspect}
-                      onChange={(e) =>
-                        setCreateForm({ ...createForm, aspect: e.target.value })
-                      }
-                    />
-                    <input
-                      className="w-full bg-surface-container-highest border-none rounded-sm text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
-                      placeholder="Sentiment"
-                      value={createForm.sentiment}
-                      onChange={(e) =>
-                        setCreateForm({ ...createForm, sentiment: e.target.value })
-                      }
-                    />
-                    <input
-                      className="w-full bg-surface-container-highest border-none rounded-sm text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
-                      type="number"
-                      min={1}
-                      placeholder="Jours"
-                      value={createForm.period_days}
+                      value={createForm.scope_type}
                       onChange={(e) =>
                         setCreateForm({
                           ...createForm,
-                          period_days: Number(e.target.value),
+                          scope_type: e.target.value as WatchlistFormInput["scope_type"],
                         })
                       }
-                    />
-                    <input
-                      className="w-full bg-surface-container-highest border-none rounded-sm text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
-                      type="number"
-                      min={0}
-                      placeholder="Volume min."
-                      value={createForm.min_volume}
-                      onChange={(e) =>
-                        setCreateForm({
-                          ...createForm,
-                          min_volume: Number(e.target.value),
-                        })
-                      }
-                    />
+                    >
+                      <option value="product">Produit</option>
+                      <option value="region">Région</option>
+                      <option value="channel">Canal</option>
+                      <option value="cross_dimension">Multi-dimension</option>
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 mt-2">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Produit</label>
+                      <input
+                        className="w-full bg-surface-container-highest border-none rounded-sm text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
+                        placeholder="Ex: Ramy Orange"
+                        value={createForm.product}
+                        onChange={(e) =>
+                          setCreateForm({ ...createForm, product: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Wilaya</label>
+                      <input
+                        className="w-full bg-surface-container-highest border-none rounded-sm text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
+                        placeholder="Ex: Alger"
+                        value={createForm.wilaya}
+                        onChange={(e) =>
+                          setCreateForm({ ...createForm, wilaya: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Canal</label>
+                      <input
+                        className="w-full bg-surface-container-highest border-none rounded-sm text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
+                        placeholder="Ex: Facebook"
+                        value={createForm.channel}
+                        onChange={(e) =>
+                          setCreateForm({ ...createForm, channel: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Aspect</label>
+                      <input
+                        className="w-full bg-surface-container-highest border-none rounded-sm text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
+                        placeholder="Ex: goût"
+                        value={createForm.aspect}
+                        onChange={(e) =>
+                          setCreateForm({ ...createForm, aspect: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Sentiment</label>
+                      <input
+                        className="w-full bg-surface-container-highest border-none rounded-sm text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
+                        placeholder="Ex: NEGATIF"
+                        value={createForm.sentiment}
+                        onChange={(e) =>
+                          setCreateForm({ ...createForm, sentiment: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Période (jours)</label>
+                      <input
+                        className="w-full bg-surface-container-highest border-none rounded-sm text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
+                        type="number"
+                        min={1}
+                        placeholder="Jours"
+                        value={createForm.period_days}
+                        onChange={(e) =>
+                          setCreateForm({
+                            ...createForm,
+                            period_days: Number(e.target.value),
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1.5 col-span-2">
+                      <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Volume minimum</label>
+                      <input
+                        className="w-full bg-surface-container-highest border-none rounded-sm text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
+                        type="number"
+                        min={0}
+                        placeholder="Volume min."
+                        value={createForm.min_volume}
+                        onChange={(e) =>
+                          setCreateForm({
+                            ...createForm,
+                            min_volume: Number(e.target.value),
+                          })
+                        }
+                      />
+                    </div>
                   </div>
                   <div className="flex gap-2">
                     <button

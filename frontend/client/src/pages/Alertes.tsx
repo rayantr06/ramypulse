@@ -448,44 +448,46 @@ export default function Alertes() {
                       </div>
                     </div>
 
-                    <div className="flex gap-3 pt-6 border-t border-outline-variant/20">
-                      <button
-                        onClick={() =>
-                          updateStatusMutation.mutate({
-                            id: selectedAlert.id,
-                            status: "acknowledged",
-                          })
-                        }
-                        className="flex-1 bg-surface-container-high hover:bg-surface-bright text-on-surface font-bold py-3 px-4 rounded-sm text-xs transition-colors border border-outline-variant/30 uppercase tracking-widest"
-                        data-testid="btn-acknowledge"
-                      >
-                        Reconnaître
-                      </button>
-                      <button
-                        onClick={() =>
-                          updateStatusMutation.mutate({
-                            id: selectedAlert.id,
-                            status: "dismissed",
-                          })
-                        }
-                        className="flex-1 bg-surface-container-high hover:bg-surface-bright text-primary font-bold py-3 px-4 rounded-sm text-xs transition-colors border border-primary/20 uppercase tracking-widest"
-                        data-testid="btn-dismiss"
-                      >
-                        Ecarter
-                      </button>
-                      <button
-                        onClick={() =>
-                          updateStatusMutation.mutate({
-                            id: selectedAlert.id,
-                            status: "resolved",
-                          })
-                        }
-                        className="flex-1 bg-gradient-to-r from-primary to-primary-container text-on-primary-fixed font-bold py-3 px-4 rounded-sm text-xs hover:opacity-90 transition-opacity uppercase tracking-widest"
-                        data-testid="btn-resolve"
-                      >
-                        Résoudre
-                      </button>
-                    </div>
+                    {selectedAlert.status !== "RESOLU" && selectedAlert.status !== "ECARTE" && (
+                      <div className="flex gap-3 pt-6 border-t border-outline-variant/20">
+                        <button
+                          onClick={() =>
+                            updateStatusMutation.mutate({
+                              id: selectedAlert.id,
+                              status: "acknowledged",
+                            })
+                          }
+                          className="flex-1 bg-surface-container-high hover:bg-surface-bright text-on-surface font-bold py-3 px-4 rounded-sm text-xs transition-colors border border-outline-variant/30 uppercase tracking-widest"
+                          data-testid="btn-acknowledge"
+                        >
+                          Reconnaître
+                        </button>
+                        <button
+                          onClick={() =>
+                            updateStatusMutation.mutate({
+                              id: selectedAlert.id,
+                              status: "dismissed",
+                            })
+                          }
+                          className="flex-1 bg-surface-container-high hover:bg-surface-bright text-primary font-bold py-3 px-4 rounded-sm text-xs transition-colors border border-primary/20 uppercase tracking-widest"
+                          data-testid="btn-dismiss"
+                        >
+                          Ecarter
+                        </button>
+                        <button
+                          onClick={() =>
+                            updateStatusMutation.mutate({
+                              id: selectedAlert.id,
+                              status: "resolved",
+                            })
+                          }
+                          className="flex-1 bg-gradient-to-r from-primary to-primary-container text-on-primary-fixed font-bold py-3 px-4 rounded-sm text-xs hover:opacity-90 transition-opacity uppercase tracking-widest"
+                          data-testid="btn-resolve"
+                        >
+                          Résoudre
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </section>

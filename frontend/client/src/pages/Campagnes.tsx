@@ -209,9 +209,9 @@ function StatusBadge({ status }: { status: string }) {
   };
   const labelMap: Record<string, string> = {
     ACTIVE: "Active",
-    PLANIFIEE: "PlanifiÃ©e",
-    TERMINEE: "TerminÃ©e",
-    ANNULEE: "AnnulÃ©e",
+    PLANIFIEE: "Planifiée",
+    TERMINEE: "Terminée",
+    ANNULEE: "Annulée",
   };
 
   return (
