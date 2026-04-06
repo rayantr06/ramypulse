@@ -17,7 +17,7 @@ _FIELDS = "id,reactions.summary(true),comments.summary(true),shares"
 
 
 def _get_conn() -> sqlite3.Connection:
-    """Retourne une connexion à la base de données."""
+    """Retourne une connexion à la base de données principale."""
     conn = sqlite3.connect(str(config.SQLITE_DB_PATH))
     conn.row_factory = sqlite3.Row
     return conn
@@ -107,7 +107,10 @@ def collect_and_save(
     """Collecte les métriques d'un post Facebook puis les persiste."""
     metrics = collect_post_metrics(post_id, access_token=access_token)
     if not metrics:
-        raise ValueError(f"Aucune métrique collectée pour le post Facebook {post_id}")
+        raise ValueError(
+            f"Aucune métrique collectée pour le post Facebook {post_id} "
+            "(vérifier les logs pour l'erreur API sous-jacente)"
+        )
 
     metric_id = save_metrics(post_id, metrics, collection_mode="api")
     return {"metric_id": metric_id, **metrics}

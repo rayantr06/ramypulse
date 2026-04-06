@@ -145,3 +145,21 @@ class TestCollectAndSave:
         assert result["likes"] == 7
         assert result["comments"] == 2
         assert result["shares"] == 1
+
+    def test_propagates_save_error(self):
+        """Une erreur de persistance (DB) est remontée au caller."""
+        api_response = {
+            "reactions": {"summary": {"total_count": 1}},
+            "comments": {"summary": {"total_count": 0}},
+            "shares": {"count": 0},
+        }
+        with mock.patch(
+            "core.social_metrics.facebook_graph_collector.meta_graph_get"
+        ) as mock_get, mock.patch(
+            "core.social_metrics.facebook_graph_collector._get_conn"
+        ) as mock_conn:
+            mock_get.return_value = api_response
+            mock_conn.return_value.__enter__ = mock.Mock(side_effect=Exception("DB locked"))
+            mock_conn.return_value.__exit__ = mock.Mock(return_value=False)
+            with pytest.raises(Exception, match="DB locked"):
+                facebook_graph_collector.collect_and_save("post_x", access_token="tok")
