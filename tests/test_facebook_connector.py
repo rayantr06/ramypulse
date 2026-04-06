@@ -145,3 +145,54 @@ class TestFacebookConnectorApiMode:
             mock_p.side_effect = Exception("HTTP 429 Too Many Requests")
             with pytest.raises(Exception, match="429"):
                 connector.fetch_documents(_source(), credentials=_creds())
+
+    def test_collector_mode_delegates_to_parent(self):
+        connector = FacebookConnector()
+        with patch(
+            "core.connectors.platform_snapshot_connector.SnapshotPlatformConnector.fetch_documents"
+        ) as mock_parent:
+            mock_parent.return_value = []
+            result = connector.fetch_documents(_source(fetch_mode="collector"), credentials=_creds())
+        mock_parent.assert_called_once()
+        assert result == []
+
+    def test_api_mode_calls_paginate_with_correct_fields(self):
+        connector = FacebookConnector()
+        with patch("core.connectors.facebook_connector.meta_graph_paginate") as mock_p:
+            mock_p.return_value = []
+            connector.fetch_documents(_source(), credentials=_creds())
+        mock_p.assert_called_once()
+        call_kwargs = mock_p.call_args
+        # First positional arg is the endpoint
+        assert call_kwargs.args[0] == "111222333/posts"
+        # fields kwarg contains all required fields
+        fields = call_kwargs.kwargs.get("fields", "")
+        assert "message" in fields
+        assert "comments" in fields
+        assert "reactions" in fields
+        assert "permalink_url" in fields
+
+    def test_multiple_posts_all_collected(self):
+        connector = FacebookConnector()
+        post_a = {"id": "post_A", "message": "Post A", "created_time": "2026-04-01T10:00:00+0000", "permalink_url": "https://fb.com/posts/A"}
+        post_b = {"id": "post_B", "message": "Post B", "created_time": "2026-04-01T11:00:00+0000", "permalink_url": "https://fb.com/posts/B"}
+        with patch("core.connectors.facebook_connector.meta_graph_paginate") as mock_p:
+            mock_p.return_value = [post_a, post_b]
+            docs = connector.fetch_documents(_source(), credentials=_creds())
+        post_ids = [d["external_document_id"] for d in docs]
+        assert "post_A" in post_ids
+        assert "post_B" in post_ids
+        assert len(docs) == 2
+
+    def test_max_pages_forwarded_to_paginate(self):
+        connector = FacebookConnector()
+        source_with_max = {
+            "source_id": "src-fb-004",
+            "platform": "facebook",
+            "config_json": {"fetch_mode": "api", "page_id": "111222333", "max_pages": 5},
+        }
+        with patch("core.connectors.facebook_connector.meta_graph_paginate") as mock_p:
+            mock_p.return_value = []
+            connector.fetch_documents(source_with_max, credentials=_creds())
+        call_kwargs = mock_p.call_args
+        assert call_kwargs.kwargs.get("max_pages") == 5
