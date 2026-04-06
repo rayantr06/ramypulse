@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
 import { demoDisabledProps } from "@/lib/demoMode";
-import { buildExplorerAiView } from "@/lib/explorerAiView";
+import { buildExplorerAiView, toDisplayRelevanceScores } from "@/lib/explorerAiView";
 import { apiRequest } from "@/lib/queryClient";
 import {
   mapExplorerSearchResults,
@@ -25,6 +25,7 @@ interface SearchResultView {
   relevance_score: number;
   sentiment: string;
   aspect: string;
+  source_url: string;
   wilaya: string;
   created_at: string;
 }
@@ -38,6 +39,7 @@ interface VerbatimView {
   sentiment: string;
   wilaya: string;
   text: string;
+  source_url: string;
 }
 
 interface VerbatimsView {
@@ -135,13 +137,17 @@ function formatDateParts(timestamp: string): { date: string; time: string } {
 }
 
 function mapSearchView(value: unknown): SearchResultView[] {
-  return mapExplorerSearchResults(value).map((result, index) => ({
+  const results = mapExplorerSearchResults(value);
+  const displayScores = toDisplayRelevanceScores(results.map((result) => result.score));
+
+  return results.map((result, index) => ({
     id: `${result.channel}-${index}-${result.score}`,
     source: result.channel || "import",
     content: result.text,
-    relevance_score: Math.round(result.score),
+    relevance_score: displayScores[index] ?? 0,
     sentiment: formatSentimentLabel(result.sentiment_label || "neutre"),
     aspect: result.aspect || "n/a",
+    source_url: result.source_url || "",
     wilaya: "n/a",
     created_at: "",
   }));
@@ -161,6 +167,7 @@ function mapVerbatimsView(value: unknown): VerbatimsView {
         sentiment: formatSentimentLabel(item.sentiment_label || "neutre"),
         wilaya: item.wilaya || "n/a",
         text: item.text,
+        source_url: item.source_url || "",
       };
     }),
     total: verbatims.total,
@@ -327,25 +334,47 @@ export default function Explorateur() {
                       RAG Insight
                     </p>
                     <p className="text-xs text-on-surface-variant mt-1">
-                      SynthÃ¨se IA ancrÃ©e dans les rÃ©sultats actuels
+                      Synthèse IA ancrée dans les résultats actuels
                     </p>
                   </div>
                   <span className="text-[10px] font-bold uppercase tracking-wide text-on-surface-variant">
                     {aiInsight.coverageLabel}
                   </span>
                 </div>
-                <div className="p-5 grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-5">
+                <div className="p-5 grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-5">
                   <div>
                     <p className="text-sm leading-relaxed text-on-surface">{aiInsight.summary}</p>
                   </div>
                   <div className="space-y-2">
-                    {aiInsight.bullets.map((bullet, index) => (
-                      <div
-                        key={`${bullet}-${index}`}
-                        className="bg-surface-container-high rounded-lg px-3 py-2 text-xs text-on-surface-variant"
+                    {aiInsight.evidence.map((evidence, index) => (
+                      <article
+                        key={`${evidence.source}-${index}-${evidence.relevanceScore}`}
+                        className="bg-surface-container-high rounded-lg px-3 py-3 border border-outline-variant/10"
                       >
-                        {bullet}
-                      </div>
+                        <p className="text-sm leading-relaxed text-on-surface">
+                          “{evidence.text}”
+                        </p>
+                        <div className="mt-3 flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-wide text-on-surface-variant">
+                          <span>{evidence.sentiment}</span>
+                          <span>•</span>
+                          <span>{evidence.aspect}</span>
+                          <span>•</span>
+                          <span>{getSourceLabel(evidence.source)}</span>
+                          <span>•</span>
+                          <span>{evidence.relevanceScore}% de pertinence</span>
+                        </div>
+                        {evidence.sourceUrl ? (
+                          <a
+                            className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:text-primary/80 transition-colors"
+                            href={evidence.sourceUrl}
+                            rel="noreferrer"
+                            target="_blank"
+                          >
+                            Voir la source
+                            <span className="material-symbols-outlined text-sm">open_in_new</span>
+                          </a>
+                        ) : null}
+                      </article>
                     ))}
                   </div>
                 </div>
@@ -396,17 +425,29 @@ export default function Explorateur() {
                     {result.content}
                   </p>
                   <div className="flex items-center justify-between gap-3">
-                    <span
-                      className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-tight ${getSentimentClass(result.sentiment)}`}
-                    >
+                    <div className="flex items-center gap-3">
                       <span
-                        className={`w-1.5 h-1.5 rounded-full ${getSentimentDot(result.sentiment)}`}
-                      ></span>
-                      {result.sentiment}
-                    </span>
-                    <span className="text-[10px] font-bold uppercase tracking-wide text-on-surface-variant">
-                      {result.aspect}
-                    </span>
+                        className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-tight ${getSentimentClass(result.sentiment)}`}
+                      >
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${getSentimentDot(result.sentiment)}`}
+                        ></span>
+                        {result.sentiment}
+                      </span>
+                      <span className="text-[10px] font-bold uppercase tracking-wide text-on-surface-variant">
+                        {result.aspect}
+                      </span>
+                    </div>
+                    {result.source_url ? (
+                      <a
+                        className="inline-flex items-center gap-1 text-on-surface-variant hover:text-primary transition-colors"
+                        href={result.source_url}
+                        rel="noreferrer"
+                        target="_blank"
+                      >
+                        <span className="material-symbols-outlined text-lg">open_in_new</span>
+                      </a>
+                    ) : null}
                   </div>
                 </div>
               ))
@@ -491,9 +532,21 @@ export default function Explorateur() {
                           >
                             {getSourceIcon(verbatim.source)}
                           </span>
-                          <span className="text-xs font-medium text-on-surface">
-                            {getSourceLabel(verbatim.source)}
-                          </span>
+                          {verbatim.source_url ? (
+                            <a
+                              className="text-xs font-medium text-on-surface hover:text-primary transition-colors inline-flex items-center gap-1"
+                              href={verbatim.source_url}
+                              rel="noreferrer"
+                              target="_blank"
+                            >
+                              {getSourceLabel(verbatim.source)}
+                              <span className="material-symbols-outlined text-sm">open_in_new</span>
+                            </a>
+                          ) : (
+                            <span className="text-xs font-medium text-on-surface">
+                              {getSourceLabel(verbatim.source)}
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">

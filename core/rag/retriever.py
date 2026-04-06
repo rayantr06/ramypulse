@@ -52,8 +52,10 @@ class Retriever:
         k_fetch = min(top_k * 2, n_docs)
 
         # 1. Recherche dense (FAISS)
-        query_vec = self.embedder.embed_query(question)
-        dense_results = self.vector_store.search(query_vec, k=k_fetch)
+        dense_results = []
+        if self.vector_store.ntotal > 0:
+            query_vec = self.embedder.embed_query(question)
+            dense_results = self.vector_store.search(query_vec, k=k_fetch)
 
         # 2. Recherche sparse (BM25)
         tokens = self._tokenize(question)
@@ -82,8 +84,11 @@ class Retriever:
                 {
                     "text": meta.get("text", ""),
                     "channel": meta.get("channel", ""),
+                    "source_url": meta.get("source_url", ""),
                     "url": meta.get("source_url", ""),
                     "timestamp": meta.get("timestamp", ""),
+                    "aspect": meta.get("aspect", ""),
+                    "sentiment_label": meta.get("sentiment_label", ""),
                     "score": round(rrf[idx], 8),
                 }
             )

@@ -4,13 +4,23 @@ export interface ExplorerInsightResult {
   relevance_score: number;
   sentiment: string;
   aspect: string;
+  source_url?: string;
+}
+
+export interface ExplorerAiEvidence {
+  text: string;
+  source: string;
+  sentiment: string;
+  aspect: string;
+  relevanceScore: number;
+  sourceUrl: string;
 }
 
 export interface ExplorerAiView {
   title: string;
   summary: string;
-  bullets: string[];
   coverageLabel: string;
+  evidence: ExplorerAiEvidence[];
 }
 
 function normalizeAspect(value: string) {
@@ -26,6 +36,22 @@ function dominantSentiment(results: ExplorerInsightResult[]) {
   }
 
   return Array.from(counts.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "Neutre";
+}
+
+export function toDisplayRelevanceScores(scores: number[]): number[] {
+  if (scores.length === 0) {
+    return [];
+  }
+
+  const maxScore = Math.max(...scores);
+  if (!Number.isFinite(maxScore) || maxScore <= 0) {
+    return scores.map(() => 0);
+  }
+
+  return scores.map((score) => {
+    const normalized = Math.max(score, 0) / maxScore;
+    return Math.max(1, Math.min(100, Math.round(normalized * 100)));
+  });
 }
 
 export function buildExplorerAiView(
@@ -50,10 +76,14 @@ export function buildExplorerAiView(
   return {
     title: "RAG Insight",
     summary: `Pour "${query}", les signaux les plus pertinents pointent surtout vers ${topAspects.join(", ")} avec une tonalité dominante ${tone.toLowerCase()}.`,
-    bullets: topResults.map(
-      (result) =>
-        `${result.sentiment} sur ${normalizeAspect(result.aspect)} via ${result.source} (${result.relevance_score}% de pertinence)`,
-    ),
     coverageLabel: `${topResults.length} résultats clés • ${sources.length} sources`,
+    evidence: topResults.map((result) => ({
+      text: result.content,
+      source: result.source,
+      sentiment: result.sentiment,
+      aspect: normalizeAspect(result.aspect),
+      relevanceScore: result.relevance_score,
+      sourceUrl: result.source_url ?? "",
+    })),
   };
 }

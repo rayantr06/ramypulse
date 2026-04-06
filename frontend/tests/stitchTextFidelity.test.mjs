@@ -72,6 +72,11 @@ test("Recommandations removes the decorative more_vert control", () => {
   lacks(source, "more_vert");
 });
 
+test("Recommandations routes the floating AI shortcut to Explorateur", () => {
+  const source = readPage("Recommandations.tsx");
+  contains(source, 'href="/explorateur"');
+});
+
 test("Watchlists keeps Stitch CTA copy", () => {
   const source = readPage("Watchlists.tsx");
   contains(source, "Créer une watchlist");
@@ -134,6 +139,8 @@ test("Explorateur keeps Stitch search copy", () => {
   contains(source, "Recherche sémantique et verbatims à travers l'écosystème digital");
   contains(source, "Que pensent les clients du goût à Alger ?");
   contains(source, "Base de données complète des interactions clients");
+  contains(source, "Synthèse IA ancrée dans les résultats actuels");
+  lacks(source, "SynthÃ¨se IA ancrÃ©e dans les rÃ©sultats actuels");
 });
 
 test("Explorateur keeps Stitch relative date and sentiment labels", () => {
@@ -148,12 +155,20 @@ test("Explorateur exposes a visible in-page RAG insight block for the demo path"
   const source = readPage("Explorateur.tsx");
   contains(source, "RAG Insight");
   contains(source, 'data-testid="explorer-ai-insight"');
+  contains(source, "Voir la source");
 });
 
 test("Explorateur marks decorative filter and export controls as demo-disabled", () => {
   const source = readPage("Explorateur.tsx");
   contains(source, 'demoDisabledProps("explorer-filter")');
   contains(source, 'demoDisabledProps("explorer-export")');
+});
+
+test("Explorateur restores real source links instead of decorative result actions", () => {
+  const source = readPage("Explorateur.tsx");
+  contains(source, "result.source_url");
+  contains(source, "target=\"_blank\"");
+  contains(source, "open_in_new");
 });
 
 test("AdminSources keeps Stitch labels and dedicated admin shell", () => {
