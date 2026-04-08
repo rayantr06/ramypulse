@@ -707,6 +707,172 @@ class TestExplorer:
         assert data["results"][0]["sentiment_label"] == "positif"
         assert data["results"][0]["source_url"] == "https://fb/1"
 
+    def test_get_retriever_recharge_l_index_si_faiss_apparait_apres_un_fallback(self):
+        mock_df = pd.DataFrame(
+            {
+                "text": ["gout excellent ramy"],
+                "sentiment_label": ["positif"],
+                "channel": ["facebook"],
+                "aspect": ["gout"],
+                "timestamp": ["2026-04-01T10:00:00Z"],
+                "source_url": ["https://fb/fallback"],
+            }
+        )
+
+        from api.routers import explorer as explorer_router
+        from core.rag.vector_store import VectorStore
+
+        previous = explorer_router._retriever
+        previous_signature = getattr(explorer_router, "_retriever_signature", None)
+        explorer_router._retriever = None
+        if hasattr(explorer_router, "_retriever_signature"):
+            explorer_router._retriever_signature = None
+
+        dense_store = VectorStore()
+        dense_store.metadata = [
+            {
+                "text": "dense faiss result",
+                "channel": "facebook",
+                "source_url": "https://fb/dense",
+                "timestamp": "2026-04-02T08:00:00Z",
+            }
+        ]
+
+        created = []
+
+        class FakeRetriever:
+            def __init__(self, *, vector_store, embedder):
+                self.vector_store = vector_store
+                self.embedder = embedder
+                created.append(self)
+
+        exists_side_effect = [False, True, True, True, True]
+
+        try:
+            with patch("api.routers.explorer.load_annotated", return_value=mock_df), patch(
+                "api.routers.explorer.os.path.exists", side_effect=exists_side_effect
+            ), patch("api.routers.explorer.VectorStore.load", return_value=dense_store), patch(
+                "api.routers.explorer.Embedder", return_value=object()
+            ), patch("api.routers.explorer.Retriever", FakeRetriever):
+                first = explorer_router._get_retriever()
+                second = explorer_router._get_retriever()
+        finally:
+            explorer_router._retriever = previous
+            if hasattr(explorer_router, "_retriever_signature"):
+                explorer_router._retriever_signature = previous_signature
+
+        assert len(created) == 2
+        assert first is not second
+        assert first.vector_store.ntotal == 0
+        assert second.vector_store is dense_store
+
+    def test_get_retriever_reutilise_le_cache_fallback_si_la_signature_finale_est_stable(self):
+        mock_df = pd.DataFrame(
+            {
+                "text": ["gout excellent ramy"],
+                "sentiment_label": ["positif"],
+                "channel": ["facebook"],
+                "aspect": ["gout"],
+                "timestamp": ["2026-04-01T10:00:00Z"],
+                "source_url": ["https://fb/fallback"],
+            }
+        )
+
+        from api.routers import explorer as explorer_router
+
+        previous = explorer_router._retriever
+        previous_signature = getattr(explorer_router, "_retriever_signature", None)
+        explorer_router._retriever = None
+        if hasattr(explorer_router, "_retriever_signature"):
+            explorer_router._retriever_signature = None
+
+        created = []
+
+        class FakeRetriever:
+            def __init__(self, *, vector_store, embedder):
+                self.vector_store = vector_store
+                self.embedder = embedder
+                created.append(self)
+
+        try:
+            with patch("api.routers.explorer.os.path.exists", return_value=False), patch(
+                "api.routers.explorer.load_annotated", return_value=mock_df
+            ), patch(
+                "api.routers.explorer._get_fallback_signature",
+                side_effect=[("fallback", 1, 1), ("fallback", 2, 2), ("fallback", 2, 2)],
+            ), patch("api.routers.explorer.Embedder", return_value=object()), patch(
+                "api.routers.explorer.Retriever", FakeRetriever
+            ):
+                first = explorer_router._get_retriever()
+                second = explorer_router._get_retriever()
+        finally:
+            explorer_router._retriever = previous
+            if hasattr(explorer_router, "_retriever_signature"):
+                explorer_router._retriever_signature = previous_signature
+
+        assert len(created) == 1
+        assert first is second
+
+    def test_get_retriever_reessaie_faiss_apres_un_echec_de_load_transitoire(self):
+        mock_df = pd.DataFrame(
+            {
+                "text": ["gout excellent ramy"],
+                "sentiment_label": ["positif"],
+                "channel": ["facebook"],
+                "aspect": ["gout"],
+                "timestamp": ["2026-04-01T10:00:00Z"],
+                "source_url": ["https://fb/fallback"],
+            }
+        )
+
+        from api.routers import explorer as explorer_router
+        from core.rag.vector_store import VectorStore
+
+        previous = explorer_router._retriever
+        previous_signature = getattr(explorer_router, "_retriever_signature", None)
+        explorer_router._retriever = None
+        if hasattr(explorer_router, "_retriever_signature"):
+            explorer_router._retriever_signature = None
+
+        dense_store = VectorStore()
+        dense_store.metadata = [
+            {
+                "text": "dense faiss result",
+                "channel": "facebook",
+                "source_url": "https://fb/dense",
+                "timestamp": "2026-04-02T08:00:00Z",
+            }
+        ]
+
+        created = []
+
+        class FakeRetriever:
+            def __init__(self, *, vector_store, embedder):
+                self.vector_store = vector_store
+                self.embedder = embedder
+                created.append(self)
+
+        try:
+            with patch("api.routers.explorer.os.path.exists", return_value=True), patch(
+                "api.routers.explorer.load_annotated", return_value=mock_df
+            ), patch(
+                "api.routers.explorer.VectorStore.load",
+                side_effect=[RuntimeError("faiss load failed"), dense_store],
+            ), patch("api.routers.explorer.Embedder", return_value=object()), patch(
+                "api.routers.explorer.Retriever", FakeRetriever
+            ):
+                first = explorer_router._get_retriever()
+                second = explorer_router._get_retriever()
+        finally:
+            explorer_router._retriever = previous
+            if hasattr(explorer_router, "_retriever_signature"):
+                explorer_router._retriever_signature = previous_signature
+
+        assert len(created) == 2
+        assert first is not second
+        assert first.vector_store.ntotal == 0
+        assert second.vector_store is dense_store
+
     def test_search_empty_query_returns_400(self):
         r = client.get("/api/explorer/search?q=")
         assert r.status_code == 400

@@ -4,6 +4,7 @@ Reciprocal Rank Fusion : score(d) = Σ 1 / (60 + rank_i)
 """
 import logging
 import re
+import unicodedata
 
 from rank_bm25 import BM25Okapi
 
@@ -29,9 +30,10 @@ class Retriever:
         self.embedder = embedder
         self._corpus: list[str] = [m.get("text", "") for m in vector_store.metadata]
         if self._corpus:
-            tokenized = [self._tokenize(doc) for doc in self._corpus]
-            self.bm25: BM25Okapi | None = BM25Okapi(tokenized)
+            self._tokenized_corpus = [self._tokenize(doc) for doc in self._corpus]
+            self.bm25: BM25Okapi | None = BM25Okapi(self._tokenized_corpus)
         else:
+            self._tokenized_corpus = []
             self.bm25 = None
 
     def search(self, question: str, top_k: int = 5) -> list[dict]:
@@ -59,9 +61,17 @@ class Retriever:
 
         # 2. Recherche sparse (BM25)
         tokens = self._tokenize(question)
-        if self.bm25 is not None:
+        if self.bm25 is not None and tokens:
             bm25_scores = self.bm25.get_scores(tokens)
-            bm25_ranked = sorted(range(len(bm25_scores)), key=lambda i: bm25_scores[i], reverse=True)[:k_fetch]
+            token_set = set(tokens)
+            sparse_matches = []
+            for idx, doc_tokens in enumerate(self._tokenized_corpus):
+                overlap = len(token_set.intersection(doc_tokens))
+                if overlap > 0:
+                    sparse_matches.append((idx, float(bm25_scores[idx]), overlap))
+
+            sparse_matches.sort(key=lambda item: (item[1], item[2]), reverse=True)
+            bm25_ranked = [idx for idx, _, _ in sparse_matches[:k_fetch]]
         else:
             bm25_ranked = []
 
@@ -101,4 +111,6 @@ class Retriever:
     @staticmethod
     def _tokenize(text: str) -> list[str]:
         """Tokenise un texte pour la BM25 de façon robuste et déterministe."""
-        return re.findall(r"\w+", text.lower())
+        normalized = unicodedata.normalize("NFKD", text.casefold())
+        folded = "".join(char for char in normalized if not unicodedata.combining(char))
+        return re.findall(r"\w+", folded)

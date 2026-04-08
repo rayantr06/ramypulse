@@ -12,7 +12,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException
 
 import config
-from api.data_loader import load_annotated
+from api.data_loader import load_annotated, reset_cache
 from core.rag.embedder import Embedder
 from core.rag.retriever import Retriever
 from core.rag.vector_store import VectorStore
@@ -22,11 +22,16 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/explorer", tags=["Explorer"])
 
 _retriever = None
+_retriever_signature = None
 
 
-def _build_fallback_metadata() -> list[dict]:
+def _build_fallback_metadata(force_reload: bool = False) -> list[dict]:
     """Construit un corpus metadata minimal depuis le dataset annoté."""
-    df = load_annotated()
+    if force_reload:
+        reset_cache()
+        df = load_annotated(ttl=0)
+    else:
+        df = load_annotated()
     if df.empty:
         return []
 
@@ -43,28 +48,80 @@ def _build_fallback_metadata() -> list[dict]:
     ]
 
 
+def _path_mtime(path: str) -> float | None:
+    try:
+        return os.path.getmtime(path)
+    except OSError:
+        return None
+
+
+def _get_faiss_signature() -> tuple | None:
+    """Retourne la signature du backend FAISS s'il est disponible sur disque."""
+    faiss_path = str(config.FAISS_INDEX_PATH)
+    faiss_file = f"{faiss_path}.faiss"
+    meta_file = f"{faiss_path}.json"
+
+    if os.path.exists(faiss_file) and os.path.exists(meta_file):
+        return ("faiss", _path_mtime(faiss_file), _path_mtime(meta_file))
+
+    return None
+
+
+def _get_fallback_signature() -> tuple:
+    """Retourne la signature du corpus fallback SQLite/Parquet."""
+    return (
+        "fallback",
+        _path_mtime(str(config.SQLITE_DB_PATH)),
+        _path_mtime(str(config.ANNOTATED_PARQUET_PATH)),
+    )
+
+
 def _get_retriever() -> Retriever:
     """Initialise et met en cache le retriever RAG."""
-    global _retriever
-    if _retriever is not None:
+    global _retriever, _retriever_signature
+    faiss_signature = _get_faiss_signature()
+    fallback_signature = _get_fallback_signature()
+
+    if faiss_signature is None:
+        cache_candidates = {fallback_signature}
+    else:
+        cache_candidates = {
+            faiss_signature,
+        }
+
+    if _retriever is not None and _retriever_signature in cache_candidates:
         return _retriever
 
     try:
         faiss_path = str(config.FAISS_INDEX_PATH)
-        if os.path.exists(f"{faiss_path}.faiss"):
-            vs = VectorStore.load(faiss_path)
-            logger.info("VectorStore FAISS chargé depuis %s", faiss_path)
+        if faiss_signature is not None:
+            try:
+                vs = VectorStore.load(faiss_path)
+                logger.info("VectorStore FAISS chargé depuis %s", faiss_path)
+                cache_signature = _get_faiss_signature() or faiss_signature
+            except Exception as e:
+                logger.warning("Impossible de charger VectorStore FAISS: %s", e)
+                vs = VectorStore()
+                vs.metadata = _build_fallback_metadata(force_reload=True)
+                cache_signature = (
+                    "fallback_after_faiss_error",
+                    faiss_signature,
+                    _get_fallback_signature(),
+                )
         else:
             logger.info("Index FAISS absent (%s.faiss) — recherche dégradée", faiss_path)
             vs = VectorStore()
-            vs.metadata = _build_fallback_metadata()
+            vs.metadata = _build_fallback_metadata(force_reload=True)
+            cache_signature = _get_fallback_signature()
     except Exception as e:
         logger.warning("Impossible de charger VectorStore: %s", e)
         vs = VectorStore()
-        vs.metadata = _build_fallback_metadata()
+        vs.metadata = _build_fallback_metadata(force_reload=True)
+        cache_signature = _get_fallback_signature()
 
     embedder = Embedder()
     _retriever = Retriever(vector_store=vs, embedder=embedder)
+    _retriever_signature = cache_signature
     return _retriever
 
 

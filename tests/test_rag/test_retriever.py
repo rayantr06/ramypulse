@@ -134,6 +134,77 @@ def test_bm25_fallback_works_with_metadata_even_without_dense_index() -> None:
     embedder.embed_query.assert_not_called()
 
 
+def test_bm25_fallback_retourne_vide_si_aucun_terme_ne_matche() -> None:
+    """Sans overlap lexical, le fallback sparse ne doit pas inventer des résultats."""
+    vs = VectorStore()
+    vs.metadata = [
+        {
+            "text": "gout excellent ramy",
+            "channel": "facebook",
+            "source_url": "http://fb/1",
+            "timestamp": "2024-01-01",
+        },
+        {
+            "text": "prix trop eleve",
+            "channel": "facebook",
+            "source_url": "http://fb/2",
+            "timestamp": "2024-01-02",
+        },
+    ]
+
+    retriever = Retriever(vs, _mock_embedder())
+
+    assert retriever.search("introuvable", top_k=5) == []
+
+
+def test_bm25_fallback_ne_pad_pas_avec_des_lignes_hors_sujet() -> None:
+    """Le fallback sparse doit retourner seulement les documents avec overlap lexical."""
+    vs = VectorStore()
+    vs.metadata = [
+        {
+            "text": "gout excellent ramy",
+            "channel": "facebook",
+            "source_url": "http://fb/1",
+            "timestamp": "2024-01-01",
+        },
+        {
+            "text": "prix trop eleve",
+            "channel": "facebook",
+            "source_url": "http://fb/2",
+            "timestamp": "2024-01-02",
+        },
+        {
+            "text": "service lent en magasin",
+            "channel": "facebook",
+            "source_url": "http://fb/3",
+            "timestamp": "2024-01-03",
+        },
+    ]
+
+    retriever = Retriever(vs, _mock_embedder())
+    results = retriever.search("gout", top_k=5)
+
+    assert [result["source_url"] for result in results] == ["http://fb/1"]
+
+
+def test_bm25_fallback_matche_malgre_les_accents() -> None:
+    """Le fallback sparse doit rapprocher 'gout' et 'goût' en mode dégradé."""
+    vs = VectorStore()
+    vs.metadata = [
+        {
+            "text": "Le goût est excellent",
+            "channel": "facebook",
+            "source_url": "http://fb/1",
+            "timestamp": "2024-01-01",
+        }
+    ]
+
+    retriever = Retriever(vs, _mock_embedder())
+    results = retriever.search("gout", top_k=5)
+
+    assert [result["source_url"] for result in results] == ["http://fb/1"]
+
+
 def test_resultats_tries_par_score_decroissant() -> None:
     """Les résultats doivent être triés du score RRF le plus élevé au plus bas."""
     retriever = Retriever(_make_store(10), _mock_embedder())
