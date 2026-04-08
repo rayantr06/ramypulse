@@ -24,6 +24,25 @@ router = APIRouter(prefix="/explorer", tags=["Explorer"])
 _retriever = None
 
 
+def _build_fallback_metadata() -> list[dict]:
+    """Construit un corpus metadata minimal depuis le dataset annoté."""
+    df = load_annotated()
+    if df.empty:
+        return []
+
+    return [
+        {
+            "text": str(row.get("text", "") or ""),
+            "channel": str(row.get("channel", "") or ""),
+            "source_url": str(row.get("source_url", "") or ""),
+            "timestamp": str(row.get("timestamp", "") or ""),
+            "aspect": str(row.get("aspect", "") or ""),
+            "sentiment_label": str(row.get("sentiment_label", "") or ""),
+        }
+        for row in df.fillna("").to_dict(orient="records")
+    ]
+
+
 def _get_retriever() -> Retriever:
     """Initialise et met en cache le retriever RAG."""
     global _retriever
@@ -38,9 +57,11 @@ def _get_retriever() -> Retriever:
         else:
             logger.info("Index FAISS absent (%s.faiss) — recherche dégradée", faiss_path)
             vs = VectorStore()
+            vs.metadata = _build_fallback_metadata()
     except Exception as e:
         logger.warning("Impossible de charger VectorStore: %s", e)
         vs = VectorStore()
+        vs.metadata = _build_fallback_metadata()
 
     embedder = Embedder()
     _retriever = Retriever(vector_store=vs, embedder=embedder)
