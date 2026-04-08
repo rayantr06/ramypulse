@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
+import { buildExplorerAiView, toDisplayRelevanceScores } from "@/lib/explorerAiView";
 import { apiRequest } from "@/lib/queryClient";
 import {
   mapExplorerSearchResults,
@@ -22,6 +23,8 @@ interface SearchResultView {
   content: string;
   relevance_score: number;
   sentiment: string;
+  aspect: string;
+  source_url: string;
   wilaya: string;
   created_at: string;
 }
@@ -35,6 +38,7 @@ interface VerbatimView {
   sentiment: string;
   wilaya: string;
   text: string;
+  source_url: string;
 }
 
 interface VerbatimsView {
@@ -132,12 +136,17 @@ function formatDateParts(timestamp: string): { date: string; time: string } {
 }
 
 function mapSearchView(value: unknown): SearchResultView[] {
-  return mapExplorerSearchResults(value).map((result, index) => ({
+  const results = mapExplorerSearchResults(value);
+  const displayScores = toDisplayRelevanceScores(results.map((result) => result.score));
+
+  return results.map((result, index) => ({
     id: `${result.channel}-${index}-${result.score}`,
     source: result.channel || "import",
     content: result.text,
-    relevance_score: Math.round(result.score),
+    relevance_score: displayScores[index] ?? 0,
     sentiment: formatSentimentLabel(result.sentiment_label || "neutre"),
+    aspect: result.aspect || "n/a",
+    source_url: result.source_url || "",
     wilaya: "n/a",
     created_at: "",
   }));
@@ -157,6 +166,7 @@ function mapVerbatimsView(value: unknown): VerbatimsView {
         sentiment: formatSentimentLabel(item.sentiment_label || "neutre"),
         wilaya: item.wilaya || "n/a",
         text: item.text,
+        source_url: item.source_url || "",
       };
     }),
     total: verbatims.total,
@@ -210,6 +220,10 @@ export default function Explorateur() {
   };
 
   const searchResults = results ?? [];
+  const aiInsight = useMemo(
+    () => buildExplorerAiView(searchResults, activeSearch),
+    [searchResults, activeSearch],
+  );
   const verbatimsData = useMemo(() => {
     return (
       verbatims ?? {
@@ -295,7 +309,10 @@ export default function Explorateur() {
               );
             })}
             <div className="h-6 w-px bg-outline-variant/20 mx-1"></div>
-            <button className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface-variant text-xs font-semibold transition-colors">
+            <button
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface-variant text-xs font-semibold transition-colors"
+              type="button"
+            >
               <span className="material-symbols-outlined text-sm">tune</span>
               Filtrer
             </button>
@@ -303,6 +320,65 @@ export default function Explorateur() {
         </section>
 
         {(activeSearch || searchResults.length > 0) && (
+          <>
+            {aiInsight ? (
+              <div
+                className="bg-surface-container rounded-xl border border-tertiary/15 overflow-hidden"
+                data-testid="explorer-ai-insight"
+              >
+                <div className="px-5 py-4 border-b border-outline-variant/10 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-tertiary">
+                      RAG Insight
+                    </p>
+                    <p className="text-xs text-on-surface-variant mt-1">
+                      Synthèse IA ancrée dans les résultats actuels
+                    </p>
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-on-surface-variant">
+                    {aiInsight.coverageLabel}
+                  </span>
+                </div>
+                <div className="p-5 grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-5">
+                  <div>
+                    <p className="text-sm leading-relaxed text-on-surface">{aiInsight.summary}</p>
+                  </div>
+                  <div className="space-y-2">
+                    {aiInsight.evidence.map((evidence, index) => (
+                      <article
+                        key={`${evidence.source}-${index}-${evidence.relevanceScore}`}
+                        className="bg-surface-container-high rounded-lg px-3 py-3 border border-outline-variant/10"
+                      >
+                        <p className="text-sm leading-relaxed text-on-surface">
+                          “{evidence.text}”
+                        </p>
+                        <div className="mt-3 flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-wide text-on-surface-variant">
+                          <span>{evidence.sentiment}</span>
+                          <span>•</span>
+                          <span>{evidence.aspect}</span>
+                          <span>•</span>
+                          <span>{getSourceLabel(evidence.source)}</span>
+                          <span>•</span>
+                          <span>{evidence.relevanceScore}% de pertinence</span>
+                        </div>
+                        {evidence.sourceUrl ? (
+                          <a
+                            className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:text-primary/80 transition-colors"
+                            href={evidence.sourceUrl}
+                            rel="noreferrer"
+                            target="_blank"
+                          >
+                            Voir la source
+                            <span className="material-symbols-outlined text-sm">open_in_new</span>
+                          </a>
+                        ) : null}
+                      </article>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
           <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {searchLoading ? (
               Array.from({ length: 3 }).map((_, index) => (
@@ -319,7 +395,7 @@ export default function Explorateur() {
               searchResults.map((result) => (
                 <div
                   key={result.id}
-                  className="bg-surface-container p-5 rounded-lg border border-outline-variant/5 hover:border-primary/20 transition-all group cursor-pointer"
+                  className="bg-surface-container p-5 rounded-lg border border-outline-variant/5 hover:border-primary/20 transition-all group"
                   data-testid={`search-result-${result.id}`}
                 >
                   <div className="flex justify-between items-start mb-4">
@@ -343,26 +419,39 @@ export default function Explorateur() {
                       {result.relevance_score}% PERTINENCE
                     </span>
                   </div>
-                  <p className="text-on-surface text-sm italic mb-4 leading-relaxed line-clamp-2">
+                  <p className="text-on-surface text-sm italic mb-3 leading-relaxed line-clamp-2">
                     {result.content}
                   </p>
-                  <div className="flex items-center justify-between">
-                    <span
-                      className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-tight ${getSentimentClass(result.sentiment)}`}
-                    >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
                       <span
-                        className={`w-1.5 h-1.5 rounded-full ${getSentimentDot(result.sentiment)}`}
-                      ></span>
-                      {result.sentiment}
-                    </span>
-                    <button className="text-on-surface-variant hover:text-primary transition-colors">
-                      <span className="material-symbols-outlined text-lg">open_in_new</span>
-                    </button>
+                        className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-tight ${getSentimentClass(result.sentiment)}`}
+                      >
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${getSentimentDot(result.sentiment)}`}
+                        ></span>
+                        {result.sentiment}
+                      </span>
+                      <span className="text-[10px] font-bold uppercase tracking-wide text-on-surface-variant">
+                        {result.aspect}
+                      </span>
+                    </div>
+                    {result.source_url ? (
+                      <a
+                        className="inline-flex items-center gap-1 text-on-surface-variant hover:text-primary transition-colors"
+                        href={result.source_url}
+                        rel="noreferrer"
+                        target="_blank"
+                      >
+                        <span className="material-symbols-outlined text-lg">open_in_new</span>
+                      </a>
+                    ) : null}
                   </div>
                 </div>
               ))
             )}
           </section>
+          </>
         )}
 
         <section className="bg-surface-container rounded-xl overflow-hidden border border-outline-variant/5">
@@ -375,7 +464,10 @@ export default function Explorateur() {
                 Base de données complète des interactions clients
               </p>
             </div>
-            <button className="flex items-center gap-2 px-3 py-1.5 rounded bg-surface-container-highest text-on-surface-variant text-[10px] font-black uppercase tracking-widest hover:text-on-surface transition-colors">
+            <button
+              className="flex items-center gap-2 px-3 py-1.5 rounded bg-surface-container-highest text-on-surface-variant text-[10px] font-black uppercase tracking-widest hover:text-on-surface transition-colors"
+              type="button"
+            >
               <span className="material-symbols-outlined text-base">download</span>
               Exporter
             </button>
@@ -416,7 +508,7 @@ export default function Explorateur() {
                   verbatimsData.items.map((verbatim) => (
                     <tr
                       key={verbatim.id}
-                      className="hover:bg-surface-container-high transition-colors cursor-pointer"
+                      className="hover:bg-surface-container-high transition-colors"
                       data-testid={`verbatim-row-${verbatim.id}`}
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -437,9 +529,21 @@ export default function Explorateur() {
                           >
                             {getSourceIcon(verbatim.source)}
                           </span>
-                          <span className="text-xs font-medium text-on-surface">
-                            {getSourceLabel(verbatim.source)}
-                          </span>
+                          {verbatim.source_url ? (
+                            <a
+                              className="text-xs font-medium text-on-surface hover:text-primary transition-colors inline-flex items-center gap-1"
+                              href={verbatim.source_url}
+                              rel="noreferrer"
+                              target="_blank"
+                            >
+                              {getSourceLabel(verbatim.source)}
+                              <span className="material-symbols-outlined text-sm">open_in_new</span>
+                            </a>
+                          ) : (
+                            <span className="text-xs font-medium text-on-surface">
+                              {getSourceLabel(verbatim.source)}
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -499,10 +603,6 @@ export default function Explorateur() {
           </div>
         </section>
       </div>
-
-      <button className="fixed bottom-8 right-8 w-14 h-14 pulse-gradient rounded-full shadow-2xl flex items-center justify-center text-on-primary-fixed hover:scale-110 active:scale-95 transition-transform z-50">
-        <span className="material-symbols-outlined text-xl font-bold">chat</span>
-      </button>
     </AppShell>
   );
 }
