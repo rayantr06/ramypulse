@@ -581,24 +581,45 @@ def test_platform_connector_ne_fall_pas_vers_snapshot_si_collecteur_indisponible
 
     connector = FacebookConnector()
 
-    documents = connector.fetch_documents(
-        {
-            "source_id": f"src-facebook-{fetch_mode}",
-            "client_id": "client-a",
-            "source_name": "Facebook Ramy",
-            "platform": "facebook",
-            "source_type": "facebook_feed",
-            "owner_type": "owned",
-            "auth_mode": "file_snapshot",
-            "config_json": {
-                "fetch_mode": fetch_mode,
-                "page_url": "https://facebook.com/ramy",
-                "snapshot_path": str(snapshot),
-            },
-        }
-    )
-
-    assert documents == []
+    if fetch_mode == "api":
+        # API mode requires credentials; it should raise an error if missing
+        with pytest.raises(ValueError, match="access_token"):
+            connector.fetch_documents(
+                {
+                    "source_id": f"src-facebook-{fetch_mode}",
+                    "client_id": "client-a",
+                    "source_name": "Facebook Ramy",
+                    "platform": "facebook",
+                    "source_type": "facebook_feed",
+                    "owner_type": "owned",
+                    "auth_mode": "file_snapshot",
+                    "config_json": {
+                        "fetch_mode": fetch_mode,
+                        "page_id": "123456789",
+                        "page_url": "https://facebook.com/ramy",
+                        "snapshot_path": str(snapshot),
+                    },
+                }
+            )
+    else:
+        # Collector mode should not fall back to snapshot when unavailable
+        documents = connector.fetch_documents(
+            {
+                "source_id": f"src-facebook-{fetch_mode}",
+                "client_id": "client-a",
+                "source_name": "Facebook Ramy",
+                "platform": "facebook",
+                "source_type": "facebook_feed",
+                "owner_type": "owned",
+                "auth_mode": "file_snapshot",
+                "config_json": {
+                    "fetch_mode": fetch_mode,
+                    "page_url": "https://facebook.com/ramy",
+                    "snapshot_path": str(snapshot),
+                },
+            }
+        )
+        assert documents == []
 
 
 def test_platform_connector_rejette_fetch_mode_invalide(tmp_path: Path) -> None:
