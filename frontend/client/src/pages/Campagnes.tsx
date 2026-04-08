@@ -208,9 +208,9 @@ function StatusBadge({ status }: { status: string }) {
   };
   const labelMap: Record<string, string> = {
     ACTIVE: "Active",
-    PLANIFIEE: "PlanifiÃ©e",
-    TERMINEE: "TerminÃ©e",
-    ANNULEE: "AnnulÃ©e",
+    PLANIFIEE: "Planifiée",
+    TERMINEE: "Terminée",
+    ANNULEE: "Annulée",
   };
 
   return (
@@ -935,7 +935,7 @@ export default function Campagnes() {
                       </div>
                     ) : (
                       <p className="mt-3 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
-                        BasÃ© sur {topPerformer?.selection_basis || "budget_dza"}
+                        Basé sur {topPerformer?.selection_basis || "budget_dza"}
                       </p>
                     )}
                   </div>

@@ -104,7 +104,11 @@ function normalizePriority(value: string | undefined | null, confidence: number)
 function buildRecoView(value: unknown): RecommendationView {
   const recommendation = mapRecommendation(value);
   const primary = getPrimaryRecommendation(recommendation);
-  const confidence = Number(recommendation.confidence_score ?? 0);
+  const rawConfidence = Number(recommendation.confidence_score ?? 0);
+  const confidence =
+    rawConfidence > 0 && rawConfidence <= 1
+      ? Math.round(rawConfidence * 100)
+      : rawConfidence;
   return {
     id: recommendation.recommendation_id,
     priority: normalizePriority(primary?.priority, confidence),
