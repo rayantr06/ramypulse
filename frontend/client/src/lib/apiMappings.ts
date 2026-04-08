@@ -42,6 +42,19 @@ export interface CampaignFormInput {
   end_date?: string;
 }
 
+export interface WatchlistFormInput {
+  name: string;
+  description: string;
+  scope_type: "product" | "region" | "channel" | "cross_dimension";
+  product: string;
+  wilaya: string;
+  channel: string;
+  aspect: string;
+  sentiment: string;
+  period_days: number;
+  min_volume: number;
+}
+
 function asRecord(value: unknown): UnknownRecord {
   return value && typeof value === "object" && !Array.isArray(value)
     ? (value as UnknownRecord)
@@ -179,6 +192,23 @@ export function buildCampaignCreatePayload(input: CampaignFormInput): UnknownRec
   if (input.end_date) payload.end_date = input.end_date;
 
   return payload;
+}
+
+export function buildWatchlistCreatePayload(input: WatchlistFormInput): UnknownRecord {
+  return {
+    name: input.name.trim(),
+    description: input.description.trim(),
+    scope_type: input.scope_type,
+    filters: {
+      channel: input.channel.trim() || null,
+      aspect: input.aspect.trim() || null,
+      wilaya: input.wilaya.trim() || null,
+      product: input.product.trim() || null,
+      sentiment: input.sentiment.trim() || null,
+      period_days: input.period_days,
+      min_volume: input.min_volume,
+    },
+  };
 }
 
 export function mapCampaignImpact(value: unknown): CampaignImpact {
