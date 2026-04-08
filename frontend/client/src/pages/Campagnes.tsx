@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
 import { apiRequest } from "@/lib/queryClient";
@@ -8,6 +8,7 @@ import {
   mapCampaignOverview,
   mapCampaignImpact,
 } from "@/lib/apiMappings";
+import { filterCampaignViews } from "@/lib/pageSearchFilters";
 import { STITCH_AVATARS } from "@/lib/stitchAssets";
 
 const CAMPAIGN_ROW_AVATARS = [
@@ -226,9 +227,13 @@ function StatusBadge({ status }: { status: string }) {
 export default function Campagnes() {
   const [filter, setFilter] = useState<CampaignFilter>("TOUTES");
   const [currentPage, setCurrentPage] = useState(1);
+  const [isComposerOpen, setIsComposerOpen] = useState(true);
   const [selectedCampaign, setSelectedCampaign] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [keywords, setKeywords] = useState<string[]>([]);
   const [newKeyword, setNewKeyword] = useState("");
+  const createFormSectionRef = useRef<HTMLDivElement | null>(null);
+  const campaignNameInputRef = useRef<HTMLInputElement | null>(null);
   const [form, setForm] = useState({
     campaign_name: "",
     campaign_type: "Influenceur",
@@ -297,14 +302,25 @@ export default function Campagnes() {
 
   const allCampaigns = campaigns ?? [];
   const filteredCampaigns = useMemo(() => {
-    return allCampaigns.filter((campaign) => {
+    const tabFiltered = allCampaigns.filter((campaign) => {
       if (filter === "ACTIVES") return campaign.status === "ACTIVE";
       if (filter === "ARCHIVES") {
         return campaign.status === "TERMINEE" || campaign.status === "ANNULEE";
       }
       return true;
     });
-  }, [allCampaigns, filter]);
+    return filterCampaignViews(tabFiltered, searchQuery);
+  }, [allCampaigns, filter, searchQuery]);
+
+  useEffect(() => {
+    if (!filteredCampaigns.length) {
+      setSelectedCampaign(null);
+      return;
+    }
+    if (!selectedCampaign || !filteredCampaigns.some((campaign) => campaign.id === selectedCampaign)) {
+      setSelectedCampaign(filteredCampaigns[0]?.id ?? null);
+    }
+  }, [filteredCampaigns, selectedCampaign]);
 
   const totalPages = Math.max(1, Math.ceil(filteredCampaigns.length / ROWS_PER_PAGE));
   const safeCurrentPage = Math.min(currentPage, totalPages);
@@ -360,10 +376,21 @@ export default function Campagnes() {
       : null,
   ].filter(Boolean);
 
+  const focusCampaignComposer = () => {
+    setIsComposerOpen(true);
+    createFormSectionRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+    window.setTimeout(() => {
+      campaignNameInputRef.current?.focus();
+    }, 120);
+  };
+
   return (
     <AppShell
       headerSearchPlaceholder="Rechercher une campagne..."
-      onSearch={() => {}}
+      onSearch={setSearchQuery}
       avatarSrc={STITCH_AVATARS.campagnes.src}
       avatarAlt={STITCH_AVATARS.campagnes.alt}
       sidebarFooterAvatarSrc={STITCH_AVATARS.campagnes.src}
@@ -380,13 +407,15 @@ export default function Campagnes() {
               Campagnes Marketing
             </h2>
           </div>
-          <div className="flex gap-3">
-            <button className="px-4 py-2 bg-surface-container-high hover:bg-surface-bright text-on-surface text-xs font-bold transition-all rounded-sm">
-              EXPORTER DATA
-            </button>
+            <div className="flex gap-3">
+              <button className="px-4 py-2 bg-surface-container-high hover:bg-surface-bright text-on-surface text-xs font-bold transition-all rounded-sm">
+                EXPORTER DATA
+              </button>
             <button
+              onClick={focusCampaignComposer}
               className="px-6 py-2 bg-gradient-to-r from-primary to-primary-container text-on-primary-fixed text-xs font-bold transition-transform active:scale-95 shadow-lg shadow-primary/10 rounded-sm"
               data-testid="btn-create-campaign"
+              type="button"
             >
               CRÉER UNE CAMPAGNE
             </button>
@@ -395,13 +424,21 @@ export default function Campagnes() {
 
         <div className="grid grid-cols-12 gap-6">
           <section className="col-span-12 lg:col-span-4 space-y-6">
-            <div className="bg-surface-container-low rounded-lg p-6 flex flex-col gap-5">
+            <div
+              ref={createFormSectionRef}
+              className="bg-surface-container-low rounded-lg p-6 flex flex-col gap-5"
+            >
               <div className="flex items-center justify-between border-b border-surface-container-highest pb-4">
                 <h3 className="font-headline font-bold text-lg">Nouvelle Campagne</h3>
-                <span className="material-symbols-outlined text-primary cursor-pointer">
-                  expand_less
-                </span>
+                <button
+                  className="material-symbols-outlined text-primary cursor-pointer"
+                  onClick={() => setIsComposerOpen((current) => !current)}
+                  type="button"
+                >
+                  {isComposerOpen ? "expand_less" : "expand_more"}
+                </button>
               </div>
+              {isComposerOpen ? (
               <form
                 className="space-y-4"
                 onSubmit={(event) => {
@@ -414,6 +451,7 @@ export default function Campagnes() {
                     Nom de la Campagne
                   </label>
                   <input
+                    ref={campaignNameInputRef}
                     className="w-full bg-surface-container-highest border-none rounded-sm text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
                     placeholder="ex: Ramy Citron Été 2024"
                     value={form.campaign_name}
@@ -560,6 +598,15 @@ export default function Campagnes() {
                   {createMutation.isPending ? "Création..." : "Lancer la Campagne"}
                 </button>
               </form>
+              ) : (
+                <button
+                  className="w-full py-3 bg-surface-container-high text-on-surface text-xs font-bold uppercase tracking-widest rounded-sm hover:bg-surface-bright transition-colors"
+                  onClick={focusCampaignComposer}
+                  type="button"
+                >
+                  Ouvrir le formulaire
+                </button>
+              )}
             </div>
 
             <div className="bg-surface-container-low rounded-lg p-6 space-y-5">

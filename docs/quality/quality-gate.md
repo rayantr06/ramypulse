@@ -14,7 +14,7 @@ This gate exists to stop page-level spec drift before manual demo testing.
 
 ## Required commands
 - `node --test frontend/tests/pageContracts.test.mjs`
-- `npx.cmd tsx --test frontend/tests/uiPayloadContracts.test.ts frontend/tests/explorerAiView.test.ts`
+- `npx.cmd tsx --test frontend/tests/pageSearchFilters.test.ts frontend/tests/uiPayloadContracts.test.ts frontend/tests/explorerAiView.test.ts`
 - `node --test frontend/tests/interactiveSurfaceAudit.test.mjs`
 - `node --test frontend/tests/stitchTextFidelity.test.mjs`
 - `cd frontend && npm.cmd run test:golden`
@@ -22,6 +22,7 @@ This gate exists to stop page-level spec drift before manual demo testing.
 ## Current focus pages
 - `Explorateur`
 - `Watchlists`
+- `Alertes`
 - `Campagnes`
 - `Recommandations`
 - `Admin Sources`

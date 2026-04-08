@@ -9,6 +9,7 @@ import {
   mapContextPreview,
   mapRecommendation,
 } from "@/lib/apiMappings";
+import { filterRecommendationViews } from "@/lib/pageSearchFilters";
 import { STITCH_AVATARS } from "@/lib/stitchAssets";
 
 interface RecommendationContextView {
@@ -206,6 +207,7 @@ export default function Recommandations() {
     provider: "",
     model: "",
   });
+  const [searchQuery, setSearchQuery] = useState("");
 
   const { data: providersRaw } = useQuery<ProviderGroup[]>({
     queryKey: ["/api/recommendations/providers"],
@@ -290,7 +292,10 @@ export default function Recommandations() {
     estimated_cost_usd: null,
   };
 
-  const recos = recommendations ?? [];
+  const recos = useMemo(
+    () => filterRecommendationViews(recommendations ?? [], searchQuery),
+    [recommendations, searchQuery],
+  );
   const activeRecos = recos.filter((recommendation) => recommendation.status === "active");
   const latestRecommendation = recos[0] ?? null;
   const lastRunLabel = formatRelativeRunLabel(latestRecommendation?.created_at);
@@ -315,7 +320,7 @@ export default function Recommandations() {
   return (
     <AppShell
       headerSearchPlaceholder="Rechercher une recommandation..."
-      onSearch={() => {}}
+      onSearch={setSearchQuery}
       avatarSrc={STITCH_AVATARS.recommandations.src}
       avatarAlt={STITCH_AVATARS.recommandations.alt}
     >

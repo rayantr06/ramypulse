@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
 import { apiRequest } from "@/lib/queryClient";
 import { mapAlert } from "@/lib/apiMappings";
+import { filterAlertViews } from "@/lib/pageSearchFilters";
 import { STITCH_AVATARS } from "@/lib/stitchAssets";
 
 type StatusFilter = "NOUVEAU" | "RECONNU" | "RESOLU" | "ECARTE";
@@ -177,6 +178,7 @@ export default function Alertes() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter | null>(null);
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const queryClientHook = useQueryClient();
 
   const { data: alerts, isLoading: alertsLoading } = useQuery<AlertView[]>({
@@ -212,7 +214,10 @@ export default function Alertes() {
     },
   });
 
-  const alertsList = alerts ?? [];
+  const alertsList = useMemo(
+    () => filterAlertViews(alerts ?? [], searchQuery),
+    [alerts, searchQuery],
+  );
 
   useEffect(() => {
     if (!alertsList.length) {
@@ -231,7 +236,7 @@ export default function Alertes() {
   return (
     <AppShell
       headerSearchPlaceholder="Rechercher une alerte..."
-      onSearch={() => {}}
+      onSearch={setSearchQuery}
       avatarSrc={STITCH_AVATARS.alertes.src}
       avatarAlt={STITCH_AVATARS.alertes.alt}
     >
