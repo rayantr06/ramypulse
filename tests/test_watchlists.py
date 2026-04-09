@@ -203,6 +203,31 @@ def test_watch_first_filters_create_watchlist_preserve_brand_seed_fields(
     assert watchlist["filters"]["min_volume"] == 3
 
 
+def test_create_watchlist_accepts_explicit_client_id(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Le manager doit pouvoir persister une watchlist pour un tenant explicite."""
+    _prepare_sqlite(monkeypatch, tmp_path)
+    manager = _import_or_fail("core.watchlists.watchlist_manager")
+
+    watchlist_id = manager.create_watchlist(
+        name="Veille Tenant B",
+        description="tenant explicite",
+        scope_type="watch_seed",
+        filters={
+            "brand_name": "Tenant B Brand",
+            "keywords": ["tenant b"],
+        },
+        client_id="tenant-b",
+    )
+
+    watchlist = manager.get_watchlist(watchlist_id)
+
+    assert watchlist is not None
+    assert watchlist["client_id"] == "tenant-b"
+
+
 def test_watch_first_filters_reject_empty_seed_payload(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,

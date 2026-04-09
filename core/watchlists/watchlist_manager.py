@@ -278,6 +278,7 @@ def create_watchlist(
     description: str,
     scope_type: str,
     filters: dict,
+    client_id: str | None = None,
 ) -> str:
     """Cree une watchlist et retourne son identifiant."""
     if not name or not str(name).strip():
@@ -308,7 +309,9 @@ def create_watchlist(
             """,
             (
                 watchlist_id,
-                config.DEFAULT_CLIENT_ID,
+                (client_id or config.DEFAULT_CLIENT_ID).strip()
+                if isinstance(client_id, str)
+                else config.DEFAULT_CLIENT_ID,
                 str(name).strip(),
                 description.strip() if description else "",
                 normalized_scope_type,

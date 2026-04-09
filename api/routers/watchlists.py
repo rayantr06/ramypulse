@@ -34,7 +34,10 @@ def _get_db_connection() -> sqlite3.Connection:
 
 
 @router.post("", status_code=201)
-def create_watchlist(data: WatchlistCreate):
+def create_watchlist(
+    data: WatchlistCreate,
+    client_id: str = Depends(resolve_client_id),
+):
     """Crée une nouvelle watchlist."""
     try:
         payload = data.model_dump()
@@ -43,6 +46,7 @@ def create_watchlist(data: WatchlistCreate):
             description=payload["description"],
             scope_type=payload["scope_type"],
             filters=payload["filters"],
+            client_id=client_id,
         )
         return {"watchlist_id": watchlist_id, "status": "created"}
     except ValueError as e:

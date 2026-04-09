@@ -510,6 +510,35 @@ class TestWatchlists:
         assert "watchlist_id" in data
         assert data["status"] == "created"
 
+    def test_create_watchlist_scopes_to_authenticated_client(self):
+        from core.security.auth import create_api_key
+        from core.tenancy.client_manager import create_client
+
+        tenant = create_client("Tenant Watchlist Scope", client_id="tenant-watchlist-scope")
+        _, raw_key = create_api_key(client_id=tenant["client_id"], label="tenant_watchlist_scope")
+
+        r = _raw_client.post(
+            "/api/watchlists",
+            json={
+                "name": "Watchlist Tenant Scope",
+                "description": "Suivi tenant scope",
+                "scope_type": "watch_seed",
+                "filters": {"brand_name": "Tenant Scope", "keywords": ["tenant scope"]},
+            },
+            headers={"X-API-Key": raw_key},
+        )
+
+        assert r.status_code == 201
+        watchlist_id = r.json()["watchlist_id"]
+
+        detail = _raw_client.get(
+            f"/api/watchlists/{watchlist_id}",
+            headers={"X-API-Key": raw_key},
+        )
+
+        assert detail.status_code == 200
+        assert detail.json()["client_id"] == tenant["client_id"]
+
     def test_create_watchlist_missing_name(self):
         r = client.post("/api/watchlists", json={
             "name": "",
