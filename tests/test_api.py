@@ -23,9 +23,11 @@ import config
 
 # Ensure all tables exist before importing the app
 from core.database import DatabaseManager
+from core.runtime.runtime_settings_manager import set_runtime_setting
 
 _db = DatabaseManager()
 _db.create_tables()
+set_runtime_setting("active_client_id", config.SAFE_EXPO_CLIENT_ID)
 
 from api.main import app
 

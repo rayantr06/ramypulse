@@ -31,10 +31,12 @@ def _prepare_isolated_db(monkeypatch, tmp_path: Path) -> dict[str, object]:
     create_client(client_name="Other Tenant", client_id=other_client_id)
 
     _, operator_raw_key = create_api_key(client_id=operator_client_id, label="tenant_scope_operator")
+    _, non_operator_raw_key = create_api_key(client_id=other_client_id, label="tenant_scope_other")
     return {
         "operator_client_id": operator_client_id,
         "other_client_id": other_client_id,
         "operator_headers": {"X-API-Key": operator_raw_key},
+        "non_operator_headers": {"X-API-Key": non_operator_raw_key},
     }
 
 
@@ -104,6 +106,52 @@ def test_dashboard_summary_falls_back_to_active_tenant_then_safe_expo(monkeypatc
     persisted_response = client.get("/api/dashboard/summary", headers=ctx["operator_headers"])
     assert persisted_response.status_code == 200
     assert calls == [ctx["other_client_id"]]
+
+
+def test_dashboard_summary_pins_non_operator_to_authenticated_client(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    ctx = _prepare_isolated_db(monkeypatch, tmp_path)
+    calls: list[object] = []
+
+    def _fake_load_annotated(*args, **kwargs):
+        calls.append(kwargs.get("client_id"))
+        return pd.DataFrame()
+
+    monkeypatch.setattr("api.routers.dashboard.load_annotated", _fake_load_annotated)
+    set_runtime_setting("active_client_id", ctx["operator_client_id"])
+
+    response = client.get("/api/dashboard/summary", headers=ctx["non_operator_headers"])
+
+    assert response.status_code == 200
+    assert calls == [ctx["other_client_id"]]
+
+
+def test_dashboard_summary_rejects_non_operator_cross_tenant_override(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    ctx = _prepare_isolated_db(monkeypatch, tmp_path)
+    calls: list[object] = []
+
+    def _fake_load_annotated(*args, **kwargs):
+        calls.append(kwargs.get("client_id"))
+        return pd.DataFrame()
+
+    monkeypatch.setattr("api.routers.dashboard.load_annotated", _fake_load_annotated)
+
+    response = client.get(
+        "/api/dashboard/summary",
+        headers={
+            **ctx["non_operator_headers"],
+            "X-Ramy-Client-Id": ctx["operator_client_id"],
+        },
+    )
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Tenant override forbidden"
+    assert calls == []
 
 
 def test_recommendations_context_preview_passes_header_client_to_context_builder(
