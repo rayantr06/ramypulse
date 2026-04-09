@@ -8,9 +8,10 @@ manager dédié n'existe encore pour cette table.
 import logging
 import sqlite3
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 import config
+from api.deps.tenant import resolve_client_id
 from api.schemas import WatchlistCreate, WatchlistUpdate
 from core.watchlists.watchlist_manager import (
     create_watchlist as _core_create_watchlist,
@@ -51,21 +52,31 @@ def create_watchlist(data: WatchlistCreate):
 
 
 @router.get("")
-def list_watchlists(is_active: bool = True):
+def list_watchlists(
+    is_active: bool = True,
+    client_id: str = Depends(resolve_client_id),
+):
     """Récupère la liste des watchlists via le manager core."""
     try:
-        return _core_list_watchlists(is_active=is_active)
+        return [
+            watchlist
+            for watchlist in _core_list_watchlists(is_active=is_active)
+            if watchlist.get("client_id") == client_id
+        ]
     except Exception as e:
         logger.error("Erreur list_watchlists: %s", e)
         raise HTTPException(status_code=500, detail="Internal DB error")
 
 
 @router.get("/{watchlist_id}")
-def get_watchlist(watchlist_id: str):
+def get_watchlist(
+    watchlist_id: str,
+    client_id: str = Depends(resolve_client_id),
+):
     """Récupère le détail d'une watchlist."""
     try:
         wl = _core_get_watchlist(watchlist_id)
-        if not wl:
+        if not wl or wl.get("client_id") != client_id:
             raise HTTPException(status_code=404, detail="Watchlist not found")
         return wl
     except HTTPException:
@@ -110,9 +121,15 @@ def deactivate_watchlist(watchlist_id: str):
 
 
 @router.get("/{watchlist_id}/metrics")
-def get_watchlist_metrics(watchlist_id: str):
+def get_watchlist_metrics(
+    watchlist_id: str,
+    client_id: str = Depends(resolve_client_id),
+):
     """Récupère les métriques courantes (snapshot le plus récent) d'une watchlist."""
     try:
+        watchlist = _core_get_watchlist(watchlist_id)
+        if not watchlist or watchlist.get("client_id") != client_id:
+            raise HTTPException(status_code=404, detail="Watchlist not found")
         with _get_db_connection() as conn:
             row = conn.execute(
                 "SELECT * FROM watchlist_metric_snapshots "

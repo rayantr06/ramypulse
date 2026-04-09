@@ -385,10 +385,14 @@ def list_alerts(
     status: str | None = None,
     severity: str | None = None,
     limit: int = 100,
+    client_id: str | None = None,
 ) -> list[dict]:
     """Liste les alertes avec payload JSON automatiquement deserialise."""
     clauses = []
     params: list[object] = []
+    if client_id is not None and str(client_id).strip():
+        clauses.append("client_id = ?")
+        params.append(str(client_id).strip())
     if status is not None:
         if status not in _VALID_STATUSES:
             raise ValueError(f"status invalide: {status}")
@@ -437,12 +441,14 @@ def update_alert_status(alert_id: str, status: str) -> bool:
     return updated
 
 
-def get_alert(alert_id: str) -> dict | None:
+def get_alert(alert_id: str, client_id: str | None = None) -> dict | None:
     """Retourne une alerte complete ou None si absente."""
+    sql = "SELECT * FROM alerts WHERE alert_id = ?"
+    params: list[object] = [alert_id]
+    if client_id is not None and str(client_id).strip():
+        sql += " AND client_id = ?"
+        params.append(str(client_id).strip())
     with _get_connection() as connection:
         _ensure_alerts_table(connection)
-        row = connection.execute(
-            "SELECT * FROM alerts WHERE alert_id = ?",
-            (alert_id,),
-        ).fetchone()
+        row = connection.execute(sql, tuple(params)).fetchone()
     return _row_to_alert(row)

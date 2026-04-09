@@ -8,10 +8,11 @@ l'assemblage de contexte (context_builder) et la persistance
 import logging
 from math import isfinite
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 import config
 from api.data_loader import load_annotated
+from api.deps.tenant import resolve_client_id
 from api.schemas import ContextPreview, RecommendationGenerate, RecommendationStatusUpdate
 from core.recommendation import agent_client, context_builder, recommendation_manager
 
@@ -53,10 +54,11 @@ def get_context_preview(
     trigger_id: str = None,
     provider: str | None = None,
     model: str | None = None,
+    client_id: str = Depends(resolve_client_id),
 ):
     """Prévisualisation du contexte compilé avant génération LLM."""
     try:
-        df_annotated = load_annotated()
+        df_annotated = load_annotated(client_id=client_id)
         ctx = context_builder.build_recommendation_context(
             trigger_type=trigger_type,
             trigger_id=trigger_id,
@@ -88,10 +90,13 @@ def get_context_preview(
 
 
 @router.post("/generate")
-def generate_recommendations(req: RecommendationGenerate):
+def generate_recommendations(
+    req: RecommendationGenerate,
+    client_id: str = Depends(resolve_client_id),
+):
     """Génère de nouvelles recommandations via le LLM."""
     try:
-        df_annotated = load_annotated()
+        df_annotated = load_annotated(client_id=client_id)
         if df_annotated.empty:
             raise HTTPException(
                 status_code=400,
@@ -120,6 +125,7 @@ def generate_recommendations(req: RecommendationGenerate):
             result=result,
             trigger_type=req.trigger_type,
             trigger_id=req.trigger_id,
+            client_id=client_id,
         )
 
         return {
@@ -137,11 +143,17 @@ def generate_recommendations(req: RecommendationGenerate):
 
 
 @router.get("")
-def list_recommendations(status: str = None, limit: int = 50):
+def list_recommendations(
+    status: str = None,
+    limit: int = 50,
+    client_id: str = Depends(resolve_client_id),
+):
     """Récupère l'historique des recommandations générées."""
     try:
         return recommendation_manager.list_recommendations(
-            status=status, limit=limit
+            status=status,
+            limit=limit,
+            client_id=client_id,
         )
     except Exception as e:
         logger.error("Erreur list_recommendations: %s", e)
@@ -149,10 +161,13 @@ def list_recommendations(status: str = None, limit: int = 50):
 
 
 @router.get("/{recommendation_id}")
-def get_recommendation(recommendation_id: str):
+def get_recommendation(
+    recommendation_id: str,
+    client_id: str = Depends(resolve_client_id),
+):
     """Détail d'une recommandation IA."""
     try:
-        rec = recommendation_manager.get_recommendation(recommendation_id)
+        rec = recommendation_manager.get_recommendation(recommendation_id, client_id=client_id)
         if not rec:
             raise HTTPException(status_code=404, detail="Recommendation not found")
         return rec

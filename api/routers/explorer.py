@@ -9,13 +9,15 @@ import math
 import os
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 import config
 from api.data_loader import load_annotated, reset_cache
+from api.deps.tenant import resolve_client_id
 from core.rag.embedder import Embedder
 from core.rag.retriever import Retriever
 from core.rag.vector_store import VectorStore
+from core.tenancy.tenant_paths import get_tenant_paths
 
 logger = logging.getLogger(__name__)
 
@@ -25,13 +27,23 @@ _retriever = None
 _retriever_signature = None
 
 
-def _build_fallback_metadata(force_reload: bool = False) -> list[dict]:
+def _resolve_client_id_value(client_id: str | None) -> str:
+    if isinstance(client_id, str) and client_id.strip():
+        return client_id.strip()
+    return config.SAFE_EXPO_CLIENT_ID
+
+
+def _build_fallback_metadata(
+    client_id: str | None = None,
+    force_reload: bool = False,
+) -> list[dict]:
     """Construit un corpus metadata minimal depuis le dataset annoté."""
+    resolved_client_id = _resolve_client_id_value(client_id)
     if force_reload:
         reset_cache()
-        df = load_annotated(ttl=0)
+        df = load_annotated(client_id=resolved_client_id, ttl=0)
     else:
-        df = load_annotated()
+        df = load_annotated(client_id=resolved_client_id)
     if df.empty:
         return []
 
@@ -55,32 +67,45 @@ def _path_mtime(path: str) -> float | None:
         return None
 
 
-def _get_faiss_signature() -> tuple | None:
+def _get_faiss_signature(client_id: str | None = None) -> tuple | None:
     """Retourne la signature du backend FAISS s'il est disponible sur disque."""
-    faiss_path = str(config.FAISS_INDEX_PATH)
+    resolved_client_id = _resolve_client_id_value(client_id)
+    tenant_paths = get_tenant_paths(resolved_client_id)
+    faiss_path = str(tenant_paths.faiss_index_prefix)
     faiss_file = f"{faiss_path}.faiss"
     meta_file = f"{faiss_path}.json"
 
     if os.path.exists(faiss_file) and os.path.exists(meta_file):
-        return ("faiss", _path_mtime(faiss_file), _path_mtime(meta_file))
+        return (
+            "faiss",
+            resolved_client_id,
+            _path_mtime(faiss_file),
+            _path_mtime(meta_file),
+            _path_mtime(str(tenant_paths.bm25_path)),
+        )
 
     return None
 
 
-def _get_fallback_signature() -> tuple:
+def _get_fallback_signature(client_id: str | None = None) -> tuple:
     """Retourne la signature du corpus fallback SQLite/Parquet."""
+    resolved_client_id = _resolve_client_id_value(client_id)
+    tenant_paths = get_tenant_paths(resolved_client_id)
     return (
         "fallback",
+        resolved_client_id,
         _path_mtime(str(config.SQLITE_DB_PATH)),
-        _path_mtime(str(config.ANNOTATED_PARQUET_PATH)),
+        _path_mtime(str(tenant_paths.annotated_path)),
+        _path_mtime(str(tenant_paths.bm25_path)),
     )
 
 
-def _get_retriever() -> Retriever:
+def _get_retriever(client_id: str | None = None) -> Retriever:
     """Initialise et met en cache le retriever RAG."""
     global _retriever, _retriever_signature
-    faiss_signature = _get_faiss_signature()
-    fallback_signature = _get_fallback_signature()
+    resolved_client_id = _resolve_client_id_value(client_id)
+    faiss_signature = _get_faiss_signature(resolved_client_id)
+    fallback_signature = _get_fallback_signature(resolved_client_id)
 
     if faiss_signature is None:
         cache_candidates = {fallback_signature}
@@ -93,31 +118,32 @@ def _get_retriever() -> Retriever:
         return _retriever
 
     try:
-        faiss_path = str(config.FAISS_INDEX_PATH)
+        faiss_path = str(get_tenant_paths(resolved_client_id).faiss_index_prefix)
         if faiss_signature is not None:
             try:
                 vs = VectorStore.load(faiss_path)
                 logger.info("VectorStore FAISS chargé depuis %s", faiss_path)
-                cache_signature = _get_faiss_signature() or faiss_signature
+                cache_signature = _get_faiss_signature(resolved_client_id) or faiss_signature
             except Exception as e:
                 logger.warning("Impossible de charger VectorStore FAISS: %s", e)
                 vs = VectorStore()
-                vs.metadata = _build_fallback_metadata(force_reload=True)
+                vs.metadata = _build_fallback_metadata(resolved_client_id, force_reload=True)
                 cache_signature = (
                     "fallback_after_faiss_error",
+                    resolved_client_id,
                     faiss_signature,
-                    _get_fallback_signature(),
+                    _get_fallback_signature(resolved_client_id),
                 )
         else:
             logger.info("Index FAISS absent (%s.faiss) — recherche dégradée", faiss_path)
             vs = VectorStore()
-            vs.metadata = _build_fallback_metadata(force_reload=True)
-            cache_signature = _get_fallback_signature()
+            vs.metadata = _build_fallback_metadata(resolved_client_id, force_reload=True)
+            cache_signature = _get_fallback_signature(resolved_client_id)
     except Exception as e:
         logger.warning("Impossible de charger VectorStore: %s", e)
         vs = VectorStore()
-        vs.metadata = _build_fallback_metadata(force_reload=True)
-        cache_signature = _get_fallback_signature()
+        vs.metadata = _build_fallback_metadata(resolved_client_id, force_reload=True)
+        cache_signature = _get_fallback_signature(resolved_client_id)
 
     embedder = Embedder()
     _retriever = Retriever(vector_store=vs, embedder=embedder)
@@ -126,13 +152,18 @@ def _get_retriever() -> Retriever:
 
 
 @router.get("/search")
-def search_verbatims(q: str, limit: int = 10, channel: Optional[str] = None):
+def search_verbatims(
+    q: str,
+    limit: int = 10,
+    channel: Optional[str] = None,
+    client_id: str = Depends(resolve_client_id),
+):
     """Recherche RAG hybride (FAISS + BM25) dans le corpus de verbatims."""
     if not q.strip():
         raise HTTPException(status_code=400, detail="Le paramètre 'q' ne peut pas être vide.")
 
     try:
-        retriever = _get_retriever()
+        retriever = _get_retriever(client_id=client_id)
         results = retriever.search(question=q, top_k=limit)
 
         if channel:
@@ -152,10 +183,11 @@ def list_verbatims(
     wilaya: Optional[str] = None,
     page: int = 1,
     page_size: int = 50,
+    client_id: str = Depends(resolve_client_id),
 ):
     """Exploration classique, filtrée et paginée des données annotées."""
     try:
-        df = load_annotated()
+        df = load_annotated(client_id=client_id)
         if df.empty:
             return {"results": [], "total": 0, "page": page, "page_size": page_size}
 

@@ -1,9 +1,10 @@
 import logging
 from typing import Any, Dict
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from api.data_loader import load_annotated
+from api.deps.tenant import resolve_client_id
 from api.schemas import CampaignCreate, CampaignOverview, CampaignStats, CampaignStatusUpdate
 from core.campaigns import campaign_manager, overview_service
 from core.campaigns.impact_calculator import compute_campaign_impact
@@ -25,20 +26,24 @@ def create_campaign(data: CampaignCreate):
 
 
 @router.get("")
-def list_campaigns(status: str = None, platform: str = None):
+def list_campaigns(
+    status: str = None,
+    platform: str = None,
+    client_id: str = Depends(resolve_client_id),
+):
     """Lister les campagnes existantes."""
     try:
-        return campaign_manager.list_campaigns(status=status, platform=platform)
+        return campaign_manager.list_campaigns(status=status, platform=platform, client_id=client_id)
     except Exception as exc:
         logger.error("Erreur list_campaigns: %s", exc)
         raise HTTPException(status_code=500, detail="Erreur interne")
 
 
 @router.get("/stats", response_model=CampaignStats)
-def get_campaign_stats():
+def get_campaign_stats(client_id: str = Depends(resolve_client_id)):
     """Expose les stats budget reelles du trimestre courant."""
     try:
-        stats = overview_service.get_quarter_budget_stats()
+        stats = overview_service.get_quarter_budget_stats(client_id=client_id)
         return CampaignStats(
             quarterly_budget_committed=stats["quarterly_budget_committed"],
             quarterly_budget_allocation=stats["quarterly_budget_allocation"],
@@ -50,20 +55,20 @@ def get_campaign_stats():
 
 
 @router.get("/overview", response_model=CampaignOverview)
-def get_campaign_overview():
+def get_campaign_overview(client_id: str = Depends(resolve_client_id)):
     """Expose le bundle métier de la page Campagnes."""
     try:
-        return CampaignOverview(**overview_service.get_campaigns_overview())
+        return CampaignOverview(**overview_service.get_campaigns_overview(client_id=client_id))
     except Exception as exc:
         logger.error("Erreur get_campaign_overview: %s", exc)
         raise HTTPException(status_code=500, detail="Erreur interne")
 
 
 @router.get("/{campaign_id}")
-def get_campaign_detail(campaign_id: str):
+def get_campaign_detail(campaign_id: str, client_id: str = Depends(resolve_client_id)):
     """Detail d'une campagne precise."""
     try:
-        campaign = campaign_manager.get_campaign(campaign_id)
+        campaign = campaign_manager.get_campaign(campaign_id, client_id=client_id)
         if not campaign:
             raise HTTPException(status_code=404, detail="Campaign not found")
         return campaign
@@ -105,14 +110,14 @@ def update_campaign(campaign_id: str, update: CampaignStatusUpdate):
 
 
 @router.get("/{campaign_id}/impact")
-def get_campaign_impact(campaign_id: str):
+def get_campaign_impact(campaign_id: str, client_id: str = Depends(resolve_client_id)):
     """Calcule l'impact NSS de la campagne depuis le Parquet annote."""
     try:
-        campaign = campaign_manager.get_campaign(campaign_id)
+        campaign = campaign_manager.get_campaign(campaign_id, client_id=client_id)
         if not campaign:
             raise HTTPException(status_code=404, detail="Campaign not found")
 
-        df = load_annotated()
+        df = load_annotated(client_id=client_id)
         if df.empty:
             raise HTTPException(status_code=400, detail="Data source unavailable or empty")
 

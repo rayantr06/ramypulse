@@ -113,9 +113,16 @@ def _load_from_parquet(client_id: str) -> pd.DataFrame:
     return pd.DataFrame()
 
 
+def _resolve_client_id(client_id: str | None) -> str:
+    """Normalise le tenant cible pour les lectures annotées."""
+    if isinstance(client_id, str) and client_id.strip():
+        return client_id.strip()
+    return config.SAFE_EXPO_CLIENT_ID
+
+
 def load_annotated(client_id: str | None = None, ttl: int = 300) -> pd.DataFrame:
     """Charge le dataset annoté en mémoire avec un TTL."""
-    resolved_client_id = client_id or config.DEFAULT_CLIENT_ID
+    resolved_client_id = _resolve_client_id(client_id)
     df_cache, cache_time = _cache_maps()
 
     current_time = time.time()

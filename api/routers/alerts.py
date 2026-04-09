@@ -6,9 +6,10 @@ désérialisation JSON automatique des payloads.
 
 import logging
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
+from api.deps.tenant import resolve_client_id
 from core.alerts.alert_manager import get_alert, list_alerts as _core_list_alerts, update_alert_status
 
 logger = logging.getLogger(__name__)
@@ -22,10 +23,20 @@ class AlertStatusUpdate(BaseModel):
 
 
 @router.get("")
-def list_alerts(status: str = None, severity: str = None, limit: int = 50):
+def list_alerts(
+    status: str = None,
+    severity: str = None,
+    limit: int = 50,
+    client_id: str = Depends(resolve_client_id),
+):
     """Récupère la liste des alertes via le manager core."""
     try:
-        return _core_list_alerts(status=status, severity=severity, limit=limit)
+        return _core_list_alerts(
+            status=status,
+            severity=severity,
+            limit=limit,
+            client_id=client_id,
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -34,10 +45,10 @@ def list_alerts(status: str = None, severity: str = None, limit: int = 50):
 
 
 @router.get("/{alert_id}")
-def get_alert_detail(alert_id: str):
+def get_alert_detail(alert_id: str, client_id: str = Depends(resolve_client_id)):
     """Récupère le détail d'une alerte spécifique."""
     try:
-        alert = get_alert(alert_id)
+        alert = get_alert(alert_id, client_id=client_id)
         if not alert:
             raise HTTPException(status_code=404, detail="Alert not found")
         return alert
