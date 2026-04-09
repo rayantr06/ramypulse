@@ -23,6 +23,7 @@ from api.routers import (  # noqa: E402
     health,
     recommendations,
     social_metrics,
+    watch_runs,
     watchlists,
 )
 from core.security.auth import get_current_client  # noqa: E402
@@ -59,6 +60,7 @@ _auth = [Depends(get_current_client)]
 app.include_router(dashboard.router, prefix="/api", dependencies=_auth)
 app.include_router(alerts.router, prefix="/api", dependencies=_auth)
 app.include_router(watchlists.router, prefix="/api", dependencies=_auth)
+app.include_router(watch_runs.router, prefix="/api", dependencies=_auth)
 app.include_router(campaigns.router, prefix="/api", dependencies=_auth)
 app.include_router(recommendations.router, prefix="/api", dependencies=_auth)
 app.include_router(explorer.router, prefix="/api", dependencies=_auth)

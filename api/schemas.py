@@ -365,6 +365,38 @@ class WatchlistUpdate(BaseModel):
     is_active: bool | None = None
 
 
+class WatchRunCreate(BaseModel):
+    watchlist_id: str = Field(..., min_length=1)
+    requested_channels: list[str] = Field(default_factory=list)
+
+
+class WatchRunStepResponse(BaseModel):
+    step_key: str
+    stage: str | None = None
+    collector_key: str | None = None
+    status: str
+    records_seen: int = 0
+    error_message: str | None = None
+    started_at: str | None = None
+    finished_at: str | None = None
+
+
+class WatchRunResponse(BaseModel):
+    run_id: str
+    client_id: str
+    watchlist_id: str
+    requested_channels: list[str] = Field(default_factory=list)
+    stage: str
+    status: str
+    records_collected: int = 0
+    error_message: str | None = None
+    created_at: str | None = None
+    updated_at: str | None = None
+    started_at: str | None = None
+    finished_at: str | None = None
+    steps: dict[str, WatchRunStepResponse] = Field(default_factory=dict)
+
+
 # ---------------------------------------------------------------------------
 # Social Metrics
 # ---------------------------------------------------------------------------

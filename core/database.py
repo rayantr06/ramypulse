@@ -250,6 +250,39 @@ _SCHEMA_STATEMENTS = {
             computed_at        TEXT NOT NULL
         )
     """,
+    "watch_runs": """
+        CREATE TABLE IF NOT EXISTS watch_runs (
+            run_id             TEXT PRIMARY KEY,
+            client_id          TEXT NOT NULL DEFAULT 'ramy_client_001',
+            watchlist_id       TEXT NOT NULL,
+            requested_channels TEXT DEFAULT '[]',
+            stage              TEXT NOT NULL DEFAULT 'queued',
+            status             TEXT NOT NULL DEFAULT 'queued',
+            records_collected  INTEGER DEFAULT 0,
+            error_message      TEXT,
+            created_at         TEXT NOT NULL,
+            updated_at         TEXT NOT NULL,
+            started_at         TEXT,
+            finished_at        TEXT
+        )
+    """,
+    "watch_run_steps": """
+        CREATE TABLE IF NOT EXISTS watch_run_steps (
+            step_id        TEXT PRIMARY KEY,
+            run_id         TEXT NOT NULL,
+            step_key       TEXT NOT NULL,
+            stage          TEXT,
+            collector_key  TEXT,
+            status         TEXT NOT NULL DEFAULT 'pending',
+            records_seen   INTEGER DEFAULT 0,
+            error_message  TEXT,
+            created_at     TEXT NOT NULL,
+            updated_at     TEXT NOT NULL,
+            started_at     TEXT,
+            finished_at    TEXT,
+            UNIQUE(run_id, step_key)
+        )
+    """,
     "campaigns": """
         CREATE TABLE IF NOT EXISTS campaigns (
             campaign_id       TEXT PRIMARY KEY,
