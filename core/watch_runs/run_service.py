@@ -24,6 +24,44 @@ CollectorFn = Callable[..., list[dict[str, object]]]
 DEFAULT_COLLECTORS: dict[str, CollectorFn] = {}
 
 
+def _normalize_requested_channels(requested_channels: list[str]) -> list[str]:
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for item in requested_channels:
+        channel = str(item or "").strip()
+        if not channel or channel in seen:
+            continue
+        seen.add(channel)
+        normalized.append(channel)
+    return normalized
+
+
+def validate_requested_channels(
+    requested_channels: list[str],
+    *,
+    collectors: dict[str, CollectorFn] | None = None,
+) -> list[str]:
+    """Validate requested channels against the currently available collector set."""
+    normalized_channels = _normalize_requested_channels(requested_channels)
+    if not normalized_channels:
+        raise ValueError("requested_channels must include at least one supported channel")
+
+    resolved_collectors = dict(DEFAULT_COLLECTORS)
+    if collectors:
+        resolved_collectors.update(collectors)
+
+    unsupported_channels = [
+        channel
+        for channel in normalized_channels
+        if channel not in resolved_collectors
+    ]
+    if unsupported_channels:
+        joined = ", ".join(unsupported_channels)
+        raise ValueError(f"unsupported requested_channels: {joined}")
+
+    return normalized_channels
+
+
 def _invoke_with_supported_kwargs(function: Callable[..., object], **kwargs):
     signature = inspect.signature(function)
     if any(parameter.kind == inspect.Parameter.VAR_KEYWORD for parameter in signature.parameters.values()):
@@ -112,6 +150,7 @@ def execute_watch_run(
             normalization_kwargs = {
                 "client_id": client_id,
                 "batch_size": max(collected_total, 1),
+                "sync_run_id": run_id,
             }
             if db_path is not None:
                 normalization_kwargs["db_path"] = db_path
@@ -191,21 +230,25 @@ def start_watch_run(
     refresh_fn: Callable[..., dict[str, object]] = refresh_tenant_artifacts,
 ) -> dict[str, object] | None:
     """Create a tracked watch run, then execute it either inline or in a daemon thread."""
+    normalized_channels = validate_requested_channels(
+        requested_channels,
+        collectors=collectors,
+    )
     run_id = create_watch_run(
         client_id=client_id,
         watchlist_id=watchlist_id,
-        requested_channels=requested_channels,
+        requested_channels=normalized_channels,
         db_path=db_path,
     )
     created = get_watch_run(run_id, db_path=db_path)
-    normalized_channels = list((created or {}).get("requested_channels") or [])
+    persisted_channels = list((created or {}).get("requested_channels") or normalized_channels)
 
     if not run_async:
         return execute_watch_run(
             run_id,
             client_id=client_id,
             watchlist_id=watchlist_id,
-            requested_channels=normalized_channels,
+            requested_channels=persisted_channels,
             collectors=collectors,
             db_path=db_path,
             normalization_fn=normalization_fn,
@@ -220,7 +263,7 @@ def start_watch_run(
             "run_id": run_id,
             "client_id": client_id,
             "watchlist_id": watchlist_id,
-            "requested_channels": normalized_channels,
+            "requested_channels": persisted_channels,
             "collectors": collectors,
             "db_path": db_path,
             "normalization_fn": normalization_fn,

@@ -8,7 +8,11 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from api.deps.tenant import resolve_client_id
 from api.schemas import WatchRunCreate, WatchRunResponse
-from core.watch_runs.run_service import get_watch_run, start_watch_run
+from core.watch_runs.run_service import (
+    get_watch_run,
+    start_watch_run,
+    validate_requested_channels,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +26,7 @@ def create_watch_run_route(
 ):
     """Create a tracked watch run and launch it asynchronously for expo usage."""
     try:
+        validate_requested_channels(payload.requested_channels)
         run = start_watch_run(
             client_id=client_id,
             watchlist_id=payload.watchlist_id,

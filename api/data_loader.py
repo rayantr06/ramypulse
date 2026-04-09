@@ -32,6 +32,18 @@ def reset_cache() -> None:
     _cache_time = {}
 
 
+def invalidate_cache(client_id: str | None = None) -> None:
+    """Invalidate the full annotated cache or one tenant entry."""
+    global _df_cache, _cache_time
+    if client_id is None:
+        reset_cache()
+        return
+
+    df_cache, cache_time = _cache_maps()
+    df_cache.pop(client_id, None)
+    cache_time.pop(client_id, None)
+
+
 def _cache_maps() -> tuple[dict[str, pd.DataFrame], dict[str, float]]:
     """Return normalized caches even if tests replace the module globals."""
     global _df_cache, _cache_time

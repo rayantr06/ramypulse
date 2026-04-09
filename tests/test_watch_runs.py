@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import importlib
 import sqlite3
+import time
 from pathlib import Path
 
 import pandas as pd
+import pytest
 from fastapi.testclient import TestClient
 
 import config
@@ -87,6 +89,76 @@ def test_watch_run_manager_tracks_run_and_steps(monkeypatch, tmp_path: Path) -> 
     assert run["steps"]["collect:facebook"]["status"] == "success"
     assert run["steps"]["collect:facebook"]["records_seen"] == 2
     assert run["steps"]["collect:facebook"]["collector_key"] == "facebook"
+
+
+def test_watch_run_schema_helpers_close_database_manager(monkeypatch) -> None:
+    run_manager = _import_module("core.watch_runs.run_manager")
+    raw_ingestion = _import_module("core.watch_runs.raw_ingestion")
+
+    class _FakeDatabaseManager:
+        def __init__(self, db_path):
+            self.db_path = db_path
+
+        def create_tables(self):
+            calls.append(("create_tables", self.db_path))
+
+        def close(self):
+            calls.append(("close", self.db_path))
+
+    calls: list[tuple[str, str]] = []
+    monkeypatch.setattr(run_manager, "DatabaseManager", _FakeDatabaseManager)
+    monkeypatch.setattr(raw_ingestion, "DatabaseManager", _FakeDatabaseManager)
+
+    run_manager._ensure_schema("memory-a")
+    raw_ingestion._ensure_schema("memory-b")
+
+    assert calls == [
+        ("create_tables", "memory-a"),
+        ("close", "memory-a"),
+        ("create_tables", "memory-b"),
+        ("close", "memory-b"),
+    ]
+
+
+def test_start_watch_run_rejects_empty_requested_channels(monkeypatch, tmp_path: Path) -> None:
+    db_path = _prepare_isolated_db(monkeypatch, tmp_path)
+    run_service = _import_module("core.watch_runs.run_service")
+
+    with pytest.raises(ValueError, match="requested_channels"):
+        run_service.start_watch_run(
+            client_id="client-a",
+            watchlist_id="watchlist-001",
+            requested_channels=[],
+            run_async=False,
+            db_path=db_path,
+        )
+
+    with sqlite3.connect(db_path) as connection:
+        run_count = connection.execute("SELECT COUNT(*) FROM watch_runs").fetchone()[0]
+
+    assert run_count == 0
+
+
+def test_start_watch_run_rejects_unsupported_channels_before_creating_run(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    db_path = _prepare_isolated_db(monkeypatch, tmp_path)
+    run_service = _import_module("core.watch_runs.run_service")
+
+    with pytest.raises(ValueError, match="unsupported"):
+        run_service.start_watch_run(
+            client_id="client-a",
+            watchlist_id="watchlist-001",
+            requested_channels=["facebook"],
+            run_async=False,
+            db_path=db_path,
+        )
+
+    with sqlite3.connect(db_path) as connection:
+        run_count = connection.execute("SELECT COUNT(*) FROM watch_runs").fetchone()[0]
+
+    assert run_count == 0
 
 
 def test_execute_watch_run_handles_partial_collector_failure_and_runs_downstream(
@@ -200,6 +272,105 @@ def test_execute_watch_run_marks_run_error_when_downstream_stage_raises(
     assert "index refresh crashed" in run["steps"]["index"]["error_message"]
 
 
+def test_execute_watch_run_normalizes_only_documents_from_current_run(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    db_path = _prepare_isolated_db(monkeypatch, tmp_path)
+    run_service = _import_module("core.watch_runs.run_service")
+    normalizer_pipeline = _import_module("core.normalization.normalizer_pipeline")
+
+    with sqlite3.connect(db_path) as connection:
+        connection.execute(
+            """
+            INSERT INTO raw_documents (
+                raw_document_id, client_id, source_id, sync_run_id, external_document_id,
+                raw_payload, raw_text, raw_metadata, checksum_sha256,
+                collected_at, is_normalized, normalizer_version, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                "raw-stale",
+                "client-a",
+                "watch:client-a:facebook",
+                "old-run",
+                "old-doc",
+                "{}",
+                "stale backlog",
+                '{"channel":"facebook","source_url":"https://example.test/stale"}',
+                "checksum-old",
+                "2026-04-09T09:00:00Z",
+                0,
+                None,
+                "2026-04-09T09:00:00Z",
+            ),
+        )
+        connection.commit()
+
+    monkeypatch.setattr(
+        normalizer_pipeline,
+        "normalize",
+        lambda text: {
+            "normalized": text,
+            "language": "fr",
+            "script_detected": "latin",
+        },
+    )
+    monkeypatch.setattr(
+        normalizer_pipeline,
+        "_analyze_text",
+        lambda text: {
+            "global_sentiment": "positif",
+            "confidence": 0.9,
+            "aspects": ["taste"],
+            "aspect_sentiments": [],
+        },
+    )
+    monkeypatch.setattr(
+        normalizer_pipeline,
+        "_resolve_entities",
+        lambda text, source_metadata, db_path=None: {
+            "brand": None,
+            "product": None,
+            "product_line": None,
+            "sku": None,
+            "wilaya": None,
+            "competitor": None,
+        },
+    )
+
+    created = run_service.start_watch_run(
+        client_id="client-a",
+        watchlist_id="watchlist-001",
+        requested_channels=["facebook"],
+        collectors={
+            "facebook": lambda **kwargs: [_doc("fb-001", "fresh watch run", "facebook")],
+        },
+        run_async=False,
+        db_path=db_path,
+        normalization_fn=normalizer_pipeline.run_normalization_job,
+        refresh_fn=lambda **kwargs: {"client_id": kwargs["client_id"], "documents": 1},
+    )
+
+    with sqlite3.connect(db_path) as connection:
+        rows = connection.execute(
+            """
+            SELECT raw_text, sync_run_id, is_normalized
+            FROM raw_documents
+            """
+        ).fetchall()
+        normalized_rows = connection.execute(
+            "SELECT text FROM normalized_records ORDER BY normalized_record_id"
+        ).fetchall()
+
+    assert created["status"] == "ready"
+    assert sorted(rows) == sorted([
+        ("stale backlog", "old-run", 0),
+        ("fresh watch run", created["run_id"], 1),
+    ])
+    assert normalized_rows == [("fresh watch run",)]
+
+
 def test_start_watch_run_dedupes_requested_channels_before_execution(
     monkeypatch,
     tmp_path: Path,
@@ -248,6 +419,34 @@ def test_start_watch_run_dedupes_requested_channels_before_execution(
     assert run["records_collected"] == sum(step["records_seen"] for step in collect_steps.values()) == 2
 
 
+def test_refresh_tenant_artifacts_invalidates_loader_cache(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setattr(config, "DATA_DIR", tmp_path, raising=False)
+    data_loader = _import_module("api.data_loader")
+    artifact_refresh = _import_module("core.tenancy.artifact_refresh")
+
+    stale = pd.DataFrame([{"text": "stale cached", "channel": "cached"}])
+    fresh = pd.DataFrame([{"text": "fresh sqlite", "channel": "web_search"}])
+    data_loader.reset_cache()
+    data_loader._df_cache = {"tenant-a": stale}
+    data_loader._cache_time = {"tenant-a": time.time()}
+
+    monkeypatch.setattr(artifact_refresh, "load_annotated_from_sqlite", lambda client_id: fresh)
+    monkeypatch.setattr(data_loader, "_load_from_sqlite", lambda client_id: fresh)
+
+    summary = artifact_refresh.refresh_tenant_artifacts(
+        client_id="tenant-a",
+        force=True,
+        build_index_fn=lambda **kwargs: None,
+    )
+    loaded = data_loader.load_annotated(client_id="tenant-a", ttl=300)
+
+    assert summary["documents"] == 1
+    assert loaded.iloc[0]["text"] == "fresh sqlite"
+
+
 def test_refresh_tenant_artifacts_writes_parquet_and_uses_builder_override(
     monkeypatch,
     tmp_path: Path,
@@ -279,6 +478,24 @@ def test_refresh_tenant_artifacts_writes_parquet_and_uses_builder_override(
     assert pd.read_parquet(summary["annotated_path"]).iloc[0]["text"] == "tenant sqlite text"
     assert captured["input_path"] == summary["annotated_path"]
     assert captured["embeddings_dir"] == summary["index_path"].parent
+
+
+def test_watch_runs_api_rejects_unsupported_channels(monkeypatch, tmp_path: Path) -> None:
+    headers = _prepare_api_auth(monkeypatch, tmp_path)
+    app = _import_module("api.main").app
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/watch-runs",
+        json={
+            "watchlist_id": "watchlist-001",
+            "requested_channels": ["facebook"],
+        },
+        headers=headers,
+    )
+
+    assert response.status_code == 422
+    assert "unsupported" in response.json()["detail"].lower()
 
 
 def test_watch_runs_api_creates_and_fetches_runs(monkeypatch, tmp_path: Path) -> None:
@@ -339,6 +556,11 @@ def test_watch_runs_api_creates_and_fetches_runs(monkeypatch, tmp_path: Path) ->
     watch_runs_router = _import_module("api.routers.watch_runs")
     monkeypatch.setattr(watch_runs_router, "start_watch_run", _fake_start_watch_run)
     monkeypatch.setattr(watch_runs_router, "get_watch_run", _fake_get_watch_run)
+    monkeypatch.setattr(
+        watch_runs_router,
+        "validate_requested_channels",
+        lambda requested_channels: requested_channels,
+    )
 
     created = client.post(
         "/api/watch-runs",

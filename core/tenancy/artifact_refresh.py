@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Callable
 
-from api.data_loader import load_annotated_from_sqlite
+from api.data_loader import invalidate_cache, load_annotated_from_sqlite
 from core.tenancy.tenant_paths import get_tenant_paths
 from scripts.build_index_04 import build_index
 
@@ -41,6 +41,8 @@ def refresh_tenant_artifacts(
     else:
         dataframe.to_parquet(annotated_path, index=False)
         resolved_build_index(input_path=annotated_path, embeddings_dir=paths.embeddings_dir)
+
+    invalidate_cache(client_id)
 
     return {
         "client_id": client_id,

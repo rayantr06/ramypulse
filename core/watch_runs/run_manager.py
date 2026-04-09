@@ -17,7 +17,11 @@ def _resolve_db_path(db_path: str | Path | None = None) -> str:
 
 
 def _ensure_schema(db_path: str | Path | None = None) -> None:
-    DatabaseManager(_resolve_db_path(db_path)).create_tables()
+    database = DatabaseManager(_resolve_db_path(db_path))
+    try:
+        database.create_tables()
+    finally:
+        database.close()
 
 
 def _get_connection(db_path: str | Path | None = None) -> sqlite3.Connection:
