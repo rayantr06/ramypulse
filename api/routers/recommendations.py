@@ -63,6 +63,7 @@ def get_context_preview(
             trigger_type=trigger_type,
             trigger_id=trigger_id,
             df_annotated=df_annotated,
+            client_id=client_id,
         )
         provider_used = provider or config.DEFAULT_AGENT_PROVIDER
         model_used = model or config.DEFAULT_AGENT_MODEL
@@ -107,6 +108,7 @@ def generate_recommendations(
             trigger_type=req.trigger_type,
             trigger_id=req.trigger_id,
             df_annotated=df_annotated,
+            client_id=client_id,
         )
 
         provider = req.provider or config.DEFAULT_AGENT_PROVIDER

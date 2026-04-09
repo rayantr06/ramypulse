@@ -104,3 +104,61 @@ def test_dashboard_summary_falls_back_to_active_tenant_then_safe_expo(monkeypatc
     persisted_response = client.get("/api/dashboard/summary", headers=ctx["operator_headers"])
     assert persisted_response.status_code == 200
     assert calls == [ctx["other_client_id"]]
+
+
+def test_recommendations_context_preview_passes_header_client_to_context_builder(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    ctx = _prepare_isolated_db(monkeypatch, tmp_path)
+    calls: list[dict[str, object]] = []
+
+    def _fake_load_annotated(*args, **kwargs):
+        return pd.DataFrame({"sentiment_label": [], "channel": [], "aspect": []})
+
+    def _fake_build_recommendation_context(
+        *,
+        trigger_type: str,
+        trigger_id: str | None,
+        df_annotated: pd.DataFrame,
+        client_id: str,
+        max_rag_chunks: int = 8,
+    ) -> dict:
+        calls.append(
+            {
+                "trigger_type": trigger_type,
+                "trigger_id": trigger_id,
+                "client_id": client_id,
+                "rows": len(df_annotated),
+                "max_rag_chunks": max_rag_chunks,
+            }
+        )
+        return {
+            "current_metrics": {"nss_global": None, "volume_total": 0},
+            "active_alerts": [],
+            "active_watchlists": [],
+            "recent_campaigns": [],
+            "estimated_tokens": 123,
+        }
+
+    monkeypatch.setattr("api.routers.recommendations.load_annotated", _fake_load_annotated)
+    monkeypatch.setattr(
+        "api.routers.recommendations.context_builder.build_recommendation_context",
+        _fake_build_recommendation_context,
+    )
+
+    response = client.get(
+        "/api/recommendations/context-preview",
+        headers={**ctx["operator_headers"], "X-Ramy-Client-Id": ctx["other_client_id"]},
+    )
+
+    assert response.status_code == 200
+    assert calls == [
+        {
+            "trigger_type": "manual",
+            "trigger_id": None,
+            "client_id": ctx["other_client_id"],
+            "rows": 0,
+            "max_rag_chunks": 8,
+        }
+    ]

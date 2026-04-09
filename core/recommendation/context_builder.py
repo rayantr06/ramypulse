@@ -86,23 +86,42 @@ def _get_connection() -> sqlite3.Connection:
     return connection
 
 
-def _latest_watchlist_metrics_map() -> dict[str, dict]:
+def _latest_watchlist_metrics_map(client_id: str | None = None) -> dict[str, dict]:
     """Retourne le dernier snapshot connu par watchlist."""
     try:
         with _get_connection() as connection:
-            rows = connection.execute(
-                """
-                SELECT w1.*
-                FROM watchlist_metric_snapshots w1
-                JOIN (
-                    SELECT watchlist_id, MAX(computed_at) AS max_computed_at
-                    FROM watchlist_metric_snapshots
-                    GROUP BY watchlist_id
-                ) latest
-                  ON latest.watchlist_id = w1.watchlist_id
-                 AND latest.max_computed_at = w1.computed_at
-                """
-            ).fetchall()
+            if client_id and str(client_id).strip():
+                rows = connection.execute(
+                    """
+                    SELECT w1.*
+                    FROM watchlist_metric_snapshots w1
+                    JOIN (
+                        SELECT wms.watchlist_id, MAX(wms.computed_at) AS max_computed_at
+                        FROM watchlist_metric_snapshots wms
+                        JOIN watchlists wl
+                          ON wl.watchlist_id = wms.watchlist_id
+                        WHERE wl.client_id = ?
+                        GROUP BY wms.watchlist_id
+                    ) latest
+                      ON latest.watchlist_id = w1.watchlist_id
+                     AND latest.max_computed_at = w1.computed_at
+                    """,
+                    (str(client_id).strip(),),
+                ).fetchall()
+            else:
+                rows = connection.execute(
+                    """
+                    SELECT w1.*
+                    FROM watchlist_metric_snapshots w1
+                    JOIN (
+                        SELECT watchlist_id, MAX(computed_at) AS max_computed_at
+                        FROM watchlist_metric_snapshots
+                        GROUP BY watchlist_id
+                    ) latest
+                      ON latest.watchlist_id = w1.watchlist_id
+                     AND latest.max_computed_at = w1.computed_at
+                    """
+                ).fetchall()
     except sqlite3.Error:
         return {}
 
@@ -117,24 +136,44 @@ def _latest_watchlist_metrics_map() -> dict[str, dict]:
     return payload
 
 
-def _latest_campaign_snapshot_map() -> dict[str, dict]:
+def _latest_campaign_snapshot_map(client_id: str | None = None) -> dict[str, dict]:
     """Retourne le dernier snapshot campagne utile pour l'uplift recent."""
     try:
         with _get_connection() as connection:
-            rows = connection.execute(
-                """
-                SELECT c1.*
-                FROM campaign_metrics_snapshots c1
-                JOIN (
-                    SELECT campaign_id, MAX(computed_at) AS max_computed_at
-                    FROM campaign_metrics_snapshots
-                    GROUP BY campaign_id
-                ) latest
-                  ON latest.campaign_id = c1.campaign_id
-                 AND latest.max_computed_at = c1.computed_at
-                ORDER BY c1.computed_at DESC
-                """
-            ).fetchall()
+            if client_id and str(client_id).strip():
+                rows = connection.execute(
+                    """
+                    SELECT c1.*
+                    FROM campaign_metrics_snapshots c1
+                    JOIN (
+                        SELECT cms.campaign_id, MAX(cms.computed_at) AS max_computed_at
+                        FROM campaign_metrics_snapshots cms
+                        JOIN campaigns c
+                          ON c.campaign_id = cms.campaign_id
+                        WHERE c.client_id = ?
+                        GROUP BY cms.campaign_id
+                    ) latest
+                      ON latest.campaign_id = c1.campaign_id
+                     AND latest.max_computed_at = c1.computed_at
+                    ORDER BY c1.computed_at DESC
+                    """,
+                    (str(client_id).strip(),),
+                ).fetchall()
+            else:
+                rows = connection.execute(
+                    """
+                    SELECT c1.*
+                    FROM campaign_metrics_snapshots c1
+                    JOIN (
+                        SELECT campaign_id, MAX(computed_at) AS max_computed_at
+                        FROM campaign_metrics_snapshots
+                        GROUP BY campaign_id
+                    ) latest
+                      ON latest.campaign_id = c1.campaign_id
+                     AND latest.max_computed_at = c1.computed_at
+                    ORDER BY c1.computed_at DESC
+                    """
+                ).fetchall()
     except sqlite3.Error:
         return {}
 
@@ -206,9 +245,24 @@ def _enrich_active_alerts(alerts: list[dict], trigger_id: str | None) -> list[di
     return triggering + others
 
 
-def _enrich_watchlists(watchlists: list[dict]) -> list[dict]:
+def _filter_watchlists_for_client(
+    watchlists: list[dict],
+    client_id: str | None,
+) -> list[dict]:
+    """Filtre localement les watchlists si le manager n'est pas encore tenant-aware."""
+    if not client_id or not str(client_id).strip():
+        return watchlists
+    resolved_client_id = str(client_id).strip()
+    return [
+        watchlist
+        for watchlist in watchlists
+        if watchlist.get("client_id") == resolved_client_id
+    ]
+
+
+def _enrich_watchlists(watchlists: list[dict], client_id: str | None = None) -> list[dict]:
     """Ajoute les dernieres metriques persistées aux watchlists actives."""
-    latest_metrics = _latest_watchlist_metrics_map()
+    latest_metrics = _latest_watchlist_metrics_map(client_id)
     enriched: list[dict] = []
     for watchlist in watchlists:
         item = dict(watchlist)
@@ -265,9 +319,9 @@ def _prioritize_watchlists(watchlists: list[dict], trigger_focus: dict) -> list[
     return sorted(watchlists, key=_sort_key)
 
 
-def _enrich_campaigns(campaigns: list[dict]) -> list[dict]:
+def _enrich_campaigns(campaigns: list[dict], client_id: str | None = None) -> list[dict]:
     """Ajoute l'uplift recent et le dernier snapshot aux campagnes recentes."""
-    latest_snapshots = _latest_campaign_snapshot_map()
+    latest_snapshots = _latest_campaign_snapshot_map(client_id)
     enriched: list[dict] = []
     for campaign in campaigns:
         item = dict(campaign)
@@ -318,6 +372,7 @@ def build_recommendation_context(
     trigger_id: str | None,
     df_annotated: pd.DataFrame,
     max_rag_chunks: int = 8,
+    client_id: str | None = None,
 ) -> dict:
     """Assemble le contexte complet pour l'agent de recommandations."""
     context: dict[str, Any] = {}
@@ -345,7 +400,7 @@ def build_recommendation_context(
     active_alerts: list[dict] = []
     if _HAS_ALERTS:
         try:
-            all_alerts = _list_alerts(limit=100)
+            all_alerts = _list_alerts(limit=100, client_id=client_id)
             active = [
                 item
                 for item in all_alerts
@@ -364,7 +419,11 @@ def build_recommendation_context(
     active_watchlists: list[dict] = []
     if _HAS_WATCHLISTS:
         try:
-            watchlists = _enrich_watchlists(_list_watchlists(is_active=True))
+            watchlists = _filter_watchlists_for_client(
+                _list_watchlists(is_active=True),
+                client_id,
+            )
+            watchlists = _enrich_watchlists(watchlists, client_id=client_id)
             active_watchlists = _prioritize_watchlists(watchlists, trigger_focus)[:5]
         except Exception as exc:  # pragma: no cover - degrade gracieusement
             logger.warning("Erreur chargement watchlists: %s", exc)
@@ -373,7 +432,10 @@ def build_recommendation_context(
     recent_campaigns: list[dict] = []
     if _HAS_CAMPAIGNS:
         try:
-            campaigns = _enrich_campaigns(_list_campaigns(limit=20))
+            campaigns = _enrich_campaigns(
+                _list_campaigns(limit=20, client_id=client_id),
+                client_id=client_id,
+            )
             recent_campaigns = _prioritize_campaigns(campaigns, trigger_focus)[:5]
         except Exception as exc:  # pragma: no cover - degrade gracieusement
             logger.warning("Erreur chargement campagnes: %s", exc)
