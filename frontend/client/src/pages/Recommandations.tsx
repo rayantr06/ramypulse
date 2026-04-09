@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { AppShell } from "@/components/AppShell";
+import { EmptyTenantState } from "@/components/EmptyTenantState";
 import { apiRequest } from "@/lib/queryClient";
 import {
   flattenProviderCatalog,
@@ -308,6 +309,24 @@ export default function Recommandations() {
     activeRecos[0]?.provider || latestRecommendation?.provider || "",
     activeRecos[0]?.model || latestRecommendation?.model || "",
   );
+
+  if (!recoLoading && (recommendations ?? []).length === 0) {
+    return (
+      <AppShell
+        headerSearchPlaceholder="Rechercher une recommandation..."
+        onSearch={setSearchQuery}
+        avatarSrc={STITCH_AVATARS.recommandations.src}
+        avatarAlt={STITCH_AVATARS.recommandations.alt}
+      >
+        <div className="p-8 max-w-7xl mx-auto">
+          <EmptyTenantState
+            title="Les recommandations attendent un premier corpus"
+            description="Le module IA devient utile une fois que la watchlist a produit assez de signaux, d'alertes et de contexte pour générer des actions crédibles."
+          />
+        </div>
+      </AppShell>
+    );
+  }
 
   const runHistory = useMemo(() => {
     return recos.map((recommendation) => ({

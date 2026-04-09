@@ -1,41 +1,35 @@
-import { useLocation } from "wouter";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
-import { Button } from "@/components/ui/button";
-import { setStoredTenantId } from "@/lib/tenantContext";
+import { apiRequest } from "@/lib/queryClient";
+import { RunProgressPanel } from "@/components/watch/RunProgressPanel";
+import { WatchOnboardingWizard } from "@/components/watch/WatchOnboardingWizard";
 
 export default function WatchOnboarding() {
-  const [, setLocation] = useLocation();
+  const [runState, setRunState] = useState<{
+    run_id: string;
+    client_id: string;
+    watchlist_id: string;
+  } | null>(null);
 
-  function activateDemoTenant() {
-    setStoredTenantId("ramy_client_001");
-    setLocation("/");
-  }
-
-  function clearTenant() {
-    setStoredTenantId(null);
-  }
+  const runQuery = useQuery({
+    queryKey: ["/api/watch-runs", runState?.run_id],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/watch-runs/${runState?.run_id}`);
+      return res.json();
+    },
+    enabled: Boolean(runState?.run_id),
+    refetchInterval: runState?.run_id ? 1000 : false,
+  });
 
   return (
     <AppShell sidebarFooterSubtitle="Nouveau client">
-      <div className="min-h-[calc(100vh-4rem)] p-8 flex items-center justify-center">
-        <div className="max-w-2xl w-full rounded-2xl border border-outline-variant/15 bg-surface-container p-8 shadow-[0_24px_80px_rgba(0,0,0,0.25)]">
-          <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-primary mb-3">
-            Nouveau client
-          </p>
-          <h1 className="text-4xl font-black tracking-tight font-headline text-on-surface mb-4">
-            Configurez votre tenant pour commencer
-          </h1>
-          <p className="max-w-xl text-sm leading-6 text-on-surface-variant mb-8">
-            Ajoutez un identifiant client pour activer les vues produit. Une fois un tenant
-            enregistré, la page d&apos;accueil bascule vers le tableau de bord.
-          </p>
-          <div className="flex flex-wrap gap-3">
-            <Button onClick={activateDemoTenant}>Charger un tenant de démo</Button>
-            <Button variant="outline" onClick={clearTenant}>
-              Réinitialiser
-            </Button>
-          </div>
-        </div>
+      <div className="min-h-[calc(100vh-4rem)] p-8">
+        {!runState ? (
+          <WatchOnboardingWizard onRunCreated={setRunState} />
+        ) : (
+          <RunProgressPanel run={runQuery.data} isLoading={runQuery.isLoading} />
+        )}
       </div>
     </AppShell>
   );

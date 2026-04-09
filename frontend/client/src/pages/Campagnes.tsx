@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
+import { EmptyTenantState } from "@/components/EmptyTenantState";
 import { apiRequest } from "@/lib/queryClient";
 import {
   buildCampaignCreatePayload,
@@ -387,6 +388,27 @@ export default function Campagnes() {
     }, 120);
   };
 
+  if (!campaignsLoading && allCampaigns.length === 0) {
+    return (
+      <AppShell
+        headerSearchPlaceholder="Rechercher une campagne..."
+        onSearch={setSearchQuery}
+        avatarSrc={STITCH_AVATARS.campagnes.src}
+        avatarAlt={STITCH_AVATARS.campagnes.alt}
+        sidebarFooterAvatarSrc={STITCH_AVATARS.campagnes.src}
+        sidebarFooterAvatarAlt={STITCH_AVATARS.campagnes.alt}
+        sidebarFooterSubtitle="Ramy Pulse Pro"
+      >
+        <div className="p-8 max-w-7xl mx-auto">
+          <EmptyTenantState
+            title="Aucune campagne active pour ce tenant"
+            description="Le module Campagnes reste visible en Beta, mais il n'affiche encore aucune campagne tant qu'un tenant n'a pas ete alimente."
+          />
+        </div>
+      </AppShell>
+    );
+  }
+
   return (
     <AppShell
       headerSearchPlaceholder="Rechercher une campagne..."
@@ -403,14 +425,19 @@ export default function Campagnes() {
             <span className="text-[10px] font-bold tracking-[0.2em] text-primary uppercase">
               Gestion Opérationnelle
             </span>
-            <h2 className="text-3xl font-headline font-extrabold tracking-tighter mt-1">
-              Campagnes Marketing
-            </h2>
+            <div className="mt-1 flex items-center gap-3">
+              <h2 className="text-3xl font-headline font-extrabold tracking-tighter">
+                Campagnes Marketing
+              </h2>
+              <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
+                Beta
+              </span>
+            </div>
           </div>
-            <div className="flex gap-3">
-              <button className="px-4 py-2 bg-surface-container-high hover:bg-surface-bright text-on-surface text-xs font-bold transition-all rounded-sm">
-                EXPORTER DATA
-              </button>
+          <div className="flex gap-3">
+            <button className="px-4 py-2 bg-surface-container-high hover:bg-surface-bright text-on-surface text-xs font-bold transition-all rounded-sm">
+              EXPORTER DATA
+            </button>
             <button
               onClick={focusCampaignComposer}
               className="px-6 py-2 bg-gradient-to-r from-primary to-primary-container text-on-primary-fixed text-xs font-bold transition-transform active:scale-95 shadow-lg shadow-primary/10 rounded-sm"

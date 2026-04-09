@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
+import { EmptyTenantState } from "@/components/EmptyTenantState";
 import { apiRequest } from "@/lib/queryClient";
 import {
   mapApiStatus,
@@ -190,6 +191,27 @@ export default function Dashboard() {
     apiStatus: "Indisponible",
     latencyMs: null,
   };
+
+  const shouldShowEmptyTenantState =
+    !summaryLoading &&
+    !alertsLoading &&
+    !actionsLoading &&
+    summaryView.totalMentions === 0 &&
+    currentAlerts.length === 0 &&
+    currentActions.length === 0;
+
+  if (shouldShowEmptyTenantState) {
+    return (
+      <AppShell>
+        <div className="p-8">
+          <EmptyTenantState
+            title="Le dashboard attend les premiers signaux"
+            description="La collecte watch-first est lancée, mais il faut encore quelques documents normalisés pour calculer la santé de marque, les alertes et les recommandations."
+          />
+        </div>
+      </AppShell>
+    );
+  }
 
   const circumference = 2 * Math.PI * 88;
   const dashOffset = circumference * (1 - summaryView.score / 100);

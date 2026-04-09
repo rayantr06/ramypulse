@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
+import { EmptyTenantState } from "@/components/EmptyTenantState";
 import { buildExplorerAiView, toDisplayRelevanceScores } from "@/lib/explorerAiView";
 import { apiRequest } from "@/lib/queryClient";
 import {
@@ -235,6 +236,28 @@ export default function Explorateur() {
       }
     );
   }, [verbatims]);
+
+  const shouldShowEmptyTenantState =
+    !activeSearch.trim() &&
+    !searchLoading &&
+    !verbatimsLoading &&
+    verbatimsData.total === 0;
+
+  if (shouldShowEmptyTenantState) {
+    return (
+      <AppShell
+        avatarSrc={STITCH_AVATARS.explorateur.src}
+        avatarAlt={STITCH_AVATARS.explorateur.alt}
+      >
+        <div className="p-8 max-w-7xl mx-auto w-full">
+          <EmptyTenantState
+            title="L'explorateur attend les premières mentions"
+            description="Dès que la watchlist remonte assez de documents, vous pourrez lancer des questions, consulter les sources et inspecter les verbatims multi-canaux."
+          />
+        </div>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell

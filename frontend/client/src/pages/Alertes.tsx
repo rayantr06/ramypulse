@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
+import { EmptyTenantState } from "@/components/EmptyTenantState";
 import { apiRequest } from "@/lib/queryClient";
 import { mapAlert } from "@/lib/apiMappings";
 import { filterAlertViews } from "@/lib/pageSearchFilters";
@@ -232,6 +233,24 @@ export default function Alertes() {
   const selectedAlert = useMemo(() => {
     return alertsList.find((alert) => alert.id === selectedId) ?? null;
   }, [alertsList, selectedId]);
+
+  if (!alertsLoading && alertsList.length === 0) {
+    return (
+      <AppShell
+        headerSearchPlaceholder="Rechercher une alerte..."
+        onSearch={setSearchQuery}
+        avatarSrc={STITCH_AVATARS.alertes.src}
+        avatarAlt={STITCH_AVATARS.alertes.alt}
+      >
+        <div className="p-8 min-h-[calc(100vh-64px)]">
+          <EmptyTenantState
+            title="Aucune alerte exploitable pour l'instant"
+            description="Les alertes apparaîtront dès que la collecte et l'ABSA auront produit assez de signaux pour détecter une dérive ou un pic négatif."
+          />
+        </div>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell

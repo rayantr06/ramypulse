@@ -4,6 +4,17 @@ import { buildTenantHeaders, getStoredTenantId } from "./tenantContext";
 const ANONYMOUS_TENANT_CACHE_KEY = "__anonymous__";
 const tenantQueryClients = new Map<string, QueryClient>();
 
+function getConfiguredApiKey(): string {
+  const env = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env;
+  const rawValue = env?.VITE_RAMYPULSE_API_KEY;
+  return typeof rawValue === "string" ? rawValue.trim() : "";
+}
+
+function buildAuthHeaders(): Record<string, string> {
+  const apiKey = getConfiguredApiKey();
+  return apiKey ? { "X-API-Key": apiKey } : {};
+}
+
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
@@ -20,6 +31,7 @@ export async function apiRequest(
   const res = await fetch(url, {
     method,
     headers: {
+      ...buildAuthHeaders(),
       ...tenantHeaders,
       ...(data ? { "Content-Type": "application/json" } : {}),
     },
@@ -37,7 +49,10 @@ export const getQueryFn: <T>(options: {
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
     const res = await fetch(queryKey.join("/"), {
-      headers: buildTenantHeaders(getStoredTenantId()),
+      headers: {
+        ...buildAuthHeaders(),
+        ...buildTenantHeaders(getStoredTenantId()),
+      },
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
