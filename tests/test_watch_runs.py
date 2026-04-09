@@ -200,6 +200,54 @@ def test_execute_watch_run_marks_run_error_when_downstream_stage_raises(
     assert "index refresh crashed" in run["steps"]["index"]["error_message"]
 
 
+def test_start_watch_run_dedupes_requested_channels_before_execution(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    db_path = _prepare_isolated_db(monkeypatch, tmp_path)
+    run_service = _import_module("core.watch_runs.run_service")
+    run_manager = _import_module("core.watch_runs.run_manager")
+
+    collector_calls: list[str] = []
+
+    def _collector_factory(channel: str):
+        def _collector(**kwargs):
+            collector_calls.append(channel)
+            return [_doc(f"{channel}-001", f"{channel} post", channel)]
+
+        return _collector
+
+    created = run_service.start_watch_run(
+        client_id="client-a",
+        watchlist_id="watchlist-001",
+        requested_channels=["facebook", "facebook", "youtube", "facebook"],
+        collectors={
+            "facebook": _collector_factory("facebook"),
+            "youtube": _collector_factory("youtube"),
+        },
+        run_async=False,
+        db_path=db_path,
+        normalization_fn=lambda **kwargs: {"processed_count": 2, "normalizer_version": "test"},
+        refresh_fn=lambda **kwargs: {"client_id": kwargs["client_id"], "documents": 2},
+    )
+
+    run = run_manager.get_watch_run(created["run_id"], db_path=db_path)
+
+    assert run is not None
+    assert collector_calls == ["facebook", "youtube"]
+    assert run["requested_channels"] == ["facebook", "youtube"]
+
+    collect_steps = {
+        step_key: step
+        for step_key, step in run["steps"].items()
+        if step_key.startswith("collect:")
+    }
+
+    assert set(collect_steps) == {"collect:facebook", "collect:youtube"}
+    assert [step_key.removeprefix("collect:") for step_key in collect_steps] == run["requested_channels"]
+    assert run["records_collected"] == sum(step["records_seen"] for step in collect_steps.values()) == 2
+
+
 def test_refresh_tenant_artifacts_writes_parquet_and_uses_builder_override(
     monkeypatch,
     tmp_path: Path,

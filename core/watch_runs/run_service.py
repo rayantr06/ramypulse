@@ -198,13 +198,14 @@ def start_watch_run(
         db_path=db_path,
     )
     created = get_watch_run(run_id, db_path=db_path)
+    normalized_channels = list((created or {}).get("requested_channels") or [])
 
     if not run_async:
         return execute_watch_run(
             run_id,
             client_id=client_id,
             watchlist_id=watchlist_id,
-            requested_channels=requested_channels,
+            requested_channels=normalized_channels,
             collectors=collectors,
             db_path=db_path,
             normalization_fn=normalization_fn,
@@ -219,7 +220,7 @@ def start_watch_run(
             "run_id": run_id,
             "client_id": client_id,
             "watchlist_id": watchlist_id,
-            "requested_channels": requested_channels,
+            "requested_channels": normalized_channels,
             "collectors": collectors,
             "db_path": db_path,
             "normalization_fn": normalization_fn,
