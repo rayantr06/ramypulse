@@ -11,6 +11,7 @@ beautifulsoup4>=4.12
 trafilatura>=1.9
 tenacity>=8.5
 tavily-python>=0.5
+google-api-python-client>=2.170
 faster-whisper>=1.0
 ollama>=0.3
 python-dotenv>=1.0
