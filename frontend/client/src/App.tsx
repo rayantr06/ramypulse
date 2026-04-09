@@ -6,6 +6,10 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useTenantId } from "@/lib/tenantContext";
+import {
+  shouldGateProductRoute,
+  shouldResetTenantCache,
+} from "@/lib/routeAccess";
 import NotFound from "@/pages/not-found";
 import Explorateur from "@/pages/Explorateur";
 import Campagnes from "@/pages/Campagnes";
@@ -21,7 +25,7 @@ function TenantCacheReset() {
   const previousTenantId = useRef<string | null>(tenantId);
 
   useEffect(() => {
-    if (previousTenantId.current !== tenantId) {
+    if (shouldResetTenantCache(previousTenantId.current, tenantId)) {
       queryClient.clear();
       previousTenantId.current = tenantId;
     }
@@ -33,14 +37,15 @@ function TenantCacheReset() {
 function TenantProtectedRoute({ component: Component }: { component: ComponentType }) {
   const tenantId = useTenantId();
   const [location, setLocation] = useLocation();
+  const path = location.split("?")[0] || "/";
 
   useEffect(() => {
-    if (!tenantId && location !== "/nouveau-client") {
+    if (shouldGateProductRoute(path, tenantId) && path !== "/nouveau-client") {
       setLocation("/nouveau-client");
     }
-  }, [location, setLocation, tenantId]);
+  }, [path, setLocation, tenantId]);
 
-  if (!tenantId) {
+  if (shouldGateProductRoute(path, tenantId)) {
     return <WatchOnboarding />;
   }
 
@@ -60,6 +65,7 @@ function AppRouter() {
         path="/recommandations"
         component={() => <TenantProtectedRoute component={Recommandations} />}
       />
+      {/* /admin-sources is intentionally outside the tenant gate: it is the operator console. */}
       <Route path="/admin-sources" component={AdminSources} />
       <Route component={NotFound} />
     </Switch>
