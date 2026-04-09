@@ -49,7 +49,7 @@ def _decode_value(value: str | None) -> object | None:
 
 def get_runtime_setting(setting_key: str, default: object | None = None) -> object | None:
     """Retourne la valeur runtime associee a une cle, ou une valeur par defaut."""
-    DatabaseManager().create_tables()
+    DatabaseManager(str(config.SQLITE_DB_PATH)).create_tables()
     with _get_connection() as connection:
         _ensure_runtime_settings_table(connection)
         row = connection.execute(
@@ -63,7 +63,7 @@ def get_runtime_setting(setting_key: str, default: object | None = None) -> obje
 
 def set_runtime_setting(setting_key: str, value: object) -> object:
     """Ecrit ou remplace une valeur runtime et la retourne."""
-    DatabaseManager().create_tables()
+    DatabaseManager(str(config.SQLITE_DB_PATH)).create_tables()
     serialized = _encode_value(value)
     now = datetime.now().isoformat()
     with _get_connection() as connection:

@@ -25,7 +25,7 @@ def _get_connection() -> sqlite3.Connection:
 
 def _ensure_schema() -> None:
     """Garantit que le schema plateforme est initialise."""
-    DatabaseManager().create_tables()
+    DatabaseManager(str(config.SQLITE_DB_PATH)).create_tables()
 
 
 def _row_to_dict(row: sqlite3.Row | None) -> dict[str, object] | None:
