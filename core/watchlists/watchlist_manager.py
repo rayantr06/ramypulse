@@ -141,6 +141,8 @@ def _uses_watch_seed_shape(filters: dict | None, scope_type: str | None = None) 
     """Determine si les filtres doivent utiliser le contrat watch_seed."""
     if scope_type == "watch_seed":
         return True
+    if scope_type in _VALID_SCOPE_TYPES:
+        return False
     if not filters:
         return False
     return any(key in _WATCH_SEED_SEMANTIC_KEYS for key in filters)
@@ -377,9 +379,13 @@ def update_watchlist(watchlist_id: str, updates: dict) -> bool:
     if "scope_type" in payload:
         payload["scope_type"] = _validate_scope_type(str(payload["scope_type"]))
 
+    effective_scope_type = str(payload.get("scope_type") or current["scope_type"])
+
     if "filters" in payload:
-        effective_scope_type = str(payload.get("scope_type") or current["scope_type"])
-        merged_filters = dict(current.get("filters") or {})
+        merged_filters = _normalize_filters(
+            current.get("filters"),
+            scope_type=effective_scope_type,
+        )
         merged_filters.update(dict(payload["filters"] or {}))
         normalized_filters = _normalize_filters(
             merged_filters,
@@ -388,12 +394,14 @@ def update_watchlist(watchlist_id: str, updates: dict) -> bool:
         if effective_scope_type == "watch_seed":
             _validate_watch_seed_filters(normalized_filters)
         payload["filters"] = _serialize_dict(normalized_filters)
-    elif payload.get("scope_type") == "watch_seed":
-        current_filters = _normalize_filters(
+    elif "scope_type" in payload:
+        normalized_filters = _normalize_filters(
             current.get("filters"),
-            scope_type="watch_seed",
+            scope_type=effective_scope_type,
         )
-        _validate_watch_seed_filters(current_filters)
+        if effective_scope_type == "watch_seed":
+            _validate_watch_seed_filters(normalized_filters)
+        payload["filters"] = _serialize_dict(normalized_filters)
 
     if "description" in payload:
         payload["description"] = str(payload["description"] or "").strip()

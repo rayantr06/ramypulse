@@ -302,6 +302,52 @@ def test_legacy_watchlists_keep_legacy_filter_shape(
     }
 
 
+def test_watch_seed_scope_transition_to_legacy_drops_seed_filter_shape(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Le passage de watch_seed vers un scope legacy doit supprimer les cles seed."""
+    _prepare_sqlite(monkeypatch, tmp_path)
+    manager = _import_or_fail("core.watchlists.watchlist_manager")
+
+    watchlist_id = manager.create_watchlist(
+        name="Transition seed",
+        description="watch seed",
+        scope_type="watch_seed",
+        filters={
+            "brand_name": "Cevital Elio",
+            "keywords": ["cevital elio"],
+            "seed_urls": ["https://example.test/seed"],
+        },
+    )
+
+    updated = manager.update_watchlist(
+        watchlist_id,
+        {
+            "scope_type": "region",
+            "filters": {
+                "wilaya": "oran",
+                "channel": "facebook",
+            },
+        },
+    )
+
+    watchlist = manager.get_watchlist(watchlist_id)
+
+    assert updated is True
+    assert watchlist is not None
+    assert watchlist["scope_type"] == "region"
+    assert watchlist["filters"] == {
+        "channel": "facebook",
+        "aspect": None,
+        "wilaya": "oran",
+        "product": None,
+        "sentiment": None,
+        "period_days": 7,
+        "min_volume": 10,
+    }
+
+
 def test_deactivate_watchlist_met_is_active_a_zero(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
