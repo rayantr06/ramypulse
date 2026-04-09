@@ -9,6 +9,7 @@ from typing import Callable
 
 from core.normalization.normalizer_pipeline import run_normalization_job
 from core.tenancy.artifact_refresh import refresh_tenant_artifacts
+from core.watch_runs.collectors.public_url_seed import collect_public_url_seed
 from core.watch_runs.raw_ingestion import insert_watch_documents
 from core.watch_runs.run_manager import (
     create_watch_run,
@@ -21,7 +22,9 @@ from core.watch_runs.run_manager import (
 
 CollectorFn = Callable[..., list[dict[str, object]]]
 
-DEFAULT_COLLECTORS: dict[str, CollectorFn] = {}
+DEFAULT_COLLECTORS: dict[str, CollectorFn] = {
+    "public_url_seed": collect_public_url_seed,
+}
 
 
 def _normalize_requested_channels(requested_channels: list[str]) -> list[str]:
