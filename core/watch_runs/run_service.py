@@ -9,6 +9,7 @@ from typing import Callable
 
 from core.normalization.normalizer_pipeline import run_normalization_job
 from core.tenancy.artifact_refresh import refresh_tenant_artifacts
+from core.watch_runs.collectors.google_maps_reviews import collect_google_maps_reviews
 from core.watch_runs.collectors.public_url_seed import collect_public_url_seed
 from core.watch_runs.collectors.web_keyword import collect_web_keyword_results
 from core.watch_runs.collectors.youtube_search import collect_youtube_search_results
@@ -28,6 +29,7 @@ DEFAULT_COLLECTORS: dict[str, CollectorFn] = {
     "public_url_seed": collect_public_url_seed,
     "web_search": collect_web_keyword_results,
     "youtube": collect_youtube_search_results,
+    "google_maps": collect_google_maps_reviews,
 }
 
 
@@ -81,6 +83,15 @@ def _invoke_with_supported_kwargs(function: Callable[..., object], **kwargs):
     return function(**supported_kwargs)
 
 
+def _normalize_collector_result(result: object) -> tuple[str, list[dict[str, object]], str | None]:
+    if isinstance(result, dict):
+        status = str(result.get("status") or "success")
+        documents = list(result.get("documents") or [])
+        reason = str(result.get("reason") or "").strip() or None
+        return status, documents, reason
+    return "success", list(result or []), None
+
+
 def execute_watch_run(
     run_id: str,
     *,
@@ -116,15 +127,15 @@ def execute_watch_run(
                 if collector is None:
                     raise RuntimeError(f"No watch collector configured for channel '{channel}'")
 
-                documents = list(
-                    _invoke_with_supported_kwargs(
-                        collector,
-                        client_id=client_id,
-                        watchlist_id=watchlist_id,
-                        channel=channel,
-                        run_id=run_id,
-                    )
-                    or []
+                collector_result = _invoke_with_supported_kwargs(
+                    collector,
+                    client_id=client_id,
+                    watchlist_id=watchlist_id,
+                    channel=channel,
+                    run_id=run_id,
+                )
+                collector_status, documents, collector_reason = _normalize_collector_result(
+                    collector_result
                 )
                 inserted = insert_watch_documents(
                     client_id=client_id,
@@ -137,8 +148,9 @@ def execute_watch_run(
                 finish_step(
                     run_id,
                     step_key,
-                    status="success",
+                    status=collector_status,
                     records_seen=inserted,
+                    error_message=collector_reason,
                     db_path=db_path,
                 )
             except Exception as exc:

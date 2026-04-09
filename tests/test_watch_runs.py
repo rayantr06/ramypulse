@@ -235,6 +235,43 @@ def test_execute_watch_run_handles_partial_collector_failure_and_runs_downstream
     assert source_ids == ["watch:client-a:facebook"]
 
 
+def test_execute_watch_run_keeps_run_ready_when_collector_is_skipped(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    db_path = _prepare_isolated_db(monkeypatch, tmp_path)
+    run_service = _import_module("core.watch_runs.run_service")
+    run_manager = _import_module("core.watch_runs.run_manager")
+
+    normalization_calls: list[dict[str, object]] = []
+
+    created = run_service.start_watch_run(
+        client_id="client-a",
+        watchlist_id="watchlist-001",
+        requested_channels=["google_maps"],
+        collectors={
+            "google_maps": lambda **kwargs: {
+                "status": "skipped",
+                "documents": [],
+                "reason": "missing_api_key",
+            }
+        },
+        run_async=False,
+        db_path=db_path,
+        normalization_fn=lambda **kwargs: normalization_calls.append(kwargs) or {"processed_count": 0},
+        refresh_fn=lambda **kwargs: {"client_id": kwargs["client_id"], "documents": 0},
+    )
+
+    run = run_manager.get_watch_run(created["run_id"], db_path=db_path)
+
+    assert run is not None
+    assert run["status"] == "ready"
+    assert run["records_collected"] == 0
+    assert run["steps"]["collect:google_maps"]["status"] == "skipped"
+    assert "missing_api_key" in (run["steps"]["collect:google_maps"]["error_message"] or "")
+    assert normalization_calls[0]["sync_run_id"] == created["run_id"]
+
+
 def test_execute_watch_run_marks_run_error_when_downstream_stage_raises(
     monkeypatch,
     tmp_path: Path,
