@@ -270,6 +270,27 @@ class SearchResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Clients / Tenancy
+# ---------------------------------------------------------------------------
+
+class ClientCreate(BaseModel):
+    client_name: str
+    industry: str | None = None
+
+
+class ClientSetActive(BaseModel):
+    client_id: str
+
+
+class ClientResponse(BaseModel):
+    client_id: str
+    client_name: str
+    industry: str | None = None
+    created_at: str | None = None
+    updated_at: str | None = None
+
+
+# ---------------------------------------------------------------------------
 # Admin (Ingestion & Sources)
 # ---------------------------------------------------------------------------
 

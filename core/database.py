@@ -38,6 +38,14 @@ _SCHEMA_STATEMENTS = {
             updated_at TEXT DEFAULT CURRENT_TIMESTAMP
         )
     """,
+    "runtime_settings": """
+        CREATE TABLE IF NOT EXISTS runtime_settings (
+            setting_key TEXT PRIMARY KEY,
+            setting_value TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """,
     "source_registry": """
         CREATE TABLE IF NOT EXISTS source_registry (
             source_id TEXT PRIMARY KEY,

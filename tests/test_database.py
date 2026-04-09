@@ -14,6 +14,7 @@ from core.database import DatabaseManager  # noqa: E402
 
 EXPECTED_TABLES = {
     "clients",
+    "runtime_settings",
     "source_registry",
     "sources",
     "source_sync_runs",

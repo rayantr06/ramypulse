@@ -191,6 +191,9 @@ BM25_METADATA_PATH: Path = INDEX_DIR / "bm25_metadata.json"
 DEFAULT_CLIENT_ID: str = "ramy_client_001"
 """Identifiant client unique pour le PoC mono-tenant."""
 
+SAFE_EXPO_CLIENT_ID: str = os.getenv("SAFE_EXPO_CLIENT_ID", DEFAULT_CLIENT_ID)
+"""Client de repli pour l'expo quand aucun tenant actif n'est défini."""
+
 # ---------------------------------------------------------------------------
 # Recommendation Agent
 # ---------------------------------------------------------------------------
