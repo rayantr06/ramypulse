@@ -18,6 +18,7 @@ load_dotenv()
 
 BASE_DIR: Path = Path(__file__).parent.resolve()
 DATA_DIR: Path = BASE_DIR / "data"
+TENANTS_DIR: Path = DATA_DIR / "tenants"
 MODELS_DIR: Path = BASE_DIR / "models"
 RAW_DATA_DIR: Path = DATA_DIR / "raw"
 PROCESSED_DATA_DIR: Path = DATA_DIR / "processed"
@@ -29,6 +30,7 @@ SECRETS_STORE_PATH: Path = SECRETS_DIR / "local_secrets.json"
 
 # Création automatique des dossiers si absents
 DATA_DIR.mkdir(parents=True, exist_ok=True)
+TENANTS_DIR.mkdir(parents=True, exist_ok=True)
 MODELS_DIR.mkdir(parents=True, exist_ok=True)
 RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
 PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
