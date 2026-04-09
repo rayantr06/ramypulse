@@ -97,6 +97,8 @@ CHANNELS: list[str] = [
     "audio",
     "youtube",
     "instagram",
+    "public_url_seed",
+    "web_search",
 ]
 """Canaux de collecte supportés."""
 
@@ -193,6 +195,9 @@ DEFAULT_CLIENT_ID: str = "ramy_client_001"
 
 SAFE_EXPO_CLIENT_ID: str = os.getenv("SAFE_EXPO_CLIENT_ID", DEFAULT_CLIENT_ID)
 """Client de repli pour l'expo quand aucun tenant actif n'est défini."""
+TAVILY_API_KEY: str = os.getenv("TAVILY_API_KEY", "")
+YOUTUBE_API_KEY: str = os.getenv("YOUTUBE_API_KEY", "")
+GOOGLE_MAPS_API_KEY: str = os.getenv("GOOGLE_MAPS_API_KEY", "")
 
 # ---------------------------------------------------------------------------
 # Recommendation Agent
