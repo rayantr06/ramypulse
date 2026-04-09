@@ -80,15 +80,19 @@ def collect_web_keyword_results(
     watchlist_id: str | None = None,
     keywords: list[str] | None = None,
     max_results: int = 5,
-) -> list[dict[str, object]]:
+) -> list[dict[str, object]] | dict[str, object]:
     """Run a keyword search and map hits into watch raw documents."""
     resolved_keywords = _resolve_keywords(
         client_id=client_id,
         watchlist_id=watchlist_id,
         keywords=keywords,
     )
-    if not resolved_keywords or not config.TAVILY_API_KEY or TavilyClient is None:
-        return []
+    if not resolved_keywords:
+        return {"status": "skipped", "documents": [], "reason": "missing_keywords"}
+    if not config.TAVILY_API_KEY:
+        return {"status": "skipped", "documents": [], "reason": "missing_api_key"}
+    if TavilyClient is None:
+        return {"status": "skipped", "documents": [], "reason": "missing_dependency"}
 
     query = " OR ".join(resolved_keywords)
     client = TavilyClient(api_key=config.TAVILY_API_KEY)

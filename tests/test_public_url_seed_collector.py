@@ -98,3 +98,15 @@ def test_collect_public_url_seed_rejects_cross_tenant_watchlist(monkeypatch) -> 
             client_id="tenant-alpha",
             watchlist_id="watch-001",
         )
+
+
+def test_collect_public_url_seed_skips_without_seed_urls() -> None:
+    collector = _import_module("core.watch_runs.collectors.public_url_seed")
+
+    documents = collector.collect_public_url_seed(
+        client_id="tenant-alpha",
+        brand_name="Cevital Elio",
+        seed_urls=[],
+    )
+
+    assert documents == {"status": "skipped", "documents": [], "reason": "missing_seed_urls"}

@@ -87,7 +87,7 @@ def collect_public_url_seed(
     watchlist_id: str | None = None,
     brand_name: str | None = None,
     seed_urls: list[str] | None = None,
-) -> list[dict[str, object]]:
+) -> list[dict[str, object]] | dict[str, object]:
     """Fetch public seed URLs and turn them into raw document payloads."""
     resolved_brand_name, resolved_seed_urls = _resolve_watch_seed_context(
         client_id=client_id,
@@ -95,6 +95,8 @@ def collect_public_url_seed(
         brand_name=brand_name,
         seed_urls=seed_urls,
     )
+    if not resolved_seed_urls:
+        return {"status": "skipped", "documents": [], "reason": "missing_seed_urls"}
 
     documents: list[dict[str, object]] = []
     for seed_url in resolved_seed_urls:

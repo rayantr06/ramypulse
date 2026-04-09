@@ -74,7 +74,7 @@ def test_collect_web_keyword_results_loads_keywords_from_watchlist(monkeypatch) 
     assert documents[0]["raw_payload"]["keywords"] == ["cevital", "elio"]
 
 
-def test_collect_web_keyword_results_returns_empty_without_api_key(monkeypatch) -> None:
+def test_collect_web_keyword_results_skips_without_api_key(monkeypatch) -> None:
     collector = _import_module("core.watch_runs.collectors.web_keyword")
 
     monkeypatch.setattr(collector.config, "TAVILY_API_KEY", "", raising=False)
@@ -84,4 +84,4 @@ def test_collect_web_keyword_results_returns_empty_without_api_key(monkeypatch) 
         keywords=["cevital", "elio"],
     )
 
-    assert documents == []
+    assert documents == {"status": "skipped", "documents": [], "reason": "missing_api_key"}

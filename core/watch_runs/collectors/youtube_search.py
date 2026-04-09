@@ -58,15 +58,19 @@ def collect_youtube_search_results(
     keywords: list[str] | None = None,
     max_videos: int = 5,
     max_comments: int = 10,
-) -> list[dict[str, object]]:
+) -> list[dict[str, object]] | dict[str, object]:
     """Collect top-level YouTube comments for search hits."""
     resolved_keywords = _resolve_keywords(
         client_id=client_id,
         watchlist_id=watchlist_id,
         keywords=keywords,
     )
-    if not resolved_keywords or not config.YOUTUBE_API_KEY or build is None:
-        return []
+    if not resolved_keywords:
+        return {"status": "skipped", "documents": [], "reason": "missing_keywords"}
+    if not config.YOUTUBE_API_KEY:
+        return {"status": "skipped", "documents": [], "reason": "missing_api_key"}
+    if build is None:
+        return {"status": "skipped", "documents": [], "reason": "missing_dependency"}
 
     query = " OR ".join(resolved_keywords)
     service = build("youtube", "v3", developerKey=config.YOUTUBE_API_KEY, cache_discovery=False)

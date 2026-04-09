@@ -103,3 +103,16 @@ def test_collect_youtube_search_results_loads_keywords_from_watchlist(monkeypatc
     )
 
     assert documents == []
+
+
+def test_collect_youtube_search_results_skips_without_api_key(monkeypatch) -> None:
+    collector = _import_module("core.watch_runs.collectors.youtube_search")
+
+    monkeypatch.setattr(collector.config, "YOUTUBE_API_KEY", "", raising=False)
+
+    documents = collector.collect_youtube_search_results(
+        client_id="tenant-alpha",
+        keywords=["elio"],
+    )
+
+    assert documents == {"status": "skipped", "documents": [], "reason": "missing_api_key"}
