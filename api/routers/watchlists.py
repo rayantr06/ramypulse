@@ -37,11 +37,12 @@ def _get_db_connection() -> sqlite3.Connection:
 def create_watchlist(data: WatchlistCreate):
     """Crée une nouvelle watchlist."""
     try:
+        payload = data.model_dump()
         watchlist_id = _core_create_watchlist(
-            name=data.name,
-            description=data.description,
-            scope_type=data.scope_type,
-            filters=data.filters,
+            name=payload["name"],
+            description=payload["description"],
+            scope_type=payload["scope_type"],
+            filters=payload["filters"],
         )
         return {"watchlist_id": watchlist_id, "status": "created"}
     except ValueError as e:
@@ -90,7 +91,9 @@ def get_watchlist(
 def update_watchlist(watchlist_id: str, data: WatchlistUpdate):
     """Met à jour les champs d'une watchlist existante."""
     try:
-        updates = {k: v for k, v in data.model_dump(exclude_unset=True).items() if v is not None}
+        updates = {
+            k: v for k, v in data.model_dump(exclude_unset=True).items() if v is not None
+        }
         if "name" in updates:
             updates["watchlist_name"] = updates.pop("name")
         updated = _core_update_watchlist(watchlist_id, updates)

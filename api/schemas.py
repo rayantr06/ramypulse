@@ -5,6 +5,8 @@ Définit les schemas de requête et réponse pour tous les routeurs.
 
 from __future__ import annotations
 
+from typing import Any, Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -351,15 +353,15 @@ class AutomationCycleTrigger(BaseModel):
 class WatchlistCreate(BaseModel):
     name: str = Field(..., min_length=1)
     description: str = ""
-    scope_type: str = "product"
-    filters: dict = Field(default_factory=dict)
+    scope_type: Literal["product", "region", "channel", "cross_dimension", "watch_seed"] = "product"
+    filters: dict[str, Any] = Field(default_factory=dict)
 
 
 class WatchlistUpdate(BaseModel):
     name: str | None = None
     description: str | None = None
-    scope_type: str | None = None
-    filters: dict | None = None
+    scope_type: Literal["product", "region", "channel", "cross_dimension", "watch_seed"] | None = None
+    filters: dict[str, Any] | None = None
     is_active: bool | None = None
 
 

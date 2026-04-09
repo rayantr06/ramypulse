@@ -158,6 +158,51 @@ def test_update_watchlist_supporte_une_mise_a_jour_partielle(
     assert watchlist["filters"]["min_volume"] == 25
 
 
+def test_watch_first_filters_create_watchlist_preserve_brand_seed_fields(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Le mode watch-first doit accepter watch_seed et conserver ses filtres riches."""
+    _prepare_sqlite(monkeypatch, tmp_path)
+    manager = _import_or_fail("core.watchlists.watchlist_manager")
+
+    watchlist_id = manager.create_watchlist(
+        name="Veille Cevital Elio",
+        description="Surveillance brand seed",
+        scope_type="watch_seed",
+        filters={
+            "brand_name": "  Cevital Elio  ",
+            "product_name": " Huile Elio ",
+            "keywords": [" cevital elio ", "elio", "", None],
+            "seed_urls": [" https://example.test/brand ", "https://example.test/product", ""],
+            "competitors": [" Ifri ", "Hamoud", "  "],
+            "channels": [" facebook ", "instagram", None],
+            "languages": [" fr ", "ar", ""],
+            "hashtags": [" #elio ", "#cevital", ""],
+            "period_days": "14",
+            "min_volume": "3",
+        },
+    )
+
+    watchlist = manager.get_watchlist(watchlist_id)
+
+    assert watchlist is not None
+    assert watchlist["scope_type"] == "watch_seed"
+    assert watchlist["filters"]["brand_name"] == "Cevital Elio"
+    assert watchlist["filters"]["product_name"] == "Huile Elio"
+    assert watchlist["filters"]["keywords"] == ["cevital elio", "elio"]
+    assert watchlist["filters"]["seed_urls"] == [
+        "https://example.test/brand",
+        "https://example.test/product",
+    ]
+    assert watchlist["filters"]["competitors"] == ["Ifri", "Hamoud"]
+    assert watchlist["filters"]["channels"] == ["facebook", "instagram"]
+    assert watchlist["filters"]["languages"] == ["fr", "ar"]
+    assert watchlist["filters"]["hashtags"] == ["#elio", "#cevital"]
+    assert watchlist["filters"]["period_days"] == 14
+    assert watchlist["filters"]["min_volume"] == 3
+
+
 def test_deactivate_watchlist_met_is_active_a_zero(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,

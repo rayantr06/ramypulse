@@ -14,6 +14,14 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 _DEFAULT_FILTERS = {
+    "brand_name": None,
+    "product_name": None,
+    "keywords": [],
+    "seed_urls": [],
+    "competitors": [],
+    "channels": [],
+    "languages": [],
+    "hashtags": [],
     "channel": None,
     "aspect": None,
     "wilaya": None,
@@ -22,7 +30,7 @@ _DEFAULT_FILTERS = {
     "period_days": 7,
     "min_volume": 10,
 }
-_VALID_SCOPE_TYPES = {"product", "region", "channel", "cross_dimension"}
+_VALID_SCOPE_TYPES = {"product", "region", "channel", "cross_dimension", "watch_seed"}
 _REQUIRED_COLUMNS = {
     "watchlist_id",
     "client_id",
@@ -87,11 +95,47 @@ def _normalize_int(value: object, default: int) -> int:
         return default
 
 
+def _normalize_string_list(
+    value: object,
+    *,
+    lowercase: bool = False,
+) -> list[str]:
+    """Normalise une liste de chaines en conservant l'ordre et l'unicite."""
+    if value in (None, ""):
+        return []
+
+    if isinstance(value, (list, tuple, set)):
+        raw_items = list(value)
+    else:
+        raw_items = [value]
+
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for item in raw_items:
+        text = _normalize_text(item)
+        if not text:
+            continue
+        candidate = text.lower() if lowercase else text
+        if candidate in seen:
+            continue
+        seen.add(candidate)
+        normalized.append(candidate)
+    return normalized
+
+
 def _normalize_filters(filters: dict | None) -> dict:
     """Valide et complete la structure de filtres contractuelle."""
     payload = dict(_DEFAULT_FILTERS)
     payload.update(filters or {})
     normalized = {
+        "brand_name": _normalize_text(payload.get("brand_name")),
+        "product_name": _normalize_text(payload.get("product_name")),
+        "keywords": _normalize_string_list(payload.get("keywords"), lowercase=True),
+        "seed_urls": _normalize_string_list(payload.get("seed_urls")),
+        "competitors": _normalize_string_list(payload.get("competitors")),
+        "channels": _normalize_string_list(payload.get("channels"), lowercase=True),
+        "languages": _normalize_string_list(payload.get("languages"), lowercase=True),
+        "hashtags": _normalize_string_list(payload.get("hashtags"), lowercase=True),
         "channel": _normalize_text(payload.get("channel")),
         "aspect": _normalize_text(payload.get("aspect")),
         "wilaya": _normalize_text(payload.get("wilaya")),
