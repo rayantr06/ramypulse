@@ -33,4 +33,3 @@ def get_tenant_paths(client_id: str) -> TenantPaths:
         faiss_index_prefix=embeddings_dir / "faiss_index",
         bm25_path=embeddings_dir / "bm25.pkl",
     )
-

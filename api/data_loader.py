@@ -16,6 +16,7 @@ import time
 import pandas as pd
 
 import config
+from core.tenancy.tenant_paths import get_tenant_paths
 
 logger = logging.getLogger(__name__)
 
@@ -84,9 +85,9 @@ def _load_from_sqlite(client_id: str) -> pd.DataFrame:
         return pd.DataFrame()
 
 
-def _export_sqlite_snapshot_to_parquet(df: pd.DataFrame) -> None:
-    """Écrit un snapshot parquet dérivé de SQLite pour compatibilité transitoire."""
-    parquet_path = config.ANNOTATED_PARQUET_PATH
+def _export_sqlite_snapshot_to_parquet(client_id: str, df: pd.DataFrame) -> None:
+    """Écrit un snapshot parquet tenant-scopé dérivé de SQLite."""
+    parquet_path = get_tenant_paths(client_id).annotated_path
     try:
         parquet_path.parent.mkdir(parents=True, exist_ok=True)
         df.to_parquet(parquet_path, index=False)
@@ -94,9 +95,9 @@ def _export_sqlite_snapshot_to_parquet(df: pd.DataFrame) -> None:
         logger.warning("Impossible d'exporter le snapshot annotated.parquet: %s", exc)
 
 
-def _load_from_parquet() -> pd.DataFrame:
-    """Charge le parquet legacy si présent."""
-    parquet_path = str(config.ANNOTATED_PARQUET_PATH)
+def _load_from_parquet(client_id: str) -> pd.DataFrame:
+    """Charge le parquet annoté tenant-scopé si présent."""
+    parquet_path = str(get_tenant_paths(client_id).annotated_path)
     try:
         if os.path.exists(parquet_path):
             logger.info("Chargement de %s en mémoire...", parquet_path)
@@ -126,10 +127,10 @@ def load_annotated(client_id: str | None = None, ttl: int = 300) -> pd.DataFrame
         if not sqlite_df.empty:
             df_cache[resolved_client_id] = sqlite_df
             cache_time[resolved_client_id] = time.time()
-            _export_sqlite_snapshot_to_parquet(sqlite_df)
+            _export_sqlite_snapshot_to_parquet(resolved_client_id, sqlite_df)
             return df_cache[resolved_client_id]
 
-        parquet_df = _load_from_parquet()
+        parquet_df = _load_from_parquet(resolved_client_id)
         df_cache[resolved_client_id] = parquet_df
         cache_time[resolved_client_id] = time.time()
         return df_cache[resolved_client_id]
