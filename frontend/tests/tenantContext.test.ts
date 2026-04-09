@@ -91,3 +91,34 @@ test("setStoredTenantId(null) removes the stored tenant", () => {
     restoreWindow();
   }
 });
+
+test("setStoredTenantId handles localStorage write failures safely", () => {
+  const storage = {
+    getItem: () => null,
+    setItem: () => {
+      throw new Error("quota exceeded");
+    },
+    removeItem: () => {
+      throw new Error("quota exceeded");
+    },
+    clear: () => {
+      throw new Error("quota exceeded");
+    },
+    key: () => null,
+    get length() {
+      return 0;
+    },
+  } as Storage;
+  const restoreWindow = installWindowWithLocalStorage(storage);
+
+  try {
+    assert.doesNotThrow(() => setStoredTenantId("ramy_client_002"));
+    assert.equal(getStoredTenantId(), "ramy_client_002");
+
+    assert.doesNotThrow(() => setStoredTenantId(null));
+    assert.equal(getStoredTenantId(), null);
+  } finally {
+    restoreWindow();
+    setStoredTenantId(null);
+  }
+});

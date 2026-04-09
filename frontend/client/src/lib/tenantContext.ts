@@ -2,6 +2,7 @@ import { useSyncExternalStore } from "react";
 
 export const STORAGE_KEY = "ramypulse.activeTenantId";
 const TENANT_CHANGE_EVENT = "ramypulse:tenant-change";
+let pendingTenantId: string | null | undefined;
 
 function getStorage(): Storage | null {
   if (typeof window === "undefined") {
@@ -22,26 +23,40 @@ function emitTenantChange() {
 }
 
 export function getStoredTenantId(): string | null {
+  if (pendingTenantId !== undefined) {
+    return pendingTenantId;
+  }
+
   const storage = getStorage();
   if (!storage) {
     return null;
   }
 
-  const value = storage.getItem(STORAGE_KEY);
-  return value && value.trim() ? value : null;
+  try {
+    const value = storage.getItem(STORAGE_KEY);
+    return value && value.trim() ? value : null;
+  } catch {
+    return null;
+  }
 }
 
 export function setStoredTenantId(clientId: string | null): void {
+  pendingTenantId = clientId?.trim() || null;
   const storage = getStorage();
   if (!storage) {
+    emitTenantChange();
     return;
   }
 
-  const trimmedClientId = clientId?.trim() || null;
-  if (trimmedClientId) {
-    storage.setItem(STORAGE_KEY, trimmedClientId);
-  } else {
-    storage.removeItem(STORAGE_KEY);
+  try {
+    if (pendingTenantId) {
+      storage.setItem(STORAGE_KEY, pendingTenantId);
+    } else {
+      storage.removeItem(STORAGE_KEY);
+    }
+    pendingTenantId = undefined;
+  } catch {
+    // Best-effort persistence: keep the in-memory tenant so the UI can proceed.
   }
 
   emitTenantChange();
