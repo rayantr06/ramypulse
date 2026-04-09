@@ -5,18 +5,20 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
-import Dashboard from "@/pages/Dashboard";
 import Explorateur from "@/pages/Explorateur";
 import Campagnes from "@/pages/Campagnes";
 import Alertes from "@/pages/Alertes";
 import Watchlists from "@/pages/Watchlists";
 import Recommandations from "@/pages/Recommandations";
 import AdminSources from "@/pages/AdminSources";
+import ProductHome from "@/pages/ProductHome";
+import WatchOnboarding from "@/pages/WatchOnboarding";
 
 function AppRouter() {
   return (
     <Switch>
-      <Route path="/" component={Dashboard} />
+      <Route path="/" component={ProductHome} />
+      <Route path="/nouveau-client" component={WatchOnboarding} />
       <Route path="/explorateur" component={Explorateur} />
       <Route path="/campagnes" component={Campagnes} />
       <Route path="/watchlists" component={Watchlists} />

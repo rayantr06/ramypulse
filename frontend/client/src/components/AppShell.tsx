@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { Sidebar } from "./Sidebar";
+import { TenantSwitcher } from "./TenantSwitcher";
 import { STITCH_AVATARS } from "@/lib/stitchAssets";
 
 interface AppShellProps {
@@ -60,6 +61,7 @@ export function AppShell({
           ) : null}
 
           <div className="flex items-center gap-6">
+            <TenantSwitcher />
             {headerRight}
             {hasSearch ? (
               <>
