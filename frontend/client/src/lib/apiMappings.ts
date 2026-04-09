@@ -55,11 +55,13 @@ export interface WatchSeedFilters {
   hashtags: string[];
 }
 
+export type WatchlistFilters = LegacyWatchlistFilters | WatchSeedFilters | UnknownRecord;
+
 export interface WatchlistCreatePayload {
   name: string;
   description: string;
   scope_type: WatchlistScopeType;
-  filters: Record<string, unknown>;
+  filters: WatchlistFilters;
 }
 
 export interface CampaignFormInput {

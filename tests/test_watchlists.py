@@ -203,6 +203,105 @@ def test_watch_first_filters_create_watchlist_preserve_brand_seed_fields(
     assert watchlist["filters"]["min_volume"] == 3
 
 
+def test_watch_first_filters_reject_empty_seed_payload(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Une watchlist watch_seed doit contenir au moins une vraie seed semantique."""
+    _prepare_sqlite(monkeypatch, tmp_path)
+    manager = _import_or_fail("core.watchlists.watchlist_manager")
+
+    with pytest.raises(ValueError, match="seed"):
+        manager.create_watchlist(
+            name="Veille vide",
+            description="aucune seed",
+            scope_type="watch_seed",
+            filters={
+                "brand_name": "   ",
+                "product_name": "",
+                "keywords": ["", " "],
+                "seed_urls": [],
+                "competitors": [""],
+                "hashtags": [],
+            },
+        )
+
+
+def test_watch_first_filters_partial_update_preserves_existing_seed_data(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Une mise a jour partielle ne doit pas ecraser les autres seeds deja stockees."""
+    _prepare_sqlite(monkeypatch, tmp_path)
+    manager = _import_or_fail("core.watchlists.watchlist_manager")
+
+    watchlist_id = manager.create_watchlist(
+        name="Veille Cevital",
+        description="seed",
+        scope_type="watch_seed",
+        filters={
+            "brand_name": "Cevital Elio",
+            "product_name": "Huile Elio",
+            "keywords": ["cevital elio", "elio"],
+            "seed_urls": ["https://example.test/brand"],
+            "competitors": ["Ifri"],
+            "hashtags": ["#elio"],
+        },
+    )
+
+    updated = manager.update_watchlist(
+        watchlist_id,
+        {
+            "filters": {
+                "channels": ["youtube"],
+                "languages": ["fr"],
+            }
+        },
+    )
+
+    watchlist = manager.get_watchlist(watchlist_id)
+
+    assert updated is True
+    assert watchlist is not None
+    assert watchlist["filters"]["brand_name"] == "Cevital Elio"
+    assert watchlist["filters"]["product_name"] == "Huile Elio"
+    assert watchlist["filters"]["keywords"] == ["cevital elio", "elio"]
+    assert watchlist["filters"]["seed_urls"] == ["https://example.test/brand"]
+    assert watchlist["filters"]["competitors"] == ["Ifri"]
+    assert watchlist["filters"]["hashtags"] == ["#elio"]
+    assert watchlist["filters"]["channels"] == ["youtube"]
+    assert watchlist["filters"]["languages"] == ["fr"]
+
+
+def test_legacy_watchlists_keep_legacy_filter_shape(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Les watchlists legacy ne doivent pas exposer les cles watch_seed par defaut."""
+    _prepare_sqlite(monkeypatch, tmp_path)
+    manager = _import_or_fail("core.watchlists.watchlist_manager")
+
+    watchlist_id = manager.create_watchlist(
+        name="Legacy Oran",
+        description="legacy",
+        scope_type="region",
+        filters=_raw_filters(),
+    )
+
+    watchlist = manager.get_watchlist(watchlist_id)
+
+    assert watchlist is not None
+    assert set(watchlist["filters"]) == {
+        "channel",
+        "aspect",
+        "wilaya",
+        "product",
+        "sentiment",
+        "period_days",
+        "min_volume",
+    }
+
+
 def test_deactivate_watchlist_met_is_active_a_zero(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
