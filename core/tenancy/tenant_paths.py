@@ -2,10 +2,19 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
 import config
+
+_TENANT_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
+
+
+def _validate_client_id(client_id: str) -> None:
+    """Reject invalid tenant IDs before building filesystem paths."""
+    if not _TENANT_ID_PATTERN.fullmatch(client_id):
+        raise ValueError(f"Invalid tenant id: {client_id!r}")
 
 
 @dataclass(frozen=True)
@@ -22,6 +31,7 @@ class TenantPaths:
 
 def get_tenant_paths(client_id: str) -> TenantPaths:
     """Build tenant-scoped paths from a client identifier."""
+    _validate_client_id(client_id)
     tenant_root = Path(config.DATA_DIR) / "tenants" / client_id
     processed_dir = tenant_root / "processed"
     embeddings_dir = tenant_root / "embeddings"

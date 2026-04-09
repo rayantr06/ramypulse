@@ -136,6 +136,29 @@ def _seed_tenant_sqlite(db_path: Path, client_id: str, text: str) -> None:
         connection.commit()
 
 
+def _write_stale_tenant_artifacts(client_id: str) -> None:
+    """Create stale tenant index artifacts for cleanup tests."""
+    paths = get_tenant_paths(client_id)
+    paths.embeddings_dir.mkdir(parents=True, exist_ok=True)
+    paths.annotated_path.parent.mkdir(parents=True, exist_ok=True)
+    paths.annotated_path.write_text("stale", encoding="utf-8")
+    paths.faiss_index_prefix.with_suffix(".faiss").write_text("stale faiss", encoding="utf-8")
+    paths.faiss_index_prefix.with_suffix(".json").write_text("stale json", encoding="utf-8")
+    paths.bm25_path.write_text("stale bm25", encoding="utf-8")
+
+
+def test_get_tenant_paths_rejects_invalid_or_traversal_ids(tmp_path, monkeypatch):
+    monkeypatch.setattr("config.DATA_DIR", tmp_path)
+
+    for client_id in ["..\\outside", "../outside", "C:/tmp/abs-target", "/tmp/abs-target", "tenant/evil", "tenant.."]:
+        try:
+            get_tenant_paths(client_id)
+        except ValueError as exc:
+            assert "Invalid tenant id" in str(exc)
+        else:
+            raise AssertionError(f"Expected ValueError for {client_id!r}")
+
+
 def test_load_annotated_uses_tenant_parquet_and_ignores_shared_global(tmp_path, monkeypatch):
     monkeypatch.setattr("config.DATA_DIR", tmp_path)
     monkeypatch.setattr("config.SQLITE_DB_PATH", tmp_path / "empty.sqlite")
@@ -203,3 +226,29 @@ def test_refresh_tenant_artifacts_uses_tenant_sqlite_and_writes_tenant_parquet(t
     assert pd.read_parquet(tenant_paths.annotated_path).iloc[0]["text"] == "tenant-a sqlite text"
     assert captured["input_path"] == tenant_paths.annotated_path
     assert captured["embeddings_dir"] == tenant_paths.embeddings_dir
+
+
+def test_refresh_tenant_artifacts_force_clears_stale_index_artifacts_when_empty(tmp_path, monkeypatch):
+    monkeypatch.setattr("config.DATA_DIR", tmp_path)
+    tenant_db = tmp_path / "sqlite" / "tenant-empty.sqlite"
+    monkeypatch.setattr("config.SQLITE_DB_PATH", tenant_db)
+    reset_cache()
+
+    _seed_tenant_sqlite(tenant_db, "tenant-empty", "unused")
+    with sqlite3.connect(tenant_db) as connection:
+        connection.execute("DELETE FROM enriched_signals")
+        connection.execute("DELETE FROM normalized_records")
+        connection.execute("DELETE FROM raw_documents")
+        connection.execute("DELETE FROM content_items")
+        connection.commit()
+
+    _write_stale_tenant_artifacts("tenant-empty")
+    tenant_paths = get_tenant_paths("tenant-empty")
+
+    summary = refresh_tenant_artifacts(client_id="tenant-empty", force=True)
+
+    assert summary["documents"] == 0
+    assert not tenant_paths.annotated_path.exists()
+    assert not tenant_paths.faiss_index_prefix.with_suffix(".faiss").exists()
+    assert not tenant_paths.faiss_index_prefix.with_suffix(".json").exists()
+    assert not tenant_paths.bm25_path.exists()

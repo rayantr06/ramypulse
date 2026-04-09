@@ -85,6 +85,11 @@ def _load_from_sqlite(client_id: str) -> pd.DataFrame:
         return pd.DataFrame()
 
 
+def load_annotated_from_sqlite(client_id: str) -> pd.DataFrame:
+    """Charge le dataset annoté directement depuis SQLite, sans fallback."""
+    return _load_from_sqlite(client_id)
+
+
 def _export_sqlite_snapshot_to_parquet(client_id: str, df: pd.DataFrame) -> None:
     """Écrit un snapshot parquet tenant-scopé dérivé de SQLite."""
     parquet_path = get_tenant_paths(client_id).annotated_path
