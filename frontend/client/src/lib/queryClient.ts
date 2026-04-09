@@ -1,6 +1,9 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 import { buildTenantHeaders, getStoredTenantId } from "./tenantContext";
 
+const ANONYMOUS_TENANT_CACHE_KEY = "__anonymous__";
+const tenantQueryClients = new Map<string, QueryClient>();
+
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
@@ -45,17 +48,36 @@ export const getQueryFn: <T>(options: {
     return await res.json();
   };
 
-export const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      queryFn: getQueryFn({ on401: "throw" }),
-      refetchInterval: false,
-      refetchOnWindowFocus: false,
-      staleTime: 30_000,
-      retry: false,
+function createQueryClient(): QueryClient {
+  return new QueryClient({
+    defaultOptions: {
+      queries: {
+        queryFn: getQueryFn({ on401: "throw" }),
+        refetchInterval: false,
+        refetchOnWindowFocus: false,
+        staleTime: 30_000,
+        retry: false,
+      },
+      mutations: {
+        retry: false,
+      },
     },
-    mutations: {
-      retry: false,
-    },
-  },
-});
+  });
+}
+
+function getTenantCacheKey(tenantId: string | null): string {
+  return tenantId ?? ANONYMOUS_TENANT_CACHE_KEY;
+}
+
+export function getTenantQueryClient(tenantId: string | null): QueryClient {
+  const cacheKey = getTenantCacheKey(tenantId);
+  const existingClient = tenantQueryClients.get(cacheKey);
+
+  if (existingClient) {
+    return existingClient;
+  }
+
+  const nextClient = createQueryClient();
+  tenantQueryClients.set(cacheKey, nextClient);
+  return nextClient;
+}

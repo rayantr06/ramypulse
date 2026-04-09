@@ -1,15 +1,12 @@
-import { useEffect, useRef, type ComponentType } from "react";
+import { useEffect, type ComponentType } from "react";
 import { Switch, Route, Router, useLocation } from "wouter";
 import { useHashLocation } from "wouter/use-hash-location";
-import { queryClient } from "./lib/queryClient";
+import { getTenantQueryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useTenantId } from "@/lib/tenantContext";
-import {
-  shouldGateProductRoute,
-  shouldResetTenantCache,
-} from "@/lib/routeAccess";
+import { shouldGateProductRoute } from "@/lib/routeAccess";
 import NotFound from "@/pages/not-found";
 import Explorateur from "@/pages/Explorateur";
 import Campagnes from "@/pages/Campagnes";
@@ -19,20 +16,6 @@ import Recommandations from "@/pages/Recommandations";
 import AdminSources from "@/pages/AdminSources";
 import ProductHome from "@/pages/ProductHome";
 import WatchOnboarding from "@/pages/WatchOnboarding";
-
-function TenantCacheReset() {
-  const tenantId = useTenantId();
-  const previousTenantId = useRef<string | null>(tenantId);
-
-  useEffect(() => {
-    if (shouldResetTenantCache(previousTenantId.current, tenantId)) {
-      queryClient.clear();
-      previousTenantId.current = tenantId;
-    }
-  }, [tenantId]);
-
-  return null;
-}
 
 function TenantProtectedRoute({ component: Component }: { component: ComponentType }) {
   const tenantId = useTenantId();
@@ -79,11 +62,13 @@ function useHashLocationWithSearchStripped(): ReturnType<typeof useHashLocation>
 }
 
 function App() {
+  const tenantId = useTenantId();
+  const queryClient = getTenantQueryClient(tenantId);
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
-        <TenantCacheReset />
         <Router hook={useHashLocationWithSearchStripped}>
           <AppRouter />
         </Router>
