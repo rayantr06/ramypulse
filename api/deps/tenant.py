@@ -2,12 +2,23 @@
 
 from __future__ import annotations
 
-from fastapi import Header
+from fastapi import Depends, Header, HTTPException
+
+from core.security.auth import AuthContext, get_current_client
 
 import config
 from core.runtime.runtime_settings_manager import get_runtime_setting
 
 _ACTIVE_CLIENT_SETTING_KEY = "active_client_id"
+
+
+def require_operator_client(
+    auth: AuthContext = Depends(get_current_client),
+) -> AuthContext:
+    """Valide que la cle authentifiee appartient au client operateur expo."""
+    if auth.client_id != config.SAFE_EXPO_CLIENT_ID:
+        raise HTTPException(status_code=403, detail="Operator access required")
+    return auth
 
 
 def resolve_client_id(
