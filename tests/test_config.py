@@ -131,11 +131,21 @@ class TestLabelsEtListes:
 
     def test_channels_5_elements(self):
         cfg = _reload_config()
-        assert len(cfg.CHANNELS) == 5
+        assert len(cfg.CHANNELS) == 9
 
     def test_channels_contenu(self):
         cfg = _reload_config()
-        attendus = {"facebook", "google_maps", "audio", "youtube", "instagram"}
+        attendus = {
+            "facebook",
+            "google_maps",
+            "audio",
+            "youtube",
+            "instagram",
+            "public_url_seed",
+            "web_search",
+            "press",
+            "reddit",
+        }
         assert set(cfg.CHANNELS) == attendus
 
 

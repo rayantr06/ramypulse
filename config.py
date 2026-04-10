@@ -99,6 +99,8 @@ CHANNELS: list[str] = [
     "instagram",
     "public_url_seed",
     "web_search",
+    "press",
+    "reddit",
 ]
 """Canaux de collecte supportés."""
 
@@ -198,6 +200,7 @@ SAFE_EXPO_CLIENT_ID: str = os.getenv("SAFE_EXPO_CLIENT_ID", "ramy-demo")
 TAVILY_API_KEY: str = os.getenv("TAVILY_API_KEY", "")
 YOUTUBE_API_KEY: str = os.getenv("YOUTUBE_API_KEY", "")
 GOOGLE_MAPS_API_KEY: str = os.getenv("GOOGLE_MAPS_API_KEY", "")
+PERPLEXITY_API_KEY: str = os.getenv("PERPLEXITY_API_KEY", "")
 
 # ---------------------------------------------------------------------------
 # Recommendation Agent
