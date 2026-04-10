@@ -41,10 +41,8 @@ function resolveStageState(run: WatchRunPayload | null | undefined, stageKey: st
   const stageSteps = Object.values(run.steps || {}).filter((step) => step.stage === stageKey);
   if (stageSteps.some((step) => step.status === "error")) return "error";
   if (stageSteps.some((step) => step.status === "running")) return "running";
-  if (stageSteps.some((step) => step.status === "skipped")) return "skipped";
-  if (stageSteps.length > 0 && stageSteps.every((step) => ["success", "skipped"].includes(step.status))) {
-    return "success";
-  }
+  if (stageSteps.length > 0 && stageSteps.some((step) => step.status === "success")) return "success";
+  if (stageSteps.length > 0 && stageSteps.every((step) => step.status === "skipped")) return "skipped";
   if (run.stage === "finished" && stageKey === "finished") return run.status === "error" ? "error" : "success";
   return "pending";
 }

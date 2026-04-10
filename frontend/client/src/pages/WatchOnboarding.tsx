@@ -19,7 +19,12 @@ export default function WatchOnboarding() {
       return res.json();
     },
     enabled: Boolean(runState?.run_id),
-    refetchInterval: runState?.run_id ? 1000 : false,
+    refetchInterval: (query) => {
+      if (!runState?.run_id) return false;
+      const data = query.state.data as { stage?: string } | undefined;
+      const TERMINAL = ["ready", "finished", "error", "partial_success"];
+      return data?.stage && TERMINAL.includes(data.stage) ? false : 1000;
+    },
   });
 
   return (
