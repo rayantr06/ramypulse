@@ -2,9 +2,13 @@
 Test du pipeline complet (DziriBERT + incongruité + LLM) sur les 9 cas originaux
 + 20 cas adversariaux. Compare DziriBERT seul vs pipeline.
 
+v2 : pipeline avec fenêtre glissante + gemini-2.5-flash (cf. inference/pipeline.py).
+
 Usage Colab :
-    !pip install -q transformers google-generativeai scikit-learn
-    !python test_pipeline.py --gemini-key AIzaSyAue3mHKzZvjxrL-3oOranYuy6TcX7psJ4
+    !pip install -q transformers google-genai scikit-learn
+    # Alternative si google-genai ne marche pas :
+    # !pip install -q transformers google-generativeai scikit-learn
+    !python evaluation/test_pipeline.py --gemini-key AIzaSyAue3mHKzZvjxrL-3oOranYuy6TcX7psJ4
 """
 
 from __future__ import annotations

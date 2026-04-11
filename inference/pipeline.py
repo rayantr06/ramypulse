@@ -8,39 +8,36 @@ Architecture (inspirée de la Sentiment Incongruity Detection, cf. SAIDS / ArSar
     └──────┬──────┘
            │
     ┌──────▼──────┐
-    │  DziriBERT  │──── conf ≥ seuil ET pas de conflit ──── ▶ RÉSULTAT DIRECT
-    │  (full text) │                                          (95% des cas)
+    │  DziriBERT  │──── neutre ou négatif direct ──── ▶ RÉSULTAT DIRECT
+    │  (full text) │                                     (90-95% des cas)
     └──────┬──────┘
-           │ conf ≥ seuil MAIS positif/négatif à vérifier
+           │ positif avec conf ≥ 0.60 ?
            │
-    ┌──────▼──────────────┐
-    │  Incongruity Check  │  DziriBERT sur moitié_1 vs moitié_2
-    │  (split & compare)  │  Détecte les retournements de polarité
-    └──────┬──────────────┘
-           │ incongruité détectée (moitié_1 ≠ moitié_2)
+    ┌──────▼──────────────────────┐
+    │  Incongruity Check          │  Fenêtre glissante : découpe le texte en
+    │  (sliding window sentiment) │  segments, cherche un segment négatif qui
+    └──────┬──────────────────────┘  contredit la prédiction positive globale
+           │ segment négatif trouvé ?
            │
     ┌──────▼──────┐
-    │  LLM Arbiter│  Gemini Flash — prompt spécialisé sarcasme/ironie
+    │  LLM Arbiter│  Gemini 2.5 Flash — prompt spécialisé sarcasme/ironie
     │  (fallback)  │  Ne traite que ~2-5% du trafic
     └─────────────┘
 
-Pourquoi cette approche :
-- La littérature SOTA (SarcasmBench 2024) montre que les LLMs sous-performent
-  les modèles supervisés pour la détection de sarcasme brute.
-- MAIS les LLMs excellent sur l'arbitrage quand on leur donne le contexte du conflit.
-- Le split+compare utilise DziriBERT lui-même comme détecteur d'incongruité
-  (pas de liste de marqueurs hardcodée = pas de maintenance).
-- Gemini Flash à 0.15$/1M tokens = coût négligeable sur 2-5% du trafic.
+Changements v2 (fix après test réel) :
+- gemini-2.0-flash → gemini-2.5-flash (2.0 déprécié, 404)
+- Split en 2 moitiés → fenêtre glissante (le split ratait les cas où le mot
+  positif se retrouvait dans les 2 moitiés, ex: "ممتاز ممتاز ممتاز خلاني مريض")
+- Incongruity check UNIQUEMENT sur les positifs (le sarcasme inverse du positif
+  vers négatif, pas l'inverse — les faux négatifs sont rares)
+- Suppression du seuil 0.95 qui laissait passer ADV-04 (conf 0.99 positif erroné)
+- Support des 2 SDK Gemini : ancien (google.generativeai) et nouveau (google.genai)
 
 Usage Colab :
     from inference.pipeline import SentimentPipeline
     pipe = SentimentPipeline(model_dir="...", gemini_api_key="...")
     result = pipe.predict("j'adore comment Ramy met autant de sucre")
     # → {"label": "negative", "confidence": 0.92, "method": "llm_arbitrage"}
-
-Usage production (sans Gemini) :
-    pipe = SentimentPipeline(model_dir="...", gemini_api_key=None)
-    # → Tourne en mode DziriBERT pur + flag incongruité
 """
 
 from __future__ import annotations
@@ -60,10 +57,19 @@ except ImportError:
     AutoTokenizer = None
     AutoModelForSequenceClassification = None
 
+# Support both old and new Gemini SDK
+_genai_client = None
+_genai_legacy = None
+
 try:
-    import google.generativeai as genai
+    from google import genai as _genai_new_sdk
 except ImportError:
-    genai = None
+    _genai_new_sdk = None
+
+try:
+    import google.generativeai as _genai_old_sdk
+except ImportError:
+    _genai_old_sdk = None
 
 logger = logging.getLogger(__name__)
 
@@ -74,30 +80,24 @@ logger = logging.getLogger(__name__)
 LABEL2ID = {"positive": 0, "negative": 1, "neutral": 2}
 ID2LABEL = {v: k for k, v in LABEL2ID.items()}
 
-# Seuils pour le pipeline
-CONFIDENCE_FLOOR = 0.55          # En dessous → toujours vérifier
-INCONGRUITY_CHECK_LABELS = {     # Labels qui méritent une vérification
-    "positive",                   # Positif peut cacher du sarcasme
-    "negative",                   # Négatif peut être un faux négatif
-}
-MIN_TEXT_LEN_FOR_SPLIT = 20      # Textes trop courts → pas de split
+# Seuils
+MIN_TEXT_LEN_FOR_CHECK = 15       # Textes trop courts → pas de vérification
+SEGMENT_NEGATIVE_THRESHOLD = 0.50  # Un segment est "négatif" si prob neg ≥ ce seuil
 
-# Prompt LLM pour l'arbitrage
+# Prompt LLM
 _LLM_ARBITRAGE_PROMPT = """Tu es un expert en analyse de sentiment pour les commentaires algériens sur les boissons (Ramy, Hamoud Boualem, etc.).
 
-Un modèle DziriBERT a classé ce commentaire comme "{dziribert_label}" (confiance: {dziribert_conf:.0%}).
-MAIS une analyse interne a détecté une INCONGRUITÉ de polarité :
-- Première partie du texte → {half1_label} ({half1_conf:.0%})
-- Seconde partie du texte → {half2_label} ({half2_conf:.0%})
-
+Un modèle DziriBERT a classé ce commentaire comme POSITIF (confiance: {dziribert_conf:.0%}).
+MAIS une analyse interne a détecté une contradiction :
+- Le texte global semble positif
+- Mais le segment "{neg_segment}" a été détecté comme négatif ({neg_conf:.0%})
 Cela peut indiquer du sarcasme, de l'ironie, ou un retournement de sens.
 
 Commentaire complet :
 "{text}"
 
 Classe ce commentaire dans exactement UNE des 3 classes : positive, negative, neutral.
-Considère le sarcasme algérien (Derja) : les gens disent parfois "ممتاز" ou "bravo" ou "j'adore" de manière ironique.
-Considère aussi les retournements : phrase positive suivie d'un twist négatif = négatif.
+Considère le sarcasme algérien (Derja) : les gens disent parfois "ممتاز" ou "bravo" ou "j'adore" ou "merci" de manière ironique quand ils sont déçus.
 
 Réponds UNIQUEMENT en JSON : {{"label": "...", "confidence": 0.0, "reasoning": "..."}}"""
 
@@ -111,10 +111,10 @@ class PredictionResult:
     """Résultat complet d'une prédiction du pipeline."""
     label: str
     confidence: float
-    method: str                          # "dziribert_direct" | "incongruity_check" | "llm_arbitrage"
-    distribution: dict = field(default_factory=dict)  # {label: prob}
-    incongruity: Optional[dict] = None   # Détails si incongruité détectée
-    llm_reasoning: Optional[str] = None  # Explication LLM si arbitrage
+    method: str                          # "dziribert_direct" | "llm_arbitrage" | "incongruity_flagged"
+    distribution: dict = field(default_factory=dict)
+    incongruity: Optional[dict] = None
+    llm_reasoning: Optional[str] = None
 
     def to_dict(self) -> dict:
         d = {
@@ -141,27 +141,15 @@ class SentimentPipeline:
         self,
         model_dir: str,
         gemini_api_key: Optional[str] = None,
-        gemini_model: str = "gemini-2.0-flash",
+        gemini_model: str = "gemini-2.5-flash",
         device: Optional[str] = None,
-        confidence_floor: float = CONFIDENCE_FLOOR,
         max_length: int = 128,
     ):
-        """
-        Args:
-            model_dir: Chemin vers le modèle DziriBERT fine-tuné.
-            gemini_api_key: Clé API Gemini. Si None, tourne en mode local pur
-                            (DziriBERT + flag incongruité, sans arbitrage LLM).
-            gemini_model: Modèle Gemini à utiliser pour l'arbitrage.
-            device: "cuda" ou "cpu". Auto-détecté si None.
-            confidence_floor: Seuil de confiance minimum pour skip l'incongruity check.
-            max_length: Longueur max de tokenisation.
-        """
         if AutoTokenizer is None:
             raise ImportError("transformers est requis : pip install transformers")
 
         self.device = torch.device(device or ("cuda" if torch.cuda.is_available() else "cpu"))
         self.max_length = max_length
-        self.confidence_floor = confidence_floor
 
         # ── Charger DziriBERT ──
         logger.info("Chargement DziriBERT depuis %s", model_dir)
@@ -170,23 +158,37 @@ class SentimentPipeline:
         self.model.to(self.device)
         self.model.eval()
 
-        # ── Configurer Gemini (optionnel) ──
+        # ── Configurer Gemini ──
         self.gemini_model_name = gemini_model
         self._gemini_available = False
-        if gemini_api_key and genai is not None:
-            genai.configure(api_key=gemini_api_key)
-            self._gemini = genai.GenerativeModel(gemini_model)
-            self._gemini_available = True
-            logger.info("LLM arbitrage activé : %s", gemini_model)
+        self._gemini_client = None   # new SDK
+        self._gemini_legacy = None   # old SDK
+
+        if gemini_api_key:
+            if _genai_new_sdk is not None:
+                try:
+                    self._gemini_client = _genai_new_sdk.Client(api_key=gemini_api_key)
+                    self._gemini_available = True
+                    logger.info("LLM arbitrage activé (new SDK) : %s", gemini_model)
+                except Exception as exc:
+                    logger.warning("New genai SDK init failed (%s), trying legacy.", exc)
+
+            if not self._gemini_available and _genai_old_sdk is not None:
+                try:
+                    _genai_old_sdk.configure(api_key=gemini_api_key)
+                    self._gemini_legacy = _genai_old_sdk.GenerativeModel(gemini_model)
+                    self._gemini_available = True
+                    logger.info("LLM arbitrage activé (legacy SDK) : %s", gemini_model)
+                except Exception as exc:
+                    logger.warning("Legacy genai SDK init failed: %s", exc)
+
+            if not self._gemini_available:
+                logger.warning("Aucun SDK Gemini disponible. pip install google-genai ou google-generativeai")
         else:
-            self._gemini = None
-            if gemini_api_key and genai is None:
-                logger.warning("google-generativeai non installé. Mode local pur.")
-            elif not gemini_api_key:
-                logger.info("Pas de clé Gemini. Mode local pur (DziriBERT + flag incongruité).")
+            logger.info("Pas de clé Gemini. Mode local pur.")
 
         # ── Compteurs ──
-        self.stats = {"total": 0, "direct": 0, "incongruity_checked": 0, "llm_arbitrated": 0}
+        self.stats = {"total": 0, "direct": 0, "incongruity_checked": 0, "llm_arbitrated": 0, "llm_flipped": 0}
 
     # ─── API publique ────────────────────────────────────────────
 
@@ -203,8 +205,9 @@ class SentimentPipeline:
         # ── Étape 1 : DziriBERT sur le texte complet ──
         full_pred = self._dziribert_predict(text)
 
-        # Neutral avec bonne confiance → direct (le sarcasme neutral est quasi inexistant)
-        if full_pred["label"] == "neutral" and full_pred["confidence"] >= self.confidence_floor:
+        # Si le modèle ne dit pas "positif" → résultat direct
+        # (le sarcasme transforme du faux-positif en vrai-négatif, pas l'inverse)
+        if full_pred["label"] != "positive":
             self.stats["direct"] += 1
             return PredictionResult(
                 label=full_pred["label"],
@@ -213,41 +216,39 @@ class SentimentPipeline:
                 distribution=full_pred["distribution"],
             )
 
-        # Confiance très haute → probablement correct
-        if full_pred["confidence"] >= 0.95:
-            # Même à haute confiance, on vérifie les positifs
-            # car ADV-04 (merci+plastique) et ADV-18 (نشكر ربي) → 0.99 positif erroné
-            # SAUF si le texte est trop court pour être sarcastique
-            if full_pred["label"] != "positive" or len(text) < MIN_TEXT_LEN_FOR_SPLIT:
-                self.stats["direct"] += 1
-                return PredictionResult(
-                    label=full_pred["label"],
-                    confidence=full_pred["confidence"],
-                    method="dziribert_direct",
-                    distribution=full_pred["distribution"],
-                )
+        # Texte trop court pour contenir du sarcasme structuré
+        if len(text) < MIN_TEXT_LEN_FOR_CHECK:
+            self.stats["direct"] += 1
+            return PredictionResult(
+                label=full_pred["label"],
+                confidence=full_pred["confidence"],
+                method="dziribert_direct",
+                distribution=full_pred["distribution"],
+            )
 
-        # ── Étape 2 : Incongruity check (split & compare) ──
-        if len(text) >= MIN_TEXT_LEN_FOR_SPLIT and full_pred["label"] in INCONGRUITY_CHECK_LABELS:
-            incongruity = self._check_incongruity(text, full_pred)
-            self.stats["incongruity_checked"] += 1
+        # ── Étape 2 : Incongruity check (fenêtre glissante) ──
+        self.stats["incongruity_checked"] += 1
+        incongruity = self._check_incongruity_sliding(text, full_pred)
 
-            if incongruity["detected"]:
-                # ── Étape 3 : LLM arbitrage (si disponible) ──
-                if self._gemini_available:
-                    self.stats["llm_arbitrated"] += 1
-                    return self._llm_arbitrate(text, full_pred, incongruity)
+        if incongruity["detected"]:
+            # ── Étape 3 : LLM arbitrage ──
+            if self._gemini_available:
+                self.stats["llm_arbitrated"] += 1
+                result = self._llm_arbitrate(text, full_pred, incongruity)
+                if result.label != full_pred["label"]:
+                    self.stats["llm_flipped"] += 1
+                return result
 
-                # Mode local : renvoyer le résultat DziriBERT + flag incongruité
-                return PredictionResult(
-                    label=full_pred["label"],
-                    confidence=full_pred["confidence"] * 0.7,  # Pénaliser la confiance
-                    method="incongruity_flagged",
-                    distribution=full_pred["distribution"],
-                    incongruity=incongruity,
-                )
+            # Mode local : flag l'incongruité + pénaliser la confiance
+            return PredictionResult(
+                label=full_pred["label"],
+                confidence=full_pred["confidence"] * 0.6,
+                method="incongruity_flagged",
+                distribution=full_pred["distribution"],
+                incongruity=incongruity,
+            )
 
-        # Pas d'incongruité → résultat DziriBERT direct
+        # Pas d'incongruité → positif sincère
         self.stats["direct"] += 1
         return PredictionResult(
             label=full_pred["label"],
@@ -294,99 +295,101 @@ class SentimentPipeline:
             "distribution": {ID2LABEL[i]: float(probs[i]) for i in range(len(probs))},
         }
 
-    # ─── Incongruity detection ───────────────────────────────────
+    # ─── Incongruity detection v2 : fenêtre glissante ────────────
 
-    def _split_text(self, text: str) -> tuple[str, str]:
-        """Découpe le texte en 2 moitiés sémantiques.
+    def _segment_text(self, text: str) -> list[str]:
+        """Découpe le texte en segments naturels (clauses).
 
-        Stratégie : cherche un séparateur naturel (virgule, point, بصح, mais, mais, w )
-        près du milieu. Sinon, coupe au milieu sur un espace.
+        Stratégie multi-niveaux :
+        1. Séparer sur les ponctuations et connecteurs forts (virgule, point, بصح, mais)
+        2. Si pas assez de segments, séparer sur les espaces en groupes de 4-5 mots
         """
         # Séparateurs sémantiques (algérien + français)
-        separators = [
-            r'،',           # virgule arabe
-            r',',           # virgule latine
-            r'\.',          # point
-            r'\bبصح\b',     # "mais" en Derja
-            r'\bمع ذلك\b',   # "cependant" en arabe
-            r'\bmais\b',    # français
-            r'\bw\b',       # "et" en Arabizi (souvent marque un pivot)
-            r'\bبصراحة\b',   # "franchement"
-        ]
+        split_pattern = r'[،,\.!?؟]+|\bبصح\b|\bمع ذلك\b|\bmais\b|\bبصراحة\b'
+        parts = re.split(split_pattern, text, flags=re.IGNORECASE)
+        segments = [p.strip() for p in parts if p and len(p.strip()) >= 5]
 
-        mid = len(text) // 2
-        best_pos = None
-        best_dist = len(text)
+        # Si on a au moins 2 segments → ok
+        if len(segments) >= 2:
+            return segments
 
-        for sep in separators:
-            for match in re.finditer(sep, text, re.IGNORECASE):
-                pos = match.start()
-                dist = abs(pos - mid)
-                if dist < best_dist and pos > 5 and pos < len(text) - 5:
-                    best_dist = dist
-                    best_pos = pos
+        # Fallback : groupes de 4 mots (fenêtre glissante avec pas de 2)
+        words = text.split()
+        if len(words) < 6:
+            return [text]
 
-        if best_pos is not None and best_dist < len(text) * 0.4:
-            return text[:best_pos].strip(), text[best_pos:].strip()
+        window_size = min(5, len(words) // 2)
+        step = max(1, window_size // 2)
+        segments = []
+        for i in range(0, len(words) - window_size + 1, step):
+            segment = " ".join(words[i:i + window_size])
+            if len(segment) >= 5:
+                segments.append(segment)
 
-        # Fallback : couper au milieu sur un espace
-        space_pos = text.find(' ', mid)
-        if space_pos == -1:
-            space_pos = mid
-        return text[:space_pos].strip(), text[space_pos:].strip()
+        return segments if segments else [text]
 
-    def _check_incongruity(self, text: str, full_pred: dict) -> dict:
-        """Détecte une incongruité de polarité entre les 2 moitiés du texte."""
-        half1, half2 = self._split_text(text)
+    def _check_incongruity_sliding(self, text: str, full_pred: dict) -> dict:
+        """Détecte une incongruité par fenêtre glissante.
 
-        # Si une moitié est trop courte, pas d'incongruity check fiable
-        if len(half1) < 5 or len(half2) < 5:
-            return {"detected": False, "reason": "halves_too_short"}
+        Si le texte global est positif mais qu'UN segment est fortement négatif,
+        c'est un signal de sarcasme ou de retournement.
+        """
+        segments = self._segment_text(text)
 
-        pred1 = self._dziribert_predict(half1)
-        pred2 = self._dziribert_predict(half2)
+        if len(segments) < 2:
+            return {"detected": False, "reason": "text_too_short", "segments": []}
 
-        # Incongruité = les 2 moitiés ont des polarités OPPOSÉES
-        polarity_conflict = (
-            (pred1["label"] == "positive" and pred2["label"] == "negative")
-            or (pred1["label"] == "negative" and pred2["label"] == "positive")
-        )
+        # Prédire chaque segment
+        segment_preds = []
+        worst_neg_score = 0.0
+        worst_neg_segment = None
+        worst_neg_pred = None
 
-        # Incongruité aussi si une moitié contredit la prédiction globale
-        half_contradicts_full = (
-            (full_pred["label"] == "positive" and pred2["label"] == "negative" and pred2["confidence"] >= 0.5)
-            or (full_pred["label"] == "negative" and pred2["label"] == "positive" and pred2["confidence"] >= 0.5)
-        )
+        for seg in segments:
+            pred = self._dziribert_predict(seg)
+            seg_info = {
+                "text": seg[:60],
+                "label": pred["label"],
+                "confidence": round(pred["confidence"], 3),
+                "neg_prob": round(pred["distribution"].get("negative", 0), 3),
+            }
+            segment_preds.append(seg_info)
 
-        detected = polarity_conflict or half_contradicts_full
+            # Tracker le segment le plus négatif
+            neg_prob = pred["distribution"].get("negative", 0)
+            if neg_prob > worst_neg_score:
+                worst_neg_score = neg_prob
+                worst_neg_segment = seg
+                worst_neg_pred = pred
+
+        # Incongruité = global positif MAIS au moins un segment fortement négatif
+        detected = worst_neg_score >= SEGMENT_NEGATIVE_THRESHOLD
 
         return {
             "detected": detected,
-            "half1": {"text": half1[:50], "label": pred1["label"], "confidence": round(pred1["confidence"], 3)},
-            "half2": {"text": half2[:50], "label": pred2["label"], "confidence": round(pred2["confidence"], 3)},
-            "polarity_conflict": polarity_conflict,
-            "half_contradicts_full": half_contradicts_full,
+            "global_label": full_pred["label"],
+            "global_confidence": round(full_pred["confidence"], 3),
+            "worst_neg_segment": worst_neg_segment[:60] if worst_neg_segment else None,
+            "worst_neg_score": round(worst_neg_score, 3),
+            "num_segments": len(segments),
+            "segments": segment_preds,
         }
 
     # ─── LLM arbitrage ───────────────────────────────────────────
 
     def _llm_arbitrate(self, text: str, full_pred: dict, incongruity: dict) -> PredictionResult:
-        """Appelle Gemini Flash pour arbitrer un cas d'incongruité."""
+        """Appelle Gemini pour arbitrer un cas d'incongruité."""
         prompt = _LLM_ARBITRAGE_PROMPT.format(
             text=text,
-            dziribert_label=full_pred["label"],
             dziribert_conf=full_pred["confidence"],
-            half1_label=incongruity["half1"]["label"],
-            half1_conf=incongruity["half1"]["confidence"],
-            half2_label=incongruity["half2"]["label"],
-            half2_conf=incongruity["half2"]["confidence"],
+            neg_segment=incongruity.get("worst_neg_segment", ""),
+            neg_conf=incongruity.get("worst_neg_score", 0),
         )
 
         try:
-            response = self._gemini.generate_content(prompt)
-            raw = response.text.strip()
+            raw = self._call_gemini(prompt)
 
-            # Extraire le JSON de la réponse (peut être entouré de markdown)
+            # Extraire le JSON
             json_match = re.search(r'\{[^}]+\}', raw)
             if json_match:
                 parsed = json.loads(json_match.group())
@@ -411,11 +414,27 @@ class SentimentPipeline:
 
         except Exception as exc:
             logger.warning("LLM arbitrage échoué (%s). Fallback DziriBERT.", exc)
-            # Fallback : DziriBERT avec confiance pénalisée
             return PredictionResult(
                 label=full_pred["label"],
-                confidence=full_pred["confidence"] * 0.7,
+                confidence=full_pred["confidence"] * 0.6,
                 method="llm_arbitrage_failed",
                 distribution=full_pred["distribution"],
                 incongruity=incongruity,
             )
+
+    def _call_gemini(self, prompt: str) -> str:
+        """Appelle Gemini via le SDK disponible (new ou legacy)."""
+        if self._gemini_client is not None:
+            # New SDK (google.genai)
+            response = self._gemini_client.models.generate_content(
+                model=self.gemini_model_name,
+                contents=prompt,
+            )
+            return response.text.strip()
+
+        if self._gemini_legacy is not None:
+            # Legacy SDK (google.generativeai)
+            response = self._gemini_legacy.generate_content(prompt)
+            return response.text.strip()
+
+        raise RuntimeError("Aucun SDK Gemini configuré")
