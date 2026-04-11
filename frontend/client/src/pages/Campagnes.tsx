@@ -9,6 +9,8 @@ import {
   mapCampaignOverview,
   mapCampaignImpact,
 } from "@/lib/apiMappings";
+import { toast } from "@/hooks/use-toast";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { filterCampaignViews } from "@/lib/pageSearchFilters";
 import { STITCH_AVATARS } from "@/lib/stitchAssets";
 
@@ -299,6 +301,13 @@ export default function Campagnes() {
       });
       setKeywords([]);
     },
+    onError: (error: Error) => {
+      toast({
+        title: "Erreur création",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   const allCampaigns = campaigns ?? [];
@@ -435,9 +444,21 @@ export default function Campagnes() {
             </div>
           </div>
           <div className="flex gap-3">
-            <button className="px-4 py-2 bg-surface-container-high hover:bg-surface-bright text-on-surface text-xs font-bold transition-all rounded-sm">
-              EXPORTER DATA
-            </button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex cursor-not-allowed">
+                    <button
+                      disabled
+                      className="px-4 py-2 bg-surface-container-high text-on-surface text-xs font-bold rounded-sm opacity-50 cursor-not-allowed"
+                    >
+                      EXPORTER DATA
+                    </button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>Bientôt disponible</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <button
               onClick={focusCampaignComposer}
               className="px-6 py-2 bg-gradient-to-r from-primary to-primary-container text-on-primary-fixed text-xs font-bold transition-transform active:scale-95 shadow-lg shadow-primary/10 rounded-sm"

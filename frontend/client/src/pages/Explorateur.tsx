@@ -8,7 +8,15 @@ import {
   mapExplorerSearchResults,
   mapExplorerVerbatims,
 } from "@/lib/apiMappings";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { STITCH_AVATARS } from "@/lib/stitchAssets";
+
+const SENTIMENT_OPTIONS = ["positif", "négatif", "neutre"];
+const WILAYA_OPTIONS = [
+  "Alger", "Oran", "Constantine", "Annaba", "Blida", "Batna", "Sétif", "Tizi Ouzou",
+  "Béjaïa", "Djelfa", "Biskra", "Mostaganem", "Tlemcen", "Médéa", "Msila",
+];
 
 const SOURCES = [
   { id: "facebook", label: "Facebook", icon: "social_leaderboard", color: "#1877F2" },
@@ -59,6 +67,13 @@ function getSentimentClass(sentiment: string) {
   ) {
     return "text-emerald-400";
   }
+  if (
+    normalized.includes("tres_negatif") ||
+    normalized.includes("tres negatif") ||
+    normalized.includes("très négatif")
+  ) {
+    return "text-red-700";
+  }
   if (normalized.includes("positif")) return "text-emerald-500";
   if (normalized.includes("negatif") || normalized.includes("négatif")) {
     return "text-red-400";
@@ -74,6 +89,13 @@ function getSentimentDot(sentiment: string) {
     normalized.includes("très positif")
   ) {
     return "bg-emerald-400";
+  }
+  if (
+    normalized.includes("tres_negatif") ||
+    normalized.includes("tres negatif") ||
+    normalized.includes("très négatif")
+  ) {
+    return "bg-red-900/30";
   }
   if (normalized.includes("positif")) return "bg-emerald-500";
   if (normalized.includes("negatif") || normalized.includes("négatif")) return "bg-red-500";
@@ -99,6 +121,9 @@ function formatSentimentLabel(sentiment: string) {
   const normalized = sentiment.toLowerCase();
   if (normalized.includes("tres_positif") || normalized.includes("tres positif")) {
     return "Très Positif";
+  }
+  if (normalized.includes("tres_negatif") || normalized.includes("tres negatif")) {
+    return "Très Négatif";
   }
   if (normalized.includes("positif")) return "Positif";
   if (normalized.includes("negatif")) return "Négatif";
@@ -182,6 +207,8 @@ export default function Explorateur() {
   const [activeSearch, setActiveSearch] = useState("");
   const [activeSources, setActiveSources] = useState<string[]>(["facebook"]);
   const [page, setPage] = useState(1);
+  const [filterSentiment, setFilterSentiment] = useState<string>("");
+  const [filterWilaya, setFilterWilaya] = useState<string>("");
 
   const channelFilter = activeSources.length === 1 ? activeSources[0] : null;
 
@@ -332,13 +359,59 @@ export default function Explorateur() {
               );
             })}
             <div className="h-6 w-px bg-outline-variant/20 mx-1"></div>
-            <button
-              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface-variant text-xs font-semibold transition-colors"
-              type="button"
-            >
-              <span className="material-symbols-outlined text-sm">tune</span>
-              Filtrer
-            </button>
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface-variant text-xs font-semibold transition-colors"
+                  type="button"
+                >
+                  <span className="material-symbols-outlined text-sm">tune</span>
+                  Filtrer
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-60 space-y-4 p-4">
+                <div className="space-y-2">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+                    Sentiment
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {SENTIMENT_OPTIONS.map((sentiment) => (
+                      <button
+                        key={sentiment}
+                        type="button"
+                        onClick={() =>
+                          setFilterSentiment((prev) => (prev === sentiment ? "" : sentiment))
+                        }
+                        className={`px-2 py-1 rounded text-[10px] font-bold uppercase transition-colors ${
+                          filterSentiment === sentiment
+                            ? "bg-primary text-on-primary-fixed"
+                            : "bg-surface-container-high text-on-surface-variant hover:text-on-surface"
+                        }`}
+                      >
+                        {sentiment}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">
+                    Wilaya
+                  </p>
+                  <select
+                    className="w-full bg-surface-container-high border-none rounded text-xs py-1.5 px-2 focus:ring-1 focus:ring-primary/40 focus:outline-none"
+                    value={filterWilaya}
+                    onChange={(e) => setFilterWilaya(e.target.value)}
+                  >
+                    <option value="">Toutes</option>
+                    {WILAYA_OPTIONS.map((wilaya) => (
+                      <option key={wilaya} value={wilaya}>
+                        {wilaya}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
         </section>
 
@@ -487,13 +560,23 @@ export default function Explorateur() {
                 Base de données complète des interactions clients
               </p>
             </div>
-            <button
-              className="flex items-center gap-2 px-3 py-1.5 rounded bg-surface-container-highest text-on-surface-variant text-[10px] font-black uppercase tracking-widest hover:text-on-surface transition-colors"
-              type="button"
-            >
-              <span className="material-symbols-outlined text-base">download</span>
-              Exporter
-            </button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex cursor-not-allowed">
+                    <button
+                      disabled
+                      className="flex items-center gap-2 px-3 py-1.5 rounded bg-surface-container-highest text-on-surface-variant text-[10px] font-black uppercase tracking-widest opacity-50 cursor-not-allowed"
+                      type="button"
+                    >
+                      <span className="material-symbols-outlined text-base">download</span>
+                      Exporter
+                    </button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>Bientôt disponible</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
 
           <div className="overflow-x-auto">

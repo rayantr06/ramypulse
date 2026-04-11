@@ -205,6 +205,10 @@ function statusLabel(status: string): { label: string; color: string; dotColor: 
   return { label: "ÉCHOUÉ", color: "text-error", dotColor: "bg-error" };
 }
 
+function isMissingBulkStatusEndpoint(error: unknown): boolean {
+  return error instanceof Error && /^(404|405):/.test(error.message);
+}
+
 export default function Recommandations() {
   const queryClientHook = useQueryClient();
   const [genForm, setGenForm] = useState({
@@ -213,6 +217,7 @@ export default function Recommandations() {
     model: "",
   });
   const [searchQuery, setSearchQuery] = useState("");
+  const [isArchivingAll, setIsArchivingAll] = useState(false);
 
   const { data: providersRaw } = useQuery<ProviderGroup[]>({
     queryKey: ["/api/recommendations/providers"],
@@ -282,9 +287,6 @@ export default function Recommandations() {
       const res = await apiRequest("PUT", `/api/recommendations/${id}/status`, { status });
       return res.json();
     },
-    onSuccess: () => {
-      queryClientHook.invalidateQueries({ queryKey: ["/api/recommendations"] });
-    },
   });
 
   const contextData = context ?? {
@@ -309,6 +311,48 @@ export default function Recommandations() {
     activeRecos[0]?.provider || latestRecommendation?.provider || "",
     activeRecos[0]?.model || latestRecommendation?.model || "",
   );
+
+  const invalidateRecommendations = async () => {
+    await queryClientHook.invalidateQueries({ queryKey: ["/api/recommendations"] });
+  };
+
+  const handleRecommendationStatusChange = async (
+    id: string,
+    status: "archived" | "dismissed",
+  ) => {
+    await updateStatusMutation.mutateAsync({ id, status });
+    await invalidateRecommendations();
+  };
+
+  const handleArchiveAll = async () => {
+    const ids = activeRecos.map((recommendation) => recommendation.id);
+    if (!ids.length) return;
+
+    setIsArchivingAll(true);
+    try {
+      try {
+        await apiRequest("/api/recommendations/bulk-status", {
+          method: "POST",
+          body: JSON.stringify({ ids, status: "archived" }),
+        });
+      } catch (error) {
+        if (!isMissingBulkStatusEndpoint(error)) {
+          throw error;
+        }
+        await Promise.all(
+          ids.map((id) =>
+            updateStatusMutation.mutateAsync({
+              id,
+              status: "archived",
+            }),
+          ),
+        );
+      }
+      await invalidateRecommendations();
+    } finally {
+      setIsArchivingAll(false);
+    }
+  };
 
   if (!recoLoading && (recommendations ?? []).length === 0) {
     return (
@@ -528,15 +572,8 @@ export default function Recommandations() {
             <div className="flex gap-2">
               <button
                 className="bg-surface-container-high px-4 py-2 rounded-sm text-xs font-bold hover:bg-surface-bright transition-colors disabled:opacity-50"
-                disabled={!activeRecos.length || updateStatusMutation.isPending}
-                onClick={() => {
-                  activeRecos.forEach((recommendation) => {
-                    updateStatusMutation.mutate({
-                      id: recommendation.id,
-                      status: "archived",
-                    });
-                  });
-                }}
+                disabled={!activeRecos.length || updateStatusMutation.isPending || isArchivingAll}
+                onClick={() => void handleArchiveAll()}
                 type="button"
               >
                 Tout Archiver
@@ -623,10 +660,7 @@ export default function Recommandations() {
                     <div className="flex gap-2">
                       <button
                         onClick={() =>
-                          updateStatusMutation.mutate({
-                            id: recommendation.id,
-                            status: "archived",
-                          })
+                          void handleRecommendationStatusChange(recommendation.id, "archived")
                         }
                         className="flex-1 py-2 rounded-sm bg-primary/10 text-primary text-[11px] font-bold hover:bg-primary/20 transition-all"
                       >
@@ -634,10 +668,7 @@ export default function Recommandations() {
                       </button>
                       <button
                         onClick={() =>
-                          updateStatusMutation.mutate({
-                            id: recommendation.id,
-                            status: "dismissed",
-                          })
+                          void handleRecommendationStatusChange(recommendation.id, "dismissed")
                         }
                         className="p-2 rounded-sm bg-surface-container-highest text-gray-400 hover:text-white transition-all"
                       >

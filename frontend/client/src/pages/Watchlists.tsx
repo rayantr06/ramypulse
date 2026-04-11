@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useLocation } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
 import { apiRequest } from "@/lib/queryClient";
@@ -90,6 +91,7 @@ function ScopeBadge({ scope }: { scope: string }) {
 }
 
 export default function Watchlists() {
+  const [, setLocation] = useLocation();
   const [tab, setTab] = useState<TabFilter>("Toutes");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -535,7 +537,10 @@ export default function Watchlists() {
                 </>
               )}
 
-              <button className="w-full py-3 bg-surface-container-highest hover:bg-surface-bright transition-colors rounded-lg text-xs font-bold uppercase tracking-widest text-on-surface">
+              <button
+                className="w-full py-3 bg-surface-container-highest hover:bg-surface-bright transition-colors rounded-lg text-xs font-bold uppercase tracking-widest text-on-surface"
+                onClick={() => setLocation(`/explorateur?watchlist=${selectedWatchlist.id}`)}
+              >
                 Voir les détails analytiques
               </button>
             </div>

@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { AppShell } from "@/components/AppShell";
 import { EmptyTenantState } from "@/components/EmptyTenantState";
 import { apiRequest } from "@/lib/queryClient";
@@ -139,6 +140,7 @@ function SeverityBadge({ severity }: { severity: string }) {
 }
 
 export default function Dashboard() {
+  const [, navigate] = useLocation();
   const { data: summary, isLoading: summaryLoading } = useQuery<DashboardSummaryView>({
     queryKey: ["/api/dashboard/summary"],
     queryFn: async () => {
@@ -332,6 +334,7 @@ export default function Dashboard() {
                 {currentAlerts.map((alert) => (
                   <div
                     key={alert.id}
+                    onClick={() => navigate("/alertes")}
                     className="flex items-center gap-4 p-4 bg-surface-container-low hover:bg-surface-container-high transition-colors duration-200 group cursor-pointer rounded-sm"
                     data-testid={`alert-card-${alert.id}`}
                   >
@@ -382,6 +385,7 @@ export default function Dashboard() {
               {currentActions.map((action) => (
                 <div
                   key={action.id}
+                  onClick={() => navigate("/recommandations")}
                   className="bg-surface-container-low border border-outline-variant/10 p-6 hover:bg-surface-container-high transition-all duration-300 group cursor-pointer rounded-sm"
                   data-testid={`action-card-${action.id}`}
                 >
@@ -407,7 +411,11 @@ export default function Dashboard() {
                   <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-3">
                     {action.targetPlatform}
                   </p>
-                  <button className="w-full py-2.5 bg-gradient-to-r from-primary to-primary-container text-on-primary-fixed text-[11px] font-bold rounded-sm group-hover:scale-[1.02] transition-transform uppercase tracking-wider">
+                  <button
+                    className="w-full py-2.5 bg-gradient-to-r from-primary to-primary-container text-on-primary-fixed text-[11px] font-bold rounded-sm group-hover:scale-[1.02] transition-transform uppercase tracking-wider"
+                    onClick={() => navigate("/recommandations")}
+                    type="button"
+                  >
                     {action.ctaLabel}
                   </button>
                 </div>

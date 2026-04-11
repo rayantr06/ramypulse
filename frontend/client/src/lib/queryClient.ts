@@ -22,20 +22,89 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+type ApiRequestOptions = Omit<RequestInit, "body"> & {
+  body?: BodyInit | Record<string, unknown> | null;
+};
+
+function mergeHeaders(...headersInit: Array<HeadersInit | undefined>): Headers {
+  const merged = new Headers();
+  headersInit.forEach((headers) => {
+    if (!headers) return;
+    new Headers(headers).forEach((value, key) => {
+      merged.set(key, value);
+    });
+  });
+  return merged;
+}
+
+function bodyNeedsJsonEncoding(body: unknown): body is Record<string, unknown> {
+  if (body == null) return false;
+  if (typeof body === "string") return false;
+  if (body instanceof FormData) return false;
+  if (body instanceof URLSearchParams) return false;
+  if (body instanceof Blob) return false;
+  if (body instanceof ArrayBuffer) return false;
+  if (ArrayBuffer.isView(body)) return false;
+  return typeof body === "object";
+}
+
+function shouldApplyJsonContentType(body: unknown, headers: Headers): boolean {
+  if (headers.has("Content-Type") || body == null) return false;
+  if (typeof body === "string") {
+    const trimmed = body.trim();
+    return trimmed.startsWith("{") || trimmed.startsWith("[");
+  }
+  return bodyNeedsJsonEncoding(body);
+}
+
+function normalizeRequestBody(body: unknown, headers: Headers): BodyInit | undefined {
+  if (body == null) return undefined;
+  if (shouldApplyJsonContentType(body, headers)) {
+    headers.set("Content-Type", "application/json");
+  }
+  if (bodyNeedsJsonEncoding(body)) {
+    return JSON.stringify(body);
+  }
+  if (
+    typeof body === "string" ||
+    body instanceof FormData ||
+    body instanceof URLSearchParams ||
+    body instanceof Blob ||
+    body instanceof ArrayBuffer ||
+    ArrayBuffer.isView(body)
+  ) {
+    return body;
+  }
+  return undefined;
+}
+
 export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
+): Promise<Response>;
+export async function apiRequest(
+  url: string,
+  init?: ApiRequestOptions,
+): Promise<Response>;
+export async function apiRequest(
+  methodOrUrl: string,
+  urlOrInit?: string | ApiRequestOptions,
+  data?: unknown,
 ): Promise<Response> {
   const tenantHeaders = buildTenantHeaders(getStoredTenantId());
-  const res = await fetch(url, {
+  const isLegacyCall = typeof urlOrInit === "string";
+  const method = isLegacyCall ? methodOrUrl : urlOrInit?.method ?? "GET";
+  const requestUrl = isLegacyCall ? urlOrInit : methodOrUrl;
+  const requestInit = (isLegacyCall ? {} : (urlOrInit ?? {})) as ApiRequestOptions;
+  const rawBody = isLegacyCall ? data : requestInit.body;
+  const headers = mergeHeaders(buildAuthHeaders(), tenantHeaders, requestInit.headers);
+  const body = normalizeRequestBody(rawBody, headers);
+  const res = await fetch(requestUrl, {
+    ...requestInit,
     method,
-    headers: {
-      ...buildAuthHeaders(),
-      ...tenantHeaders,
-      ...(data ? { "Content-Type": "application/json" } : {}),
-    },
-    body: data ? JSON.stringify(data) : undefined,
+    headers,
+    body,
   });
 
   await throwIfResNotOk(res);

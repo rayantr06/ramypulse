@@ -749,13 +749,10 @@ export default function AdminSourcesOps() {
       for (const [key, value] of Object.entries(buildMetricsPayload(payload.form))) {
         formData.append(key, String(value));
       }
-      const res = await fetch(`/api/social-metrics/posts/${payload.postId}/metrics/screenshot`, {
+      const res = await apiRequest(`/api/social-metrics/posts/${payload.postId}/metrics/screenshot`, {
         method: "POST",
         body: formData,
       });
-      if (!res.ok) {
-        throw new Error((await res.text()) || res.statusText);
-      }
       return res.json();
     },
     onSuccess: () => {
@@ -1009,7 +1006,6 @@ export default function AdminSourcesOps() {
                 <h3 className="text-sm font-bold uppercase tracking-widest text-on-surface-variant">
                   Historique Sync Runs
                 </h3>
-                <span className="text-xs text-primary font-medium">Voir tout l'historique</span>
               </div>
               <table className="w-full text-left text-sm">
                 <thead className="bg-surface-container-high/30">
