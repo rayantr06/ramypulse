@@ -778,18 +778,17 @@ export default function Recommandations() {
       </div>
 
       <div className="fixed bottom-8 right-8 z-50">
-        <Link href="/explorateur">
-          <a
-            className="w-14 h-14 bg-gradient-to-br from-primary to-primary-container rounded-sm shadow-[0_10px_30px_rgba(245,102,0,0.3)] flex items-center justify-center text-on-primary-container hover:scale-110 active:scale-95 transition-all"
-            data-testid="recommendations-ai-shortcut"
+        <Link
+          href="/explorateur"
+          className="w-14 h-14 bg-gradient-to-br from-primary to-primary-container rounded-sm shadow-[0_10px_30px_rgba(245,102,0,0.3)] flex items-center justify-center text-on-primary-container hover:scale-110 active:scale-95 transition-all"
+          data-testid="recommendations-ai-shortcut"
+        >
+          <span
+            className="material-symbols-outlined text-2xl"
+            style={{ fontVariationSettings: "'FILL' 1" }}
           >
-            <span
-              className="material-symbols-outlined text-2xl"
-              style={{ fontVariationSettings: "'FILL' 1" }}
-            >
-              auto_awesome
-            </span>
-          </a>
+            auto_awesome
+          </span>
         </Link>
       </div>
     </AppShell>
