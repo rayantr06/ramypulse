@@ -9,7 +9,8 @@ import {
   mapExplorerVerbatims,
 } from "@/lib/apiMappings";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { toast } from "@/hooks/use-toast";
+import { convertToCSV, downloadCSV } from "@/lib/csvExport";
 import { STITCH_AVATARS } from "@/lib/stitchAssets";
 
 const SENTIMENT_OPTIONS = ["positif", "négatif", "neutre"];
@@ -209,6 +210,51 @@ export default function Explorateur() {
   const [page, setPage] = useState(1);
   const [filterSentiment, setFilterSentiment] = useState<string>("");
   const [filterWilaya, setFilterWilaya] = useState<string>("");
+
+  const handleExportVerbatims = async () => {
+    try {
+      const params = new URLSearchParams({ page_size: "1000" });
+      if (channelFilter) params.set("channel", channelFilter);
+      const res = await apiRequest("GET", `/api/explorer/verbatims?${params.toString()}`);
+      const data = await res.json() as unknown;
+      const rawItems = Array.isArray(data) ? data : ((data as Record<string, unknown>).items ?? (data as Record<string, unknown>).verbatims ?? []) as unknown[];
+
+      if (rawItems.length === 0) {
+        toast({ title: "Aucun verbatim à exporter" });
+        return;
+      }
+
+      const mapped = (rawItems as Record<string, unknown>[]).map((item) => {
+        const parts = formatDateParts(String(item.timestamp ?? ""));
+        return {
+          source: String(item.channel ?? ""),
+          sentiment: formatSentimentLabel(String(item.sentiment_label ?? "neutre")),
+          content: String(item.text ?? ""),
+          wilaya: String(item.wilaya ?? "n/a"),
+          date: parts.date,
+          aspect: String(item.aspect ?? "n/a"),
+        };
+      });
+
+      const csv = convertToCSV(mapped, [
+        { key: "source", header: "Source" },
+        { key: "sentiment", header: "Sentiment" },
+        { key: "content", header: "Contenu" },
+        { key: "wilaya", header: "Wilaya" },
+        { key: "date", header: "Date" },
+        { key: "aspect", header: "Aspect" },
+      ]);
+      const today = new Date().toISOString().split("T")[0];
+      downloadCSV(csv, `verbatims_${today}.csv`);
+      toast({ title: `Export téléchargé (${mapped.length} verbatims)` });
+    } catch (err) {
+      toast({
+        title: "Erreur d'export",
+        description: err instanceof Error ? err.message : "Impossible d'exporter",
+        variant: "destructive",
+      });
+    }
+  };
 
   const channelFilter = activeSources.length === 1 ? activeSources[0] : null;
 
@@ -560,23 +606,14 @@ export default function Explorateur() {
                 Base de données complète des interactions clients
               </p>
             </div>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="inline-flex cursor-not-allowed">
-                    <button
-                      disabled
-                      className="flex items-center gap-2 px-3 py-1.5 rounded bg-surface-container-highest text-on-surface-variant text-[10px] font-black uppercase tracking-widest opacity-50 cursor-not-allowed"
-                      type="button"
-                    >
-                      <span className="material-symbols-outlined text-base">download</span>
-                      Exporter
-                    </button>
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>Bientôt disponible</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <button
+              className="flex items-center gap-2 px-3 py-1.5 rounded bg-surface-container-highest text-on-surface-variant text-[10px] font-black uppercase tracking-widest hover:text-on-surface transition-colors"
+              type="button"
+              onClick={handleExportVerbatims}
+            >
+              <span className="material-symbols-outlined text-base">download</span>
+              Exporter
+            </button>
           </div>
 
           <div className="overflow-x-auto">
