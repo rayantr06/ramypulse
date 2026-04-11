@@ -435,6 +435,7 @@ export default function Campagnes() {
             </div>
           </div>
           <div className="flex gap-3">
+            {/* // TODO-DEAD-BUTTON: Bouton export des campagnes. Exporter les donnees de la vue campagnes ou du tableau courant. */}
             <button className="px-4 py-2 bg-surface-container-high hover:bg-surface-bright text-on-surface text-xs font-bold transition-all rounded-sm">
               EXPORTER DATA
             </button>

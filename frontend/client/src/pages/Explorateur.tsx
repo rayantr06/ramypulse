@@ -332,6 +332,7 @@ export default function Explorateur() {
               );
             })}
             <div className="h-6 w-px bg-outline-variant/20 mx-1"></div>
+            {/* // TODO-DEAD-BUTTON: Bouton filtre de l'explorateur. Ouvrir les filtres avances et appliquer la selection. */}
             <button
               className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface-variant text-xs font-semibold transition-colors"
               type="button"
@@ -487,6 +488,7 @@ export default function Explorateur() {
                 Base de données complète des interactions clients
               </p>
             </div>
+            {/* // TODO-DEAD-BUTTON: Bouton exporter des verbatims. Telecharger la selection courante au format attendu. */}
             <button
               className="flex items-center gap-2 px-3 py-1.5 rounded bg-surface-container-highest text-on-surface-variant text-[10px] font-black uppercase tracking-widest hover:text-on-surface transition-colors"
               type="button"

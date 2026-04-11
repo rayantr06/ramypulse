@@ -535,6 +535,7 @@ export default function Watchlists() {
                 </>
               )}
 
+              {/* // TODO-DEAD-BUTTON: Bouton details analytiques de la watchlist. Ouvrir la vue analytique detaillee de la watchlist selectionnee. */}
               <button className="w-full py-3 bg-surface-container-highest hover:bg-surface-bright transition-colors rounded-lg text-xs font-bold uppercase tracking-widest text-on-surface">
                 Voir les détails analytiques
               </button>

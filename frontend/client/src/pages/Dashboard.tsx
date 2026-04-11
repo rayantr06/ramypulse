@@ -407,6 +407,7 @@ export default function Dashboard() {
                   <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-3">
                     {action.targetPlatform}
                   </p>
+                  {/* // TODO-DEAD-BUTTON: CTA d'action recommandee du dashboard. Ouvrir le detail de la recommandation ou lancer l'action attendue. */}
                   <button className="w-full py-2.5 bg-gradient-to-r from-primary to-primary-container text-on-primary-fixed text-[11px] font-bold rounded-sm group-hover:scale-[1.02] transition-transform uppercase tracking-wider">
                     {action.ctaLabel}
                   </button>

@@ -66,13 +66,16 @@ export function AppShell({
             {hasSearch ? (
               <>
                 <div className="flex items-center gap-4 text-on-surface-variant">
+                  {/* // TODO-DEAD-BUTTON: Bouton langue du header. Ouvrir le switcher de langue ou de locale. */}
                   <button className="material-symbols-outlined hover:text-white transition-colors">
                     language
                   </button>
+                  {/* // TODO-DEAD-BUTTON: Bouton changement de vue du header. Basculer entre les layouts ou modes d'affichage prevus. */}
                   <button className="material-symbols-outlined hover:text-white transition-colors">
                     grid_view
                   </button>
                   <div className="relative">
+                    {/* // TODO-DEAD-BUTTON: Bouton notifications du header. Ouvrir le panneau ou centre de notifications. */}
                     <button
                       className="material-symbols-outlined hover:text-white transition-colors"
                       data-testid="btn-notifications"
@@ -86,6 +89,7 @@ export function AppShell({
               </>
             ) : (
               <>
+                {/* // TODO-DEAD-BUTTON: Bouton notifications compact du header. Ouvrir le panneau ou centre de notifications. */}
                 <button
                   className="relative text-gray-400 hover:bg-[#1b1d20] p-2 rounded-sm transition-all duration-200"
                   data-testid="btn-notifications"
@@ -93,6 +97,7 @@ export function AppShell({
                   <span className="material-symbols-outlined">notifications</span>
                   <span className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full"></span>
                 </button>
+                {/* // TODO-DEAD-BUTTON: Bouton capteurs du header. Ouvrir le statut temps reel ou les sources connectees. */}
                 <button className="text-gray-400 hover:bg-[#1b1d20] p-2 rounded-sm transition-all duration-200">
                   <span className="material-symbols-outlined">sensors</span>
                 </button>
