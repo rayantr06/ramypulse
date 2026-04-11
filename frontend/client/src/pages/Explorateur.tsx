@@ -59,6 +59,13 @@ function getSentimentClass(sentiment: string) {
   ) {
     return "text-emerald-400";
   }
+  if (
+    normalized.includes("tres_negatif") ||
+    normalized.includes("tres negatif") ||
+    normalized.includes("très négatif")
+  ) {
+    return "text-red-700";
+  }
   if (normalized.includes("positif")) return "text-emerald-500";
   if (normalized.includes("negatif") || normalized.includes("négatif")) {
     return "text-red-400";
@@ -74,6 +81,13 @@ function getSentimentDot(sentiment: string) {
     normalized.includes("très positif")
   ) {
     return "bg-emerald-400";
+  }
+  if (
+    normalized.includes("tres_negatif") ||
+    normalized.includes("tres negatif") ||
+    normalized.includes("très négatif")
+  ) {
+    return "bg-red-900/30";
   }
   if (normalized.includes("positif")) return "bg-emerald-500";
   if (normalized.includes("negatif") || normalized.includes("négatif")) return "bg-red-500";
@@ -99,6 +113,9 @@ function formatSentimentLabel(sentiment: string) {
   const normalized = sentiment.toLowerCase();
   if (normalized.includes("tres_positif") || normalized.includes("tres positif")) {
     return "Très Positif";
+  }
+  if (normalized.includes("tres_negatif") || normalized.includes("tres negatif")) {
+    return "Très Négatif";
   }
   if (normalized.includes("positif")) return "Positif";
   if (normalized.includes("negatif")) return "Négatif";
