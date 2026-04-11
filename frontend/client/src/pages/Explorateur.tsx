@@ -256,7 +256,7 @@ export default function Explorateur() {
     }
   };
 
-  const channelFilter = activeSources.length === 1 ? activeSources[0] : null;
+  const channelFilter = activeSources.length > 0 ? activeSources.join(",") : null;
 
   const { data: results, isLoading: searchLoading } = useQuery<SearchResultView[]>({
     queryKey: ["/api/explorer/search", activeSearch, channelFilter],
