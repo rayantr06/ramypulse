@@ -11,11 +11,15 @@ Problème résolu :
 Solution — Global-to-Aspect Propagation (inspirée de GCNet / Arctic-ABSA) :
     1. On calcule le sentiment GLOBAL du texte complet via le pipeline v3
        (DziriBERT + lexicon + sliding window + Gemini arbitrage)
-    2. Pour chaque aspect, on calcule le sentiment LOCAL de la phrase isolée
-    3. Si GLOBAL = négatif ET LOCAL = positif → CONFLIT (sarcasme probable)
-       → On propage le sentiment global à l'aspect
-    4. Les autres cas (global positif + aspect négatif) sont légitimes
-       (ex: "j'adore Ramy mais le prix est cher" → goût positif, prix négatif)
+    2. Pour chaque aspect :
+       a) Si le commentaire = 1 phrase → aspect hérite du global directement
+       b) Si multi-phrase → on classifie la phrase isolée de l'aspect
+          - Conflit (global négatif + local positif) + confiance locale < 0.70
+            → sarcasme cross-phrase probable → propager le global
+          - Sinon (confiance locale forte ou pas de conflit)
+            → opinion spécifique légitime → garder le local
+    Cas légitime préservé : "El prix raisonnable. Bla goût."
+       → prix=positif (gardé), goût=négatif, global=négatif
 
 Ce fichier ne modifie AUCUN fichier existant du repo.
 Pour activer l'adapter, changer l'import dans normalizer_pipeline.py :
@@ -115,8 +119,12 @@ def _build_aspect_sentiments_context_aware(
     for mention in aspect_mentions:
         sentence = _extract_sentence_for_span(text, int(mention["start"]), int(mention["end"]))
 
-        # Si la phrase isolée = texte complet, pas besoin de double classif
-        if sentence.strip() == text.strip():
+        is_single_sentence = sentence.strip() == text.strip()
+
+        if is_single_sentence:
+            # Texte = 1 seule phrase → le global EST le local
+            # Si conflit (global négatif + aspect positif dans la même phrase),
+            # c'est du sarcasme → propager le global
             annotations.append({
                 "aspect": mention["aspect"],
                 "mention": mention["mention"],
@@ -127,13 +135,21 @@ def _build_aspect_sentiments_context_aware(
             })
             continue
 
-        # Classifier la phrase isolée
+        # ── Multi-phrase : l'aspect a sa propre phrase distincte ──
+        # Classifier la phrase isolée de l'aspect
         local_classification = classify_sentiment(sentence)
         local_label = local_classification["label"]
         local_confidence = local_classification["confidence"]
 
-        # Vérifier le conflit
-        if _should_propagate_global(global_label, local_label):
+        # Propagation UNIQUEMENT si l'aspect n'a pas de sentiment propre
+        # explicite (phrase trop courte / neutre) et que le global est négatif
+        # → indique un sarcasme cross-phrase
+        #
+        # Si l'aspect a un sentiment LOCAL clair (positif OU négatif),
+        # on le garde : c'est une opinion spécifique à cet aspect.
+        # Ex: "El prix raisonnable. Bla goût." → prix=positif (garder), goût=négatif
+        if _should_propagate_global(global_label, local_label) and local_confidence < 0.70:
+            # Conflit + faible confiance locale → sarcasme cross-phrase probable
             logger.info(
                 "ABSA propagation: aspect '%s' local=%s (%.2f) → global=%s (%.2f) [%s]",
                 mention["aspect"], local_label, local_confidence,
@@ -150,14 +166,14 @@ def _build_aspect_sentiments_context_aware(
                 "local_confidence": local_confidence,
             })
         else:
-            # Pas de conflit → garder le sentiment local
+            # Pas de conflit OU confiance locale forte → garder le local
             annotations.append({
                 "aspect": mention["aspect"],
                 "mention": mention["mention"],
                 "sentiment": local_label,
                 "confidence": local_confidence,
                 "propagated": False,
-                "reason": "local_consistent",
+                "reason": "local_confident" if local_confidence >= 0.70 else "local_consistent",
             })
 
     return annotations
