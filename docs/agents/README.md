@@ -51,28 +51,21 @@ J10 → MERGE FINAL → tag v1.0-expo
 # 1. Récupérer les branches distantes
 git fetch origin
 
-# 2. Créer les worktrees qui trackent les branches distantes existantes
-#    (pas de "git branch" — les branches existent déjà sur origin)
-git worktree add .worktrees\agent-backend origin/agent/claude-backend
-git worktree add .worktrees\agent-frontend origin/agent/codex-frontend
+# 2. Créer les worktrees avec branche locale trackée sur la distante
+#    --track -b crée une branche locale qui suit origin/* (pas de detached HEAD)
+git worktree add --track -b agent/claude-backend .worktrees\agent-backend origin/agent/claude-backend
+git worktree add --track -b agent/codex-frontend .worktrees\agent-frontend origin/agent/codex-frontend
 
-# 3. Dans chaque worktree, configurer le tracking upstream
-cd .worktrees\agent-backend
-git branch --set-upstream-to=origin/agent/claude-backend
-cd ..\agent-frontend
-git branch --set-upstream-to=origin/agent/codex-frontend
-cd ..\..
-
-# 4. Copier les configs agents depuis docs/agents/
+# 3. Copier les configs agents depuis docs/agents/
 #    (les fichiers sont sur expo/main-dev, pas main — on les récupère via git show)
 git show origin/expo/main-dev:docs/agents/CLAUDE.md > .worktrees\agent-backend\CLAUDE.md
 git show origin/expo/main-dev:docs/agents/AGENTS.md > .worktrees\agent-frontend\AGENTS.md
 
-# 5. Copier le .env dans les worktrees
+# 4. Copier le .env dans les worktrees
 Copy-Item .env .worktrees\agent-backend\.env -ErrorAction SilentlyContinue
 Copy-Item .env .worktrees\agent-frontend\.env -ErrorAction SilentlyContinue
 
-# 6. Vérification
+# 5. Vérification
 git worktree list
 # Attendu (parmi les 18+ existants) :
 # G:/ramypulse/.worktrees/agent-backend   99023f2 [agent/claude-backend]
