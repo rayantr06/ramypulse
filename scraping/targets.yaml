@@ -1,0 +1,79 @@
+# ============================================================================
+# RamyPulse — Pages Facebook & Instagram cibles
+# ============================================================================
+# Modifier ce fichier pour ajouter/retirer des marques ou des posts.
+#
+# Structure :
+#   brands:
+#     - name: Nom de la marque
+#       facebook_page: URL de la page Facebook
+#       instagram_profile: URL du profil Instagram (optionnel)
+#       facebook_posts: liste d'URLs de posts spécifiques (optionnel)
+#       instagram_posts: liste d'URLs de posts spécifiques (optionnel)
+#       category: catégorie produit
+# ============================================================================
+
+brands:
+  - name: "Ramy"
+    facebook_page: "https://www.facebook.com/ramy.jus"
+    instagram_profile: "https://www.instagram.com/ramy_officiel/"
+    facebook_posts: []      # Ajouter ici des URLs de posts spécifiques
+    instagram_posts: []
+    category: "jus_boissons"
+
+  - name: "Hamoud Boualem"
+    facebook_page: "https://www.facebook.com/HamoudLaBlanche/"
+    instagram_profile: "https://www.instagram.com/hamoudboualem_officiel/"
+    facebook_posts: []
+    instagram_posts: []
+    category: "boissons_gazeuses"
+
+  - name: "Ifri"
+    facebook_page: "https://www.facebook.com/ifaborijia/"
+    instagram_profile: "https://www.instagram.com/ifri_officiel/"
+    facebook_posts: []
+    instagram_posts: []
+    category: "eau_boissons"
+
+  - name: "NCA Rouiba"
+    facebook_page: "https://www.facebook.com/NCA.Rouiba/"
+    instagram_profile: "https://www.instagram.com/nca_rouiba/"
+    facebook_posts: []
+    instagram_posts: []
+    category: "jus_nectars"
+
+# ============================================================================
+# Paramètres de collecte
+# ============================================================================
+
+collection:
+  # Nombre max de commentaires à récupérer par post
+  max_comments_per_post: 500
+
+  # Nombre max de posts à récupérer par page (mode discovery)
+  max_posts_per_page: 50
+
+  # Inclure les réponses aux commentaires
+  include_replies: true
+
+  # Tri des commentaires : RANKED_UNFILTERED | MOST_RELEVANT | RECENT_ACTIVITY
+  sort_order: "RANKED_UNFILTERED"
+
+  # Ne collecter que les commentaires plus récents que cette date (optionnel)
+  # Format : YYYY-MM-DD ou relatif ("6 months", "1 year")
+  comments_newer_than: null
+
+  # Pause en secondes entre chaque appel API (rate limiting)
+  delay_between_calls: 2
+
+  # Nombre de tentatives en cas d'erreur
+  max_retries: 3
+
+# ============================================================================
+# Chemins de sortie (relatifs au dossier du script)
+# ============================================================================
+
+output:
+  raw_dir: "output/raw"
+  merged_file: "output/all_comments.csv"
+  stats_file: "output/collection_stats.json"
