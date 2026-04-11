@@ -9,6 +9,7 @@ import {
   mapCampaignOverview,
   mapCampaignImpact,
 } from "@/lib/apiMappings";
+import { toast } from "@/hooks/use-toast";
 import { filterCampaignViews } from "@/lib/pageSearchFilters";
 import { STITCH_AVATARS } from "@/lib/stitchAssets";
 
@@ -298,6 +299,13 @@ export default function Campagnes() {
         end_date: "",
       });
       setKeywords([]);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erreur création",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
