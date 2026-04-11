@@ -10,8 +10,12 @@ from typing import Callable
 from core.normalization.normalizer_pipeline import run_normalization_job
 from core.tenancy.artifact_refresh import refresh_tenant_artifacts
 from core.watch_runs.collectors.google_maps_reviews import collect_google_maps_reviews
+from core.watch_runs.collectors.perplexity_discovery import (
+    collect_perplexity_discovery,
+    collect_perplexity_press,
+    collect_perplexity_reddit,
+)
 from core.watch_runs.collectors.public_url_seed import collect_public_url_seed
-from core.watch_runs.collectors.web_keyword import collect_web_keyword_results
 from core.watch_runs.collectors.youtube_search import collect_youtube_search_results
 from core.watch_runs.raw_ingestion import insert_watch_documents
 from core.watch_runs.run_manager import (
@@ -27,7 +31,9 @@ CollectorFn = Callable[..., list[dict[str, object]]]
 
 DEFAULT_COLLECTORS: dict[str, CollectorFn] = {
     "public_url_seed": collect_public_url_seed,
-    "web_search": collect_web_keyword_results,
+    "web_search": collect_perplexity_discovery,
+    "press": collect_perplexity_press,
+    "reddit": collect_perplexity_reddit,
     "youtube": collect_youtube_search_results,
     "google_maps": collect_google_maps_reviews,
 }
