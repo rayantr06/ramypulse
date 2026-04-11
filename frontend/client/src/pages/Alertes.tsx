@@ -5,6 +5,7 @@ import { EmptyTenantState } from "@/components/EmptyTenantState";
 import { apiRequest } from "@/lib/queryClient";
 import { mapAlert } from "@/lib/apiMappings";
 import { filterAlertViews } from "@/lib/pageSearchFilters";
+import { toast } from "@/hooks/use-toast";
 import { STITCH_AVATARS } from "@/lib/stitchAssets";
 
 type StatusFilter = "NOUVEAU" | "RECONNU" | "RESOLU" | "ECARTE";
@@ -212,6 +213,13 @@ export default function Alertes() {
     },
     onSuccess: () => {
       queryClientHook.invalidateQueries({ queryKey: ["/api/alerts"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erreur",
+        description: error.message || "Une erreur est survenue",
+        variant: "destructive",
+      });
     },
   });
 

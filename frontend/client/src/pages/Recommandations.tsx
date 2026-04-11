@@ -11,6 +11,7 @@ import {
   mapRecommendation,
 } from "@/lib/apiMappings";
 import { filterRecommendationViews } from "@/lib/pageSearchFilters";
+import { toast } from "@/hooks/use-toast";
 import { STITCH_AVATARS } from "@/lib/stitchAssets";
 
 interface RecommendationContextView {
@@ -280,12 +281,26 @@ export default function Recommandations() {
         ],
       });
     },
+    onError: (error: Error) => {
+      toast({
+        title: "Erreur",
+        description: error.message || "Une erreur est survenue",
+        variant: "destructive",
+      });
+    },
   });
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: "archived" | "dismissed" }) => {
       const res = await apiRequest("PUT", `/api/recommendations/${id}/status`, { status });
       return res.json();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erreur",
+        description: error.message || "Une erreur est survenue",
+        variant: "destructive",
+      });
     },
   });
 

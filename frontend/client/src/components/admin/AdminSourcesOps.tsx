@@ -25,6 +25,7 @@ import {
   mapSchedulerTickResult,
 } from "@/lib/apiMappings";
 import { apiRequest } from "@/lib/queryClient";
+import { toast } from "@/hooks/use-toast";
 
 interface SourceView {
   id: string;
@@ -612,6 +613,9 @@ export default function AdminSourcesOps() {
       setSourceForm(formFromSource(createdSource));
       invalidateSources();
     },
+    onError: (error: Error) => {
+      toast({ title: "Erreur", description: error.message || "Une erreur est survenue", variant: "destructive" });
+    },
   });
 
   const updateSourceMutation = useMutation({
@@ -634,6 +638,9 @@ export default function AdminSourcesOps() {
       setSourceForm(formFromSource(updatedSource));
       invalidateSources();
     },
+    onError: (error: Error) => {
+      toast({ title: "Erreur", description: error.message || "Une erreur est survenue", variant: "destructive" });
+    },
   });
 
   const syncMutation = useMutation({
@@ -644,6 +651,9 @@ export default function AdminSourcesOps() {
       return res.json();
     },
     onSuccess: invalidateSources,
+    onError: (error: Error) => {
+      toast({ title: "Erreur", description: error.message || "Une erreur est survenue", variant: "destructive" });
+    },
   });
 
   const healthMutation = useMutation({
@@ -652,6 +662,9 @@ export default function AdminSourcesOps() {
       return res.json();
     },
     onSuccess: invalidateSources,
+    onError: (error: Error) => {
+      toast({ title: "Erreur", description: error.message || "Une erreur est survenue", variant: "destructive" });
+    },
   });
 
   const createCredentialMutation = useMutation({
@@ -674,6 +687,9 @@ export default function AdminSourcesOps() {
       queryClientHook.invalidateQueries({ queryKey: ["/api/social-metrics/credentials"] });
       queryClientHook.invalidateQueries({ queryKey: ["/api/admin/sources"] });
     },
+    onError: (error: Error) => {
+      toast({ title: "Erreur", description: error.message || "Une erreur est survenue", variant: "destructive" });
+    },
   });
 
   const deactivateCredentialMutation = useMutation({
@@ -683,6 +699,9 @@ export default function AdminSourcesOps() {
     onSuccess: () => {
       queryClientHook.invalidateQueries({ queryKey: ["/api/social-metrics/credentials"] });
       queryClientHook.invalidateQueries({ queryKey: ["/api/admin/sources"] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Erreur", description: error.message || "Une erreur est survenue", variant: "destructive" });
     },
   });
 
@@ -703,6 +722,9 @@ export default function AdminSourcesOps() {
       setOpsError(null);
       invalidateCampaignOps();
     },
+    onError: (error: Error) => {
+      toast({ title: "Erreur", description: error.message || "Une erreur est survenue", variant: "destructive" });
+    },
   });
 
   const deletePostMutation = useMutation({
@@ -712,6 +734,9 @@ export default function AdminSourcesOps() {
     onSuccess: () => {
       setOpsError(null);
       invalidateCampaignOps();
+    },
+    onError: (error: Error) => {
+      toast({ title: "Erreur", description: error.message || "Une erreur est survenue", variant: "destructive" });
     },
   });
 
@@ -723,6 +748,9 @@ export default function AdminSourcesOps() {
     onSuccess: () => {
       setOpsError(null);
       invalidateCampaignOps();
+    },
+    onError: (error: Error) => {
+      toast({ title: "Erreur", description: error.message || "Une erreur est survenue", variant: "destructive" });
     },
   });
 
@@ -739,6 +767,9 @@ export default function AdminSourcesOps() {
       setMetricsForm(blankMetricsForm());
       setOpsError(null);
       invalidateCampaignOps();
+    },
+    onError: (error: Error) => {
+      toast({ title: "Erreur", description: error.message || "Une erreur est survenue", variant: "destructive" });
     },
   });
 
@@ -761,6 +792,9 @@ export default function AdminSourcesOps() {
       setOpsError(null);
       invalidateCampaignOps();
     },
+    onError: (error: Error) => {
+      toast({ title: "Erreur", description: error.message || "Une erreur est survenue", variant: "destructive" });
+    },
   });
 
   const revenueMutation = useMutation({
@@ -776,6 +810,9 @@ export default function AdminSourcesOps() {
       setOpsError(null);
       invalidateCampaignOps();
     },
+    onError: (error: Error) => {
+      toast({ title: "Erreur", description: error.message || "Une erreur est survenue", variant: "destructive" });
+    },
   });
 
   const schedulerMutation = useMutation({
@@ -786,6 +823,9 @@ export default function AdminSourcesOps() {
     onSuccess: (result) => {
       setLastTickResult(result);
       invalidateSources();
+    },
+    onError: (error: Error) => {
+      toast({ title: "Erreur", description: error.message || "Une erreur est survenue", variant: "destructive" });
     },
   });
 

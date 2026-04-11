@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "@/hooks/use-toast";
 import { AppShell } from "@/components/AppShell";
 import { apiRequest } from "@/lib/queryClient";
 import { buildWatchlistCreatePayload, type WatchlistFormInput } from "@/lib/apiMappings";
@@ -180,6 +181,13 @@ export default function Watchlists() {
       });
       setSelectedId(data.watchlist_id);
     },
+    onError: (error: Error) => {
+      toast({
+        title: "Erreur",
+        description: error.message || "Une erreur est survenue",
+        variant: "destructive",
+      });
+    },
   });
 
   const deactivateMutation = useMutation({
@@ -189,6 +197,13 @@ export default function Watchlists() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/watchlists"] });
       setSelectedId(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erreur",
+        description: error.message || "Une erreur est survenue",
+        variant: "destructive",
+      });
     },
   });
 
