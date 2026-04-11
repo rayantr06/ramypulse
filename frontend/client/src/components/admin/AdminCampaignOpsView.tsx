@@ -355,11 +355,14 @@ export function AdminCampaignOpsView() {
               <p className="text-xs font-bold text-on-surface-variant tracking-widest uppercase">Campaign Ops</p>
               <h2 className="text-xl font-headline font-bold mt-1">Engagement & Sentiment Operations</h2>
             </div>
-            <select className="w-full max-w-sm bg-surface-container-highest rounded-lg py-2 px-3 text-sm" value={selectedCampaignId ?? ""} onChange={(event) => setSelectedCampaignId(event.target.value || null)}>
-              {campaignOptions.map((campaign) => (
-                <option key={campaign.campaign_id} value={campaign.campaign_id}>{campaign.campaign_name}</option>
-              ))}
-            </select>
+            <div>
+              <label htmlFor="field-campaign-select" className="block text-xs font-bold text-on-surface-variant mb-1 ml-1">Campagne</label>
+              <select id="field-campaign-select" className="w-full max-w-sm bg-surface-container-highest rounded-lg py-2 px-3 text-sm" value={selectedCampaignId ?? ""} onChange={(event) => setSelectedCampaignId(event.target.value || null)}>
+                {campaignOptions.map((campaign) => (
+                  <option key={campaign.campaign_id} value={campaign.campaign_id}>{campaign.campaign_name}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
@@ -468,27 +471,45 @@ export function AdminCampaignOpsView() {
           <p className="text-xs font-bold text-on-surface-variant tracking-widest uppercase mb-5">Ajouter un post lié</p>
           <form className="space-y-4" onSubmit={handleAddPost}>
             <div className="grid grid-cols-2 gap-4">
-              <select className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" value={postForm.platform} onChange={(event) => setPostForm({ ...postForm, platform: event.target.value })}>
-                {PLATFORM_OPTIONS.filter((option) => option.value !== "import").map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
-              <select className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" value={postForm.entity_type} onChange={(event) => setPostForm({ ...postForm, entity_type: event.target.value })}>
-                {CREDENTIAL_ENTITY_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
+              <div>
+                <label htmlFor="field-post-platform" className="block text-xs font-bold text-on-surface-variant mb-1 ml-1">Plateforme du post</label>
+                <select id="field-post-platform" className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" value={postForm.platform} onChange={(event) => setPostForm({ ...postForm, platform: event.target.value })}>
+                  {PLATFORM_OPTIONS.filter((option) => option.value !== "import").map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="field-post-entity-type" className="block text-xs font-bold text-on-surface-variant mb-1 ml-1">Type d'entité</label>
+                <select id="field-post-entity-type" className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" value={postForm.entity_type} onChange={(event) => setPostForm({ ...postForm, entity_type: event.target.value })}>
+                  {CREDENTIAL_ENTITY_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </div>
             </div>
-            <input className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" type="text" placeholder="post_platform_id" value={postForm.post_platform_id} onChange={(event) => setPostForm({ ...postForm, post_platform_id: event.target.value })} />
-            <input className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" type="text" placeholder="URL du post" value={postForm.post_url} onChange={(event) => setPostForm({ ...postForm, post_url: event.target.value })} />
+            <div>
+              <label htmlFor="field-post-platform-id" className="block text-xs font-bold text-on-surface-variant mb-1 ml-1">ID plateforme du post</label>
+              <input id="field-post-platform-id" className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" type="text" placeholder="post_platform_id" value={postForm.post_platform_id} onChange={(event) => setPostForm({ ...postForm, post_platform_id: event.target.value })} />
+            </div>
+            <div>
+              <label htmlFor="field-post-url" className="block text-xs font-bold text-on-surface-variant mb-1 ml-1">URL du post</label>
+              <input id="field-post-url" className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" type="text" placeholder="URL du post" value={postForm.post_url} onChange={(event) => setPostForm({ ...postForm, post_url: event.target.value })} />
+            </div>
             <div className="grid grid-cols-2 gap-4">
-              <input className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" type="text" placeholder="Entity Name" value={postForm.entity_name} onChange={(event) => setPostForm({ ...postForm, entity_name: event.target.value })} />
-              <select className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" value={postForm.credential_id} onChange={(event) => setPostForm({ ...postForm, credential_id: event.target.value })}>
-                <option value="">Aucun credential</option>
-                {credentialOptions.map((credential) => (
-                  <option key={credential.credential_id} value={credential.credential_id}>{credential.entity_name} · {credential.platform}</option>
-                ))}
-              </select>
+              <div>
+                <label htmlFor="field-post-entity-name" className="block text-xs font-bold text-on-surface-variant mb-1 ml-1">Nom de l'entité</label>
+                <input id="field-post-entity-name" className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" type="text" placeholder="Entity Name" value={postForm.entity_name} onChange={(event) => setPostForm({ ...postForm, entity_name: event.target.value })} />
+              </div>
+              <div>
+                <label htmlFor="field-post-credential" className="block text-xs font-bold text-on-surface-variant mb-1 ml-1">Credential</label>
+                <select id="field-post-credential" className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" value={postForm.credential_id} onChange={(event) => setPostForm({ ...postForm, credential_id: event.target.value })}>
+                  <option value="">Aucun credential</option>
+                  {credentialOptions.map((credential) => (
+                    <option key={credential.credential_id} value={credential.credential_id}>{credential.entity_name} · {credential.platform}</option>
+                  ))}
+                </select>
+              </div>
             </div>
             <button type="submit" disabled={addPostMutation.isPending || !selectedCampaignId} className="w-full py-3 bg-primary text-on-primary font-bold rounded-lg disabled:opacity-50">
               {addPostMutation.isPending ? "Ajout..." : "Lier le post à la campagne"}
@@ -504,8 +525,8 @@ export function AdminCampaignOpsView() {
           <div className="grid grid-cols-2 gap-3">
             {Object.entries(metricsForm).map(([key, value]) => (
               <div key={key}>
-                <label className="block text-xs font-bold text-on-surface-variant mb-1 ml-1 capitalize">{key}</label>
-                <input className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" type="number" value={value} onChange={(event) => setMetricsForm({ ...metricsForm, [key]: event.target.value })} />
+                <label htmlFor={`field-metric-${key}`} className="block text-xs font-bold text-on-surface-variant mb-1 ml-1 capitalize">{key}</label>
+                <input id={`field-metric-${key}`} className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" type="number" value={value} onChange={(event) => setMetricsForm({ ...metricsForm, [key]: event.target.value })} />
               </div>
             ))}
           </div>
@@ -517,14 +538,20 @@ export function AdminCampaignOpsView() {
               {screenshotMutation.isPending ? "Upload..." : "Uploader capture"}
             </button>
           </div>
-          <input className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm file:mr-4 file:border-0 file:bg-primary file:text-on-primary file:px-3 file:py-2 file:rounded-lg" type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => setScreenshotFile(event.target.files?.[0] ?? null)} />
+          <div>
+            <label htmlFor="field-screenshot" className="block text-xs font-bold text-on-surface-variant mb-1 ml-1">Capture d'écran</label>
+            <input id="field-screenshot" className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm file:mr-4 file:border-0 file:bg-primary file:text-on-primary file:px-3 file:py-2 file:rounded-lg" type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => setScreenshotFile(event.target.files?.[0] ?? null)} />
+          </div>
           {opsError ? <p className="text-xs text-error">{opsError}</p> : null}
         </div>
 
         <div className="bg-surface-container p-6 rounded-xl border border-white/5">
           <p className="text-xs font-bold text-on-surface-variant tracking-widest uppercase mb-5">Revenue attribué</p>
           <form className="space-y-4" onSubmit={handleRevenueSubmit}>
-            <input className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" type="number" placeholder="revenue_dza" value={revenueInput} onChange={(event) => setRevenueInput(event.target.value)} />
+            <div>
+              <label htmlFor="field-revenue" className="block text-xs font-bold text-on-surface-variant mb-1 ml-1">Revenue (DZA)</label>
+              <input id="field-revenue" className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" type="number" placeholder="revenue_dza" value={revenueInput} onChange={(event) => setRevenueInput(event.target.value)} />
+            </div>
             <button type="submit" disabled={!selectedCampaignId || revenueMutation.isPending} className="w-full py-3 bg-primary text-on-primary font-bold rounded-lg disabled:opacity-50">
               {revenueMutation.isPending ? "Mise à jour..." : "Mettre à jour revenue_dza"}
             </button>

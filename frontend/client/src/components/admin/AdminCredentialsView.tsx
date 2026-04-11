@@ -166,25 +166,49 @@ export function AdminCredentialsView() {
         <p className="text-xs font-bold text-on-surface-variant tracking-widest uppercase mb-5">Nouveau credential</p>
         <form className="space-y-4" onSubmit={handleCredentialSubmit}>
           <div className="grid grid-cols-2 gap-4">
-            <select className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" value={credentialForm.entity_type} onChange={(event) => setCredentialForm({ ...credentialForm, entity_type: event.target.value })}>
-              {CREDENTIAL_ENTITY_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-            <select className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" value={credentialForm.platform} onChange={(event) => setCredentialForm({ ...credentialForm, platform: event.target.value })}>
-              {PLATFORM_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
+            <div>
+              <label htmlFor="field-entity-type" className="block text-xs font-bold text-on-surface-variant mb-1 ml-1">Type d'entité</label>
+              <select id="field-entity-type" className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" value={credentialForm.entity_type} onChange={(event) => setCredentialForm({ ...credentialForm, entity_type: event.target.value })}>
+                {CREDENTIAL_ENTITY_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="field-cred-platform" className="block text-xs font-bold text-on-surface-variant mb-1 ml-1">Plateforme</label>
+              <select id="field-cred-platform" className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" value={credentialForm.platform} onChange={(event) => setCredentialForm({ ...credentialForm, platform: event.target.value })}>
+                {PLATFORM_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
           </div>
-          <input className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" type="text" placeholder="Nom de l'entité" value={credentialForm.entity_name} onChange={(event) => setCredentialForm({ ...credentialForm, entity_name: event.target.value })} />
+          <div>
+            <label htmlFor="field-entity-name" className="block text-xs font-bold text-on-surface-variant mb-1 ml-1">Nom de l'entité</label>
+            <input id="field-entity-name" className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" type="text" placeholder="Nom de l'entité" value={credentialForm.entity_name} onChange={(event) => setCredentialForm({ ...credentialForm, entity_name: event.target.value })} />
+          </div>
           <div className="grid grid-cols-2 gap-4">
-            <input className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" type="text" placeholder="Account ID" value={credentialForm.account_id} onChange={(event) => setCredentialForm({ ...credentialForm, account_id: event.target.value })} />
-            <input className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" type="text" placeholder="App ID" value={credentialForm.app_id} onChange={(event) => setCredentialForm({ ...credentialForm, app_id: event.target.value })} />
+            <div>
+              <label htmlFor="field-account-id" className="block text-xs font-bold text-on-surface-variant mb-1 ml-1">Account ID</label>
+              <input id="field-account-id" className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" type="text" placeholder="Account ID" value={credentialForm.account_id} onChange={(event) => setCredentialForm({ ...credentialForm, account_id: event.target.value })} />
+            </div>
+            <div>
+              <label htmlFor="field-app-id" className="block text-xs font-bold text-on-surface-variant mb-1 ml-1">App ID</label>
+              <input id="field-app-id" className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" type="text" placeholder="App ID" value={credentialForm.app_id} onChange={(event) => setCredentialForm({ ...credentialForm, app_id: event.target.value })} />
+            </div>
           </div>
-          <input className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" type="password" placeholder="Access Token" value={credentialForm.access_token} onChange={(event) => setCredentialForm({ ...credentialForm, access_token: event.target.value })} />
-          <input className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" type="password" placeholder="App Secret" value={credentialForm.app_secret} onChange={(event) => setCredentialForm({ ...credentialForm, app_secret: event.target.value })} />
-          <textarea className="w-full bg-[#0d0e10] p-3 rounded-lg font-mono text-[11px] text-primary/80 h-24 overflow-y-auto border border-white/5" value={credentialForm.extra_config_text} onChange={(event) => setCredentialForm({ ...credentialForm, extra_config_text: event.target.value })} />
+          <div>
+            <label htmlFor="field-access-token" className="block text-xs font-bold text-on-surface-variant mb-1 ml-1">Access Token</label>
+            <input id="field-access-token" className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" type="password" placeholder="Access Token" value={credentialForm.access_token} onChange={(event) => setCredentialForm({ ...credentialForm, access_token: event.target.value })} />
+          </div>
+          <div>
+            <label htmlFor="field-app-secret" className="block text-xs font-bold text-on-surface-variant mb-1 ml-1">App Secret</label>
+            <input id="field-app-secret" className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" type="password" placeholder="App Secret" value={credentialForm.app_secret} onChange={(event) => setCredentialForm({ ...credentialForm, app_secret: event.target.value })} />
+          </div>
+          <div>
+            <label htmlFor="field-extra-config" className="block text-xs font-bold text-on-surface-variant mb-1 ml-1">Configuration extra</label>
+            <textarea id="field-extra-config" className="w-full bg-[#0d0e10] p-3 rounded-lg font-mono text-[11px] text-primary/80 h-24 overflow-y-auto border border-white/5" value={credentialForm.extra_config_text} onChange={(event) => setCredentialForm({ ...credentialForm, extra_config_text: event.target.value })} />
+          </div>
           {credentialError ? <p className="text-xs text-error">{credentialError}</p> : null}
           <button type="submit" disabled={createCredentialMutation.isPending} className="w-full py-3 bg-primary text-on-primary font-bold rounded-lg disabled:opacity-50">
             {createCredentialMutation.isPending ? "Création..." : "Créer le credential"}

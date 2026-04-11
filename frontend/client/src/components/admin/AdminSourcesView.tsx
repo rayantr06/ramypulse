@@ -597,23 +597,41 @@ export function AdminSourcesView() {
             {isCreateMode || !selectedSource ? "CRÉATION DE SOURCE" : "ÉDITION DE SOURCE"}
           </p>
           <form className="space-y-4" onSubmit={handleSourceSubmit}>
-            <input className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" type="text" value={sourceForm.source_name} onChange={(event) => setSourceForm({ ...sourceForm, source_name: event.target.value })} />
-            <div className="grid grid-cols-2 gap-4">
-              <select className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" value={sourceForm.platform} disabled={!isCreateMode} onChange={(event) => setSourceForm({ ...sourceForm, platform: event.target.value })}>
-                {PLATFORM_OPTIONS.filter((option) => option.value !== "tiktok").map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
-              <select className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" value={sourceForm.owner_type} disabled={!isCreateMode} onChange={(event) => setSourceForm({ ...sourceForm, owner_type: event.target.value })}>
-                {OWNER_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
+            <div>
+              <label htmlFor="field-source-name" className="block text-xs font-bold text-on-surface-variant mb-1 ml-1">Nom de la source</label>
+              <input id="field-source-name" className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" type="text" value={sourceForm.source_name} onChange={(event) => setSourceForm({ ...sourceForm, source_name: event.target.value })} />
             </div>
-            <textarea className="w-full bg-[#0d0e10] p-3 rounded-lg font-mono text-[11px] text-primary/80 h-28 overflow-y-auto border border-white/5" value={sourceForm.config_text} onChange={(event) => setSourceForm({ ...sourceForm, config_text: event.target.value })} />
             <div className="grid grid-cols-2 gap-4">
-              <input className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" type="number" value={sourceForm.sync_frequency_minutes} onChange={(event) => setSourceForm({ ...sourceForm, sync_frequency_minutes: Number(event.target.value || 0) })} />
-              <input className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" type="number" value={sourceForm.freshness_sla_hours} onChange={(event) => setSourceForm({ ...sourceForm, freshness_sla_hours: Number(event.target.value || 0) })} />
+              <div>
+                <label htmlFor="field-platform" className="block text-xs font-bold text-on-surface-variant mb-1 ml-1">Plateforme</label>
+                <select id="field-platform" className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" value={sourceForm.platform} disabled={!isCreateMode} onChange={(event) => setSourceForm({ ...sourceForm, platform: event.target.value })}>
+                  {PLATFORM_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="field-owner-type" className="block text-xs font-bold text-on-surface-variant mb-1 ml-1">Type propriétaire</label>
+                <select id="field-owner-type" className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" value={sourceForm.owner_type} disabled={!isCreateMode} onChange={(event) => setSourceForm({ ...sourceForm, owner_type: event.target.value })}>
+                  {OWNER_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div>
+              <label htmlFor="field-config-json" className="block text-xs font-bold text-on-surface-variant mb-1 ml-1">Configuration JSON</label>
+              <textarea id="field-config-json" className="w-full bg-[#0d0e10] p-3 rounded-lg font-mono text-[11px] text-primary/80 h-28 overflow-y-auto border border-white/5" value={sourceForm.config_text} onChange={(event) => setSourceForm({ ...sourceForm, config_text: event.target.value })} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="field-sync-frequency" className="block text-xs font-bold text-on-surface-variant mb-1 ml-1">Fréquence sync (min)</label>
+                <input id="field-sync-frequency" className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" type="number" value={sourceForm.sync_frequency_minutes} onChange={(event) => setSourceForm({ ...sourceForm, sync_frequency_minutes: Number(event.target.value || 0) })} />
+              </div>
+              <div>
+                <label htmlFor="field-freshness-sla" className="block text-xs font-bold text-on-surface-variant mb-1 ml-1">SLA fraîcheur (h)</label>
+                <input id="field-freshness-sla" className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" type="number" value={sourceForm.freshness_sla_hours} onChange={(event) => setSourceForm({ ...sourceForm, freshness_sla_hours: Number(event.target.value || 0) })} />
+              </div>
             </div>
             <details className="bg-surface-container-high rounded-lg p-4">
               <summary className="cursor-pointer text-xs font-bold uppercase tracking-widest text-on-surface-variant">
@@ -621,22 +639,34 @@ export function AdminSourcesView() {
               </summary>
               <div className="grid grid-cols-1 gap-4 mt-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <select className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" value={sourceForm.source_purpose} onChange={(event) => setSourceForm({ ...sourceForm, source_purpose: event.target.value })}>
-                    {SOURCE_PURPOSE_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
+                  <div>
+                    <label htmlFor="field-source-purpose" className="block text-xs font-bold text-on-surface-variant mb-1 ml-1">Objectif source</label>
+                    <select id="field-source-purpose" className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" value={sourceForm.source_purpose} onChange={(event) => setSourceForm({ ...sourceForm, source_purpose: event.target.value })}>
+                      {SOURCE_PURPOSE_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="field-source-priority" className="block text-xs font-bold text-on-surface-variant mb-1 ml-1">Priorité</label>
+                    <input id="field-source-priority" className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" type="number" value={sourceForm.source_priority} onChange={(event) => setSourceForm({ ...sourceForm, source_priority: Number(event.target.value || 0) })} />
+                  </div>
+                </div>
+                <div>
+                  <label htmlFor="field-coverage-key" className="block text-xs font-bold text-on-surface-variant mb-1 ml-1">Clé couverture</label>
+                  <input id="field-coverage-key" className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" type="text" value={sourceForm.coverage_key} onChange={(event) => setSourceForm({ ...sourceForm, coverage_key: event.target.value })} placeholder="coverage_key" />
+                </div>
+                <div>
+                  <label htmlFor="field-credential-id" className="block text-xs font-bold text-on-surface-variant mb-1 ml-1">Credential associé</label>
+                  <select id="field-credential-id" className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" value={sourceForm.credential_id} onChange={(event) => setSourceForm({ ...sourceForm, credential_id: event.target.value })}>
+                    <option value="">Aucun credential</option>
+                    {credentialOptions.map((credential) => (
+                      <option key={credential.credential_id} value={credential.credential_id}>
+                        {credential.entity_name} · {credential.platform}
+                      </option>
                     ))}
                   </select>
-                  <input className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" type="number" value={sourceForm.source_priority} onChange={(event) => setSourceForm({ ...sourceForm, source_priority: Number(event.target.value || 0) })} />
                 </div>
-                <input className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" type="text" value={sourceForm.coverage_key} onChange={(event) => setSourceForm({ ...sourceForm, coverage_key: event.target.value })} placeholder="coverage_key" />
-                <select className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" value={sourceForm.credential_id} onChange={(event) => setSourceForm({ ...sourceForm, credential_id: event.target.value })}>
-                  <option value="">Aucun credential</option>
-                  {credentialOptions.map((credential) => (
-                    <option key={credential.credential_id} value={credential.credential_id}>
-                      {credential.entity_name} · {credential.platform}
-                    </option>
-                  ))}
-                </select>
               </div>
             </details>
             {sourceError ? <p className="text-xs text-error">{sourceError}</p> : null}
