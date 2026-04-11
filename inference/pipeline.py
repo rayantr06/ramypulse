@@ -24,6 +24,12 @@ Architecture (inspirée de la Sentiment Incongruity Detection, cf. SAIDS / ArSar
     │  (fallback)  │  Ne traite que ~2-5% du trafic
     └─────────────┘
 
+Changements v3 (après test Colab du 11 avril) :
+- Ajout lexicon check : marqueurs négatifs explicites (مريض, plastique, robinet, etc.)
+  qui déclenchent l'arbitrage LLM même si la fenêtre glissante ne détecte rien
+- Ordre : lexicon check → sliding window → LLM arbitrage
+- Fix clé API leaked → nouvelle clé
+
 Changements v2 (fix après test réel) :
 - gemini-2.0-flash → gemini-2.5-flash (2.0 déprécié, 404)
 - Split en 2 moitiés → fenêtre glissante (le split ratait les cas où le mot
@@ -83,6 +89,23 @@ ID2LABEL = {v: k for k, v in LABEL2ID.items()}
 # Seuils
 MIN_TEXT_LEN_FOR_CHECK = 15       # Textes trop courts → pas de vérification
 SEGMENT_NEGATIVE_THRESHOLD = 0.50  # Un segment est "négatif" si prob neg ≥ ce seuil
+
+# Lexique de marqueurs négatifs — twist sarcasme/ironie algérien
+# Si le texte est classé positif MAIS contient ces marqueurs → incongruité lexicale
+# Ces mots signalent un retournement de sens même quand DziriBERT ne le détecte pas
+_NEGATIVE_TWIST_MARKERS = {
+    # Santé / maladie
+    "مريض", "مرضت", "مرض", "malade", "intoxication", "périmé",
+    # Goût / qualité négatifs
+    "robinet", "plastique", "médicament", "dégoûtant", "dgoutant",
+    "مصنع", "خايب", "سم",
+    # Comparaisons sarcastiques
+    "eaux usées", "eau du robinet",
+    # Arnaque / vol / prix
+    "vol", "arnaque", "7ram",
+    # Négations fortes (Derja)
+    "ماشي مليح", "بلا goût", "bla goût",
+}
 
 # Prompt LLM
 _LLM_ARBITRAGE_PROMPT = """Tu es un expert en analyse de sentiment pour les commentaires algériens sur les boissons (Ramy, Hamoud Boualem, etc.).
@@ -226,11 +249,17 @@ class SentimentPipeline:
                 distribution=full_pred["distribution"],
             )
 
-        # ── Étape 2 : Incongruity check (fenêtre glissante) ──
+        # ── Étape 2a : Lexicon check (marqueurs négatifs explicites) ──
         self.stats["incongruity_checked"] += 1
-        incongruity = self._check_incongruity_sliding(text, full_pred)
+        lexicon_hit = self._check_lexicon_incongruity(text)
 
-        if incongruity["detected"]:
+        if lexicon_hit:
+            incongruity = lexicon_hit
+        else:
+            # ── Étape 2b : Incongruity check (fenêtre glissante) ──
+            incongruity = self._check_incongruity_sliding(text, full_pred)
+
+        if incongruity and incongruity.get("detected", False):
             # ── Étape 3 : LLM arbitrage ──
             if self._gemini_available:
                 self.stats["llm_arbitrated"] += 1
@@ -327,6 +356,29 @@ class SentimentPipeline:
                 segments.append(segment)
 
         return segments if segments else [text]
+
+    def _check_lexicon_incongruity(self, text: str) -> dict | None:
+        """Détecte une incongruité lexicale : marqueurs négatifs dans un texte classé positif.
+
+        Complémentaire à la fenêtre glissante — attrape les cas où DziriBERT
+        voit 'ممتاز' comme positif même sur les segments courts, alors que
+        'مريض' ou 'plastique' indiquent clairement un retournement.
+        """
+        text_lower = text.lower()
+        found = []
+        for marker in _NEGATIVE_TWIST_MARKERS:
+            if marker in text_lower or marker in text:
+                found.append(marker)
+
+        if found:
+            return {
+                "detected": True,
+                "reason": "lexicon_twist",
+                "markers_found": found,
+                "worst_neg_segment": found[0],
+                "worst_neg_score": 0.80,  # Score synthétique pour le prompt LLM
+            }
+        return None
 
     def _check_incongruity_sliding(self, text: str, full_pred: dict) -> dict:
         """Détecte une incongruité par fenêtre glissante.

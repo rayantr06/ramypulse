@@ -8,7 +8,7 @@ Usage Colab :
     !pip install -q transformers google-genai scikit-learn
     # Alternative si google-genai ne marche pas :
     # !pip install -q transformers google-generativeai scikit-learn
-    !python evaluation/test_pipeline.py --gemini-key AIzaSyAue3mHKzZvjxrL-3oOranYuy6TcX7psJ4
+    !python evaluation/test_pipeline.py --gemini-key AIzaSyCjk7RJtwbryCdUcbVnFs-BOK9QYnNlgAc
 """
 
 from __future__ import annotations
