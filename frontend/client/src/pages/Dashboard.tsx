@@ -385,6 +385,7 @@ export default function Dashboard() {
               {currentActions.map((action) => (
                 <div
                   key={action.id}
+                  onClick={() => navigate("/recommandations")}
                   className="bg-surface-container-low border border-outline-variant/10 p-6 hover:bg-surface-container-high transition-all duration-300 group cursor-pointer rounded-sm"
                   data-testid={`action-card-${action.id}`}
                 >

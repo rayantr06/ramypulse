@@ -1006,7 +1006,6 @@ export default function AdminSourcesOps() {
                 <h3 className="text-sm font-bold uppercase tracking-widest text-on-surface-variant">
                   Historique Sync Runs
                 </h3>
-                <span className="text-xs text-primary font-medium">Voir tout l'historique</span>
               </div>
               <table className="w-full text-left text-sm">
                 <thead className="bg-surface-container-high/30">
