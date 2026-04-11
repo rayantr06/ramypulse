@@ -33,6 +33,13 @@ def _now() -> str:
 
 
 def _analyze_text(text: str) -> dict:
+    # Préférer absa_adapter (context-aware + sarcasm) si disponible et opérationnel,
+    # sinon fallback transparent sur absa_engine (pas de modèle chargé = normal en dev/CI)
+    try:
+        from core.analysis import absa_adapter as _engine
+        return _engine.analyze_text(text)
+    except Exception:
+        pass
     analyze_fn = getattr(absa_engine, "analyze_text", None)
     if callable(analyze_fn):
         return analyze_fn(text)
@@ -96,7 +103,7 @@ def run_normalization_job(
             raw_text = str(payload.get("raw_text") or "")
             normalized = normalize(raw_text)
             raw_metadata = json.loads(payload.get("raw_metadata") or "{}")
-            analysis = _analyze_text(normalized["normalized"])
+            analysis = _analyze_text(normalized.get("cleaned_raw") or normalized["normalized"])
             resolved = _resolve_entities(normalized["normalized"], raw_metadata, db_path=db_path)
 
             normalized_record_id = _new_id("norm")

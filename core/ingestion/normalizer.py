@@ -194,6 +194,21 @@ def _clean_noise(text: str) -> str:
     return cleaned.strip()
 
 
+def _clean_for_classifier(text: str) -> str:
+    """Nettoie le texte pour le classifieur sans translittérer ni tronquer les emojis.
+
+    Supprime URLs, mentions, hashtags et espaces parasites.
+    Garde les emojis complets (signal d'ironie : 😍😍😍🤮).
+    Ne fait PAS de translittération Arabizi→Arabe.
+    """
+    cleaned = _URL.sub("", text)
+    cleaned = _MENTION.sub("", cleaned)
+    cleaned = _HASHTAG.sub("", cleaned)
+    # NE PAS tronquer les emojis — garder le signal complet pour le classifieur
+    cleaned = _MULTI_SPACE.sub(" ", cleaned)
+    return cleaned.strip()
+
+
 def _split_token(token: str) -> tuple[str, str, str]:
     """Sépare préfixe ponctuation, coeur de mot et suffixe ponctuation."""
     match = _WORD_PARTS.match(token)
@@ -322,11 +337,13 @@ def normalize(text: str) -> dict:
         return {
             "normalized": "",
             "original": original,
+            "cleaned_raw": "",  # ← AJOUTER CE CHAMP
             "script_detected": "latin",
             "language": "french",
         }
 
     cleaned = _clean_noise(text)
+    cleaned_for_classifier = _clean_for_classifier(text)  # ← AJOUTER CETTE LIGNE
     script = _detect_script(cleaned)
     converted, arabizi_detected = _convert_arabizi(cleaned)
     normalized = _normalize_arabic_graphemes(converted)
@@ -337,6 +354,7 @@ def normalize(text: str) -> dict:
     return {
         "normalized": normalized,
         "original": original,
+        "cleaned_raw": cleaned_for_classifier,  # ← AJOUTER CE CHAMP
         "script_detected": script,
         "language": language,
     }
