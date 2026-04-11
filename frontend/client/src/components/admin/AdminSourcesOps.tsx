@@ -26,6 +26,17 @@ import {
 } from "@/lib/apiMappings";
 import { apiRequest } from "@/lib/queryClient";
 import { toast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface SourceView {
   id: string;
@@ -1323,9 +1334,30 @@ export default function AdminSourcesOps() {
                         <td className="px-6 py-4">{post.entity_name || post.entity_type || "n/a"}</td>
                         <td className="px-6 py-4 text-xs text-on-surface-variant">{post.credential_id || "Aucun"}</td>
                         <td className="px-6 py-4 text-right">
-                          <button onClick={() => deletePostMutation.mutate(post.post_id)} disabled={deletePostMutation.isPending} className="text-xs font-bold text-error disabled:opacity-40">
-                            Retirer le post
-                          </button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <button disabled={deletePostMutation.isPending} className="text-xs font-bold text-error disabled:opacity-40">
+                                Retirer le post
+                              </button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent className="bg-surface-container border-outline-variant/20">
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Cette action est irréversible. Le post sera définitivement supprimé.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel className="bg-surface-container-high text-on-surface">Annuler</AlertDialogCancel>
+                                <AlertDialogAction
+                                  className="bg-error text-on-error hover:bg-error/80"
+                                  onClick={() => deletePostMutation.mutate(post.post_id)}
+                                >
+                                  Supprimer
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </td>
                       </tr>
                     ))
