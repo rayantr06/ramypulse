@@ -12,6 +12,8 @@ import {
 } from "@/lib/apiMappings";
 import { filterRecommendationViews } from "@/lib/pageSearchFilters";
 import { toast } from "@/hooks/use-toast";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 import { STITCH_AVATARS } from "@/lib/stitchAssets";
 
 interface RecommendationContextView {
@@ -531,7 +533,7 @@ export default function Recommandations() {
                       contextData.volume >= 1000
                         ? `${(contextData.volume / 1000).toFixed(1)}k`
                         : contextData.volume,
-                    label: "Volume (m³)",
+                    label: "Volume mentions",
                   },
                   {
                     icon: "warning",
@@ -544,8 +546,8 @@ export default function Recommandations() {
                     icon: "history",
                     color: "text-gray-500",
                     borderColor: "border-white/5",
-                    value: "Dernière run",
-                    label: lastRunLabel,
+                    value: lastRunLabel,
+                    label: "Dernière run",
                   },
                 ].map(({ icon, color, borderColor, value, label }) => (
                   <div
@@ -556,7 +558,7 @@ export default function Recommandations() {
                     <div>
                       <p
                         className={`font-headline tracking-tighter ${
-                          value === "Dernière run"
+                          label === "Dernière run"
                             ? "text-lg font-bold leading-tight"
                             : "text-2xl font-black"
                         }`}
@@ -630,7 +632,11 @@ export default function Recommandations() {
                     <span className="material-symbols-outlined text-xs">memory</span>
                     <span>{activeProviderBadge}</span>
                   </div>
-                  <span>{latestRecommendation?.created_at || "-"}</span>
+                  <span>
+                    {latestRecommendation?.created_at
+                      ? format(new Date(latestRecommendation.created_at), "dd/MM/yyyy HH:mm", { locale: fr })
+                      : "-"}
+                  </span>
                 </div>
               </div>
 
@@ -735,7 +741,9 @@ export default function Recommandations() {
               <tbody className="divide-y divide-white/5">
                 {runHistory.map((run, index) => (
                   <tr key={`${run.date}-${index}`} className="hover:bg-surface-bright/30 transition-colors">
-                    <td className="px-6 py-4 text-xs font-medium text-white">{run.date}</td>
+                    <td className="px-6 py-4 text-xs font-medium text-white">
+                      {run.date && run.date !== "-" ? format(new Date(run.date), "dd/MM/yyyy HH:mm", { locale: fr }) : run.date}
+                    </td>
                     <td className="px-6 py-4">
                       <span className="text-[10px] px-2 py-1 bg-surface-container-highest rounded-full text-gray-400">
                         {run.trigger}
