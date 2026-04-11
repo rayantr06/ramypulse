@@ -41,19 +41,33 @@ J10 → MERGE FINAL → tag v1.0-expo
 
 ## Setup worktrees
 
+Ton repo utilise la structure `.worktrees/` existante. Voici les commandes adaptées :
+
 ```bash
-# Depuis la racine du repo (branche expo/main-dev)
+# 1. Récupérer la branche expo/main-dev depuis GitHub
+git fetch origin expo/main-dev
+git checkout expo/main-dev
+
+# 2. Créer les branches agents
 git branch agent/claude-backend
 git branch agent/codex-frontend
+
+# 3. Créer les worktrees (dans ta structure .worktrees/ existante)
 git worktree add .worktrees/agent-backend agent/claude-backend
 git worktree add .worktrees/agent-frontend agent/codex-frontend
 
-# Copier les configs
-cp docs/agents/CLAUDE.md .worktrees/agent-backend/CLAUDE.md
-cp docs/agents/AGENTS.md .worktrees/agent-frontend/AGENTS.md
-cp .env .worktrees/agent-backend/.env
-cp .env .worktrees/agent-frontend/.env
+# 4. Copier les configs agents
+copy docs\agents\CLAUDE.md .worktrees\agent-backend\CLAUDE.md
+copy docs\agents\AGENTS.md .worktrees\agent-frontend\AGENTS.md
+copy .env .worktrees\agent-backend\.env
+copy .env .worktrees\agent-frontend\.env
+
+# 5. Vérification
+git worktree list
+# Attendu : ...agent-backend [agent/claude-backend] + ...agent-frontend [agent/codex-frontend]
 ```
+
+> **Note Windows** : Les commandes `copy` sont en syntaxe Windows. Sur Git Bash, utiliser `cp` à la place.
 
 ## Références
 
