@@ -11,6 +11,7 @@ interface WatchOnboardingWizardProps {
 }
 
 const DEFAULT_CHANNELS = ["public_url_seed", "web_search"];
+const DEFAULT_LANGUAGES = ["fr", "ar"];
 
 export function WatchOnboardingWizard({ onRunCreated }: WatchOnboardingWizardProps) {
   const [step, setStep] = useState<1 | 2>(1);
@@ -18,6 +19,7 @@ export function WatchOnboardingWizard({ onRunCreated }: WatchOnboardingWizardPro
   const [productName, setProductName] = useState("");
   const [seedUrl, setSeedUrl] = useState("");
   const [channels, setChannels] = useState<string[]>(DEFAULT_CHANNELS);
+  const [languages, setLanguages] = useState<string[]>(DEFAULT_LANGUAGES);
 
   const suggestedKeywords = useMemo(
     () => suggestBrandKeywords(`${brandName} ${productName}`.trim()),
@@ -42,7 +44,7 @@ export function WatchOnboardingWizard({ onRunCreated }: WatchOnboardingWizardPro
         product_name: productName,
         seed_urls: seedUrl ? [seedUrl] : [],
         channels,
-        languages: ["fr", "ar"],
+        languages,
       });
       const watchlistResponse = await apiRequest("POST", "/api/watchlists", watchlistPayload);
       const watchlistPayloadResponse = await watchlistResponse.json();
@@ -175,45 +177,70 @@ export function WatchOnboardingWizard({ onRunCreated }: WatchOnboardingWizardPro
               </p>
             </div>
 
-            <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-high p-5">
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
-                Canaux activés
-              </p>
-              <div className="mt-4 space-y-3 text-sm">
-                <label className="flex items-center gap-3">
-                  <input
-                    data-testid="checkbox-channel-public_url_seed"
-                    type="checkbox"
-                    checked={channels.includes("public_url_seed")}
-                    onChange={() => toggleChannel("public_url_seed")}
-                  />
-                  <span>Page publique seed</span>
+            <div className="space-y-4">
+              <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-high p-5">
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
+                  Canaux activés
+                </p>
+                <div className="mt-4 space-y-3 text-sm">
+                  <label className="flex items-center gap-3">
+                    <input
+                      data-testid="checkbox-channel-public_url_seed"
+                      type="checkbox"
+                      checked={channels.includes("public_url_seed")}
+                      onChange={() => toggleChannel("public_url_seed")}
+                    />
+                    <span>Page publique seed</span>
+                  </label>
+                  <label className="flex items-center gap-3">
+                    <input
+                      data-testid="checkbox-channel-web_search"
+                      type="checkbox"
+                      checked={channels.includes("web_search")}
+                      onChange={() => toggleChannel("web_search")}
+                    />
+                    <span>Recherche web</span>
+                  </label>
+                  <label className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      checked={channels.includes("youtube")}
+                      onChange={() => toggleChannel("youtube")}
+                    />
+                    <span>YouTube</span>
+                  </label>
+                  <label className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      checked={channels.includes("google_maps")}
+                      onChange={() => toggleChannel("google_maps")}
+                    />
+                    <span>Google Maps</span>
+                  </label>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-high p-5">
+                <label className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
+                  Langues optionnelles
                 </label>
-                <label className="flex items-center gap-3">
-                  <input
-                    data-testid="checkbox-channel-web_search"
-                    type="checkbox"
-                    checked={channels.includes("web_search")}
-                    onChange={() => toggleChannel("web_search")}
-                  />
-                  <span>Recherche web</span>
-                </label>
-                <label className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={channels.includes("youtube")}
-                    onChange={() => toggleChannel("youtube")}
-                  />
-                  <span>YouTube</span>
-                </label>
-                <label className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={channels.includes("google_maps")}
-                    onChange={() => toggleChannel("google_maps")}
-                  />
-                  <span>Google Maps</span>
-                </label>
+                <select
+                  multiple
+                  className="mt-4 min-h-24 w-full rounded-xl border border-outline-variant/15 bg-surface-container-highest px-3 py-2 text-sm text-on-surface focus:outline-none focus:ring-1 focus:ring-primary/40"
+                  value={languages}
+                  onChange={(event) =>
+                    setLanguages(
+                      Array.from(event.target.selectedOptions, (option) => option.value),
+                    )
+                  }
+                >
+                  <option value="fr">Français</option>
+                  <option value="ar">Arabe</option>
+                  <option value="en">Anglais</option>
+                </select>
+                <p className="mt-2 text-xs leading-5 text-on-surface-variant">
+                  Préselection par défaut : français et arabe. Vous pouvez ajouter ou retirer des langues.
+                </p>
               </div>
             </div>
           </div>
