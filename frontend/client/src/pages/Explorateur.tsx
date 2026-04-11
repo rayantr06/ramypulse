@@ -172,9 +172,9 @@ function mapSearchView(value: unknown): SearchResultView[] {
     content: result.text,
     relevance_score: displayScores[index] ?? 0,
     sentiment: formatSentimentLabel(result.sentiment_label || "neutre"),
-    aspect: result.aspect || "n/a",
+    aspect: result.aspect || "—",
     source_url: result.source_url || "",
-    wilaya: "n/a",
+    wilaya: "—",
     created_at: "",
   }));
 }
@@ -189,9 +189,9 @@ function mapVerbatimsView(value: unknown): VerbatimsView {
         date: parts.date,
         time: parts.time,
         source: item.channel,
-        aspect: item.aspect || "n/a",
+        aspect: item.aspect || "—",
         sentiment: formatSentimentLabel(item.sentiment_label || "neutre"),
-        wilaya: item.wilaya || "n/a",
+        wilaya: item.wilaya || "—",
         text: item.text,
         source_url: item.source_url || "",
       };
@@ -230,9 +230,9 @@ export default function Explorateur() {
           source: String(item.channel ?? ""),
           sentiment: formatSentimentLabel(String(item.sentiment_label ?? "neutre")),
           content: String(item.text ?? ""),
-          wilaya: String(item.wilaya ?? "n/a"),
+          wilaya: String(item.wilaya ?? "—"),
           date: parts.date,
-          aspect: String(item.aspect ?? "n/a"),
+          aspect: String(item.aspect ?? "—"),
         };
       });
 

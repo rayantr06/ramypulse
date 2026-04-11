@@ -301,7 +301,7 @@ export default function Dashboard() {
                 {trendCopy(summaryView)}
               </p>
               <p className="text-[11px] text-gray-500 mt-1 italic">
-                Base sur {summaryView.totalMentions.toLocaleString("fr-FR")} mentions {summaryView.period}
+                Basé sur {summaryView.totalMentions.toLocaleString("fr-FR")} mentions {summaryView.period}
               </p>
               <p className="text-[11px] text-gray-500 mt-2 italic">{summaryView.summary}</p>
             </div>
@@ -513,7 +513,7 @@ export default function Dashboard() {
                 : `Latency: ${statusView.latencyMs}ms`}
             </span>
           </div>
-          <div>© 2024 RamyPulse Intelligence Unit</div>
+          <div>© {new Date().getFullYear()} RamyPulse Intelligence Unit</div>
         </footer>
       </div>
     </AppShell>
