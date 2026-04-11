@@ -111,6 +111,16 @@ function buildSocialExcerpts(payload: Record<string, unknown>): SocialExcerpt[] 
     .filter((item) => item.text);
 }
 
+function getSourceInitials(platform: string): string {
+  const normalized = platform.toLowerCase();
+  if (normalized === "facebook") return "FB";
+  if (normalized === "youtube") return "YT";
+  if (normalized === "google_maps") return "GM";
+  if (normalized === "instagram") return "IG";
+  if (normalized === "import") return "IM";
+  return platform.slice(0, 2).toUpperCase();
+}
+
 function mapAlertView(value: unknown): AlertView {
   const alert = mapAlert(value);
   const payload = asRecord(alert.alert_payload);
@@ -154,8 +164,8 @@ function SeverityDot({ severity }: { severity: SeverityFilter }) {
   const map: Record<SeverityFilter, string> = {
     CRITIQUE: "bg-error shadow-[0_0_8px_rgba(255,180,171,0.5)]",
     HAUTE: "bg-primary-container",
-    MOYENNE: "bg-yellow-400",
-    BASSE: "bg-tertiary",
+    MOYENNE: "bg-amber-500/20 text-amber-400 border border-amber-400/40",
+    BASSE: "bg-slate-500/20 text-slate-400 border border-slate-400/40",
   };
   return <span className={`w-3 h-3 rounded-full ${map[severity]}`}></span>;
 }
@@ -164,8 +174,8 @@ function severityBorderClass(severity: SeverityFilter): string {
   const map: Record<SeverityFilter, string> = {
     CRITIQUE: "border-error",
     HAUTE: "border-primary-container",
-    MOYENNE: "border-yellow-400",
-    BASSE: "border-tertiary",
+    MOYENNE: "border-amber-400",
+    BASSE: "border-slate-400",
   };
   return map[severity];
 }
@@ -173,7 +183,8 @@ function severityBorderClass(severity: SeverityFilter): string {
 function severityGradient(severity: SeverityFilter): string {
   if (severity === "CRITIQUE") return "from-error to-error-container";
   if (severity === "HAUTE") return "from-primary-container to-primary";
-  return "from-tertiary to-tertiary-container";
+  if (severity === "MOYENNE") return "from-amber-500/80 to-amber-400/40";
+  return "from-slate-500/80 to-slate-400/40";
 }
 
 export default function Alertes() {
@@ -315,8 +326,8 @@ export default function Alertes() {
               {[
                 { value: "CRITIQUE" as SeverityFilter, dotClass: "bg-error" },
                 { value: "HAUTE" as SeverityFilter, dotClass: "bg-primary-container" },
-                { value: "MOYENNE" as SeverityFilter, dotClass: "bg-yellow-400" },
-                { value: "BASSE" as SeverityFilter, dotClass: "bg-tertiary" },
+                { value: "MOYENNE" as SeverityFilter, dotClass: "bg-amber-400" },
+                { value: "BASSE" as SeverityFilter, dotClass: "bg-slate-400" },
               ].map(({ value, dotClass }) => (
                 <button
                   key={value}
@@ -445,7 +456,9 @@ export default function Alertes() {
                         <div className="space-y-4">
                           {selectedAlert.social_excerpts.map((excerpt, index) => (
                             <div key={`${excerpt.author}-${index}`} className="flex gap-3">
-                              <div className="h-6 w-6 rounded-full bg-surface-container-highest shrink-0"></div>
+                              <div className="h-6 w-6 rounded-full bg-surface-container-highest shrink-0 flex items-center justify-center text-[9px] font-bold text-on-surface-variant">
+                                {getSourceInitials(excerpt.platform)}
+                              </div>
                               <div>
                                 <span className="text-xs font-bold block mb-1">
                                   {excerpt.author}{" "}
@@ -519,7 +532,7 @@ export default function Alertes() {
                           {updateStatusMutation.isPending ? (
                             <span className="material-symbols-outlined text-sm animate-spin">progress_activity</span>
                           ) : (
-                            "Ecarter"
+                            "Écarter"
                           )}
                         </button>
                       )}
