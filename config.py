@@ -38,14 +38,15 @@ EMBEDDINGS_DIR.mkdir(parents=True, exist_ok=True)
 DEMO_DATA_DIR.mkdir(parents=True, exist_ok=True)
 SECRETS_DIR.mkdir(parents=True, exist_ok=True)
 (MODELS_DIR / "dziribert").mkdir(parents=True, exist_ok=True)
+(MODELS_DIR / "dziribert-sentiment").mkdir(parents=True, exist_ok=True)
 (MODELS_DIR / "whisper").mkdir(parents=True, exist_ok=True)
 
 # ---------------------------------------------------------------------------
 # Modèles ML
 # ---------------------------------------------------------------------------
 
-DZIRIBERT_MODEL_PATH: Path = MODELS_DIR / "dziribert"
-"""Chemin local vers le modèle DziriBERT fine-tuné (5 classes)."""
+DZIRIBERT_MODEL_PATH: Path = MODELS_DIR / "dziribert-sentiment"
+"""Chemin local vers le modèle DziriBERT fine-tuné (3 classes: positive/negative/neutral)."""
 
 WHISPER_MODEL_SIZE: str = os.getenv("WHISPER_MODEL_SIZE", "large-v3")
 """Taille du modèle Whisper: tiny, base, small, medium, large, large-v2, large-v3."""

@@ -1,0 +1,43 @@
+{
+  "model_base": "alger-ia/dziribert",
+  "num_labels": 3,
+  "label2id": {
+    "positive": 0,
+    "negative": 1,
+    "neutral": 2
+  },
+  "id2label": {
+    "0": "positive",
+    "1": "negative",
+    "2": "neutral"
+  },
+  "class_weights": {
+    "negative": 1.9285,
+    "neutral": 0.6181,
+    "positive": 1.1578
+  },
+  "dataset": {
+    "total": 1834,
+    "train": 1283,
+    "val": 275,
+    "test": 276
+  },
+  "test_metrics": {
+    "loss": 0.7806,
+    "f1_macro": 0.7786,
+    "f1_positive": 0.6918,
+    "f1_negative": 0.8172,
+    "f1_neutral": 0.8267,
+    "accuracy": 0.7862,
+    "runtime": 0.1589,
+    "samples_per_second": 1737.014,
+    "steps_per_second": 56.642
+  },
+  "hyperparams": {
+    "lr": 2e-05,
+    "batch": 16,
+    "epochs_max": 10,
+    "patience": 3,
+    "max_len": 128
+  }
+}
