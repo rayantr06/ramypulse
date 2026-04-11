@@ -13,7 +13,12 @@ from fastapi import APIRouter, Depends, HTTPException
 import config
 from api.data_loader import load_annotated
 from api.deps.tenant import resolve_client_id
-from api.schemas import ContextPreview, RecommendationGenerate, RecommendationStatusUpdate
+from api.schemas import (
+    ContextPreview,
+    RecommendationBulkStatusUpdate,
+    RecommendationGenerate,
+    RecommendationStatusUpdate,
+)
 from core.recommendation import agent_client, context_builder, recommendation_manager
 
 logger = logging.getLogger(__name__)
@@ -141,6 +146,34 @@ def generate_recommendations(
         raise
     except Exception as e:
         logger.error("Erreur generate_recommendations: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+_VALID_STATUSES = {"active", "archived", "dismissed"}
+
+
+@router.post("/bulk-status")
+def bulk_update_recommendation_status(payload: RecommendationBulkStatusUpdate):
+    """Met à jour le statut de plusieurs recommandations en une transaction.
+
+    - IDs inexistants : ignorés silencieusement
+    - Status invalide : HTTP 422
+    - Retourne {"updated": N, "ids": [...ids mis à jour...]}
+    """
+    if payload.status not in _VALID_STATUSES:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Statut invalide '{payload.status}'. Valeurs acceptées : {sorted(_VALID_STATUSES)}",
+        )
+
+    if not payload.ids:
+        return {"updated": 0, "ids": []}
+
+    try:
+        updated_ids = recommendation_manager.bulk_update_status(payload.ids, payload.status)
+        return {"updated": len(updated_ids), "ids": updated_ids}
+    except Exception as e:
+        logger.error("Erreur bulk_update_recommendation_status: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
 
 

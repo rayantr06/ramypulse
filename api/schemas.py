@@ -192,6 +192,11 @@ class RecommendationStatusUpdate(BaseModel):
     status: str = Field(description="active | archived | dismissed")
 
 
+class RecommendationBulkStatusUpdate(BaseModel):
+    ids: list[str]
+    status: str = Field(description="active | archived | dismissed")
+
+
 class ProviderModel(BaseModel):
     id: str
     label: str
