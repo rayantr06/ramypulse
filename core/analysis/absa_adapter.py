@@ -14,12 +14,16 @@ Solution — Global-to-Aspect Propagation (inspirée de GCNet / Arctic-ABSA) :
     2. Pour chaque aspect :
        a) Si le commentaire = 1 phrase → aspect hérite du global directement
        b) Si multi-phrase → on classifie la phrase isolée de l'aspect
-          - Conflit (global négatif + local positif) + confiance locale < 0.70
-            → sarcasme cross-phrase probable → propager le global
-          - Sinon (confiance locale forte ou pas de conflit)
-            → opinion spécifique légitime → garder le local
+          - Conflit (global négatif + local positif) :
+            • D'autres aspects sont négatifs dans d'autres phrases
+              → commentaire mixte → garder le local (opinion légitime)
+            • Aucun autre aspect négatif détecté
+              → sarcasme cross-phrase → propager le global
+          - Pas de conflit → garder le local
     Cas légitime préservé : "El prix raisonnable. Bla goût."
        → prix=positif (gardé), goût=négatif, global=négatif
+    Sarcasme cross-phrase : "Le goût est excellent. Après 2h malade."
+       → goût=négatif (propagé du global), global=négatif
 
 Ce fichier ne modifie AUCUN fichier existant du repo.
 Pour activer l'adapter, changer l'import dans normalizer_pipeline.py :
@@ -141,39 +145,80 @@ def _build_aspect_sentiments_context_aware(
         local_label = local_classification["label"]
         local_confidence = local_classification["confidence"]
 
-        # Propagation UNIQUEMENT si l'aspect n'a pas de sentiment propre
-        # explicite (phrase trop courte / neutre) et que le global est négatif
-        # → indique un sarcasme cross-phrase
+        # Logique de propagation multi-phrase :
         #
-        # Si l'aspect a un sentiment LOCAL clair (positif OU négatif),
-        # on le garde : c'est une opinion spécifique à cet aspect.
-        # Ex: "El prix raisonnable. Bla goût." → prix=positif (garder), goût=négatif
-        if _should_propagate_global(global_label, local_label) and local_confidence < 0.70:
-            # Conflit + faible confiance locale → sarcasme cross-phrase probable
-            logger.info(
-                "ABSA propagation: aspect '%s' local=%s (%.2f) → global=%s (%.2f) [%s]",
-                mention["aspect"], local_label, local_confidence,
-                global_label, global_confidence, global_method,
-            )
-            annotations.append({
-                "aspect": mention["aspect"],
-                "mention": mention["mention"],
-                "sentiment": global_label,
-                "confidence": global_confidence,
-                "propagated": True,
-                "reason": "global_override_sarcasm",
-                "local_sentiment": local_label,
-                "local_confidence": local_confidence,
-            })
+        # CAS 1 — Conflit (global négatif + local positif) :
+        #   Le global dit "ce commentaire est négatif" mais la phrase de l'aspect
+        #   semble positive. C'est soit du sarcasme cross-phrase, soit un aspect
+        #   légitimement positif dans un commentaire globalement négatif.
+        #
+        #   On vérifie si d'autres aspects existent avec un sentiment négatif
+        #   dans le texte. Si oui, le commentaire est "mixte" (certains aspects
+        #   positifs, d'autres négatifs) → garder le local.
+        #   Si non (aucun autre aspect négatif détecté), le négatif vient d'un
+        #   contexte général qui contredit l'aspect → propager le global.
+        #
+        # CAS 2 — Pas de conflit : garder le local.
+
+        if _should_propagate_global(global_label, local_label):
+            # Vérifier si d'autres mentions d'aspect ont un sentiment négatif
+            # dans leurs propres phrases (signe d'un commentaire "mixte")
+            other_negative = False
+            for other in aspect_mentions:
+                if other is mention:
+                    continue
+                other_sentence = _extract_sentence_for_span(
+                    text, int(other["start"]), int(other["end"])
+                )
+                if other_sentence.strip() != sentence.strip():
+                    other_cls = classify_sentiment(other_sentence)
+                    if other_cls["label"] in _NEGATIVE_LABELS:
+                        other_negative = True
+                        break
+
+            if other_negative:
+                # Commentaire mixte : cet aspect est légitimement positif
+                # Ex: "El prix raisonnable. Bla goût." → prix=positif (garder)
+                logger.info(
+                    "ABSA local conservé (mixte): aspect '%s' local=%s, "
+                    "autre aspect négatif détecté",
+                    mention["aspect"], local_label,
+                )
+                annotations.append({
+                    "aspect": mention["aspect"],
+                    "mention": mention["mention"],
+                    "sentiment": local_label,
+                    "confidence": local_confidence,
+                    "propagated": False,
+                    "reason": "local_mixed_legitimate",
+                })
+            else:
+                # Pas d'autre aspect négatif → sarcasme cross-phrase
+                # Ex: "Le goût est excellent. Après 2h malade."
+                logger.info(
+                    "ABSA propagation: aspect '%s' local=%s (%.2f) → global=%s (%.2f) [%s]",
+                    mention["aspect"], local_label, local_confidence,
+                    global_label, global_confidence, global_method,
+                )
+                annotations.append({
+                    "aspect": mention["aspect"],
+                    "mention": mention["mention"],
+                    "sentiment": global_label,
+                    "confidence": global_confidence,
+                    "propagated": True,
+                    "reason": "global_override_sarcasm",
+                    "local_sentiment": local_label,
+                    "local_confidence": local_confidence,
+                })
         else:
-            # Pas de conflit OU confiance locale forte → garder le local
+            # Pas de conflit → garder le sentiment local
             annotations.append({
                 "aspect": mention["aspect"],
                 "mention": mention["mention"],
                 "sentiment": local_label,
                 "confidence": local_confidence,
                 "propagated": False,
-                "reason": "local_confident" if local_confidence >= 0.70 else "local_consistent",
+                "reason": "local_consistent",
             })
 
     return annotations
