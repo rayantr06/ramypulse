@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -70,8 +71,29 @@ class TestQueryPlanner:
 
         assert len(queries) <= 3
 
+    def test_reddit_queries_differ_from_press_queries(self) -> None:
+        brand_watchlist = _import_module("core.discovery.brand_watchlist")
+        query_planner = _import_module("core.discovery.query_planner")
+
+        planner = query_planner.QueryPlanner(brand_watchlist.BrandWatchlist())
+        press_queries = planner.generate_queries("press", max_queries=12)
+        reddit_queries = planner.generate_queries("reddit", max_queries=12)
+
+        assert press_queries != reddit_queries
+        assert any("reddit" in query.lower() or "forum" in query.lower() for query in reddit_queries)
+        assert not any("reddit" in query.lower() or "forum" in query.lower() for query in press_queries)
+
 
 class TestBudgetController:
+    def test_default_state_path_uses_config_data_dir(self, monkeypatch, tmp_path: Path) -> None:
+        module = _import_module("core.discovery.budget_controller")
+        config_module = _import_module("config")
+        monkeypatch.setattr(config_module, "DATA_DIR", tmp_path / "tenant-data", raising=False)
+
+        budget = module.BudgetController()
+
+        assert budget.state_path == config_module.DATA_DIR / "budget_state.json"
+
     def test_can_spend_within_budget(self, tmp_path: Path) -> None:
         module = _import_module("core.discovery.budget_controller")
         budget = module.BudgetController(
@@ -151,6 +173,10 @@ class TestBudgetController:
 
         assert budget.can_spend("press", n_search=1)
         assert budget.get_remaining() == 5.0
+        persisted = json.loads(state_file.read_text())
+        assert persisted["month"] == datetime.now(timezone.utc).strftime("%Y-%m")
+        assert persisted["search_calls"] == 0
+        assert persisted["total_cost_usd"] == 0.0
 
 
 class TestPerplexityCollector:
@@ -255,6 +281,40 @@ class TestPerplexityCollector:
         urls = [document["source_url"] for document in result]
         assert len(urls) == len(set(urls))
 
+    def test_build_watchlist_derives_variants_from_brand_when_keywords_missing(self, monkeypatch) -> None:
+        module = _import_module("core.watch_runs.collectors.perplexity_discovery")
+        monkeypatch.setattr(
+            module,
+            "get_watchlist",
+            lambda watchlist_id: {
+                "watchlist_id": watchlist_id,
+                "client_id": "tenant-pepsi",
+                "filters": {"brand_name": "Pepsi"},
+            },
+        )
+
+        watchlist = module._build_watchlist_from_db("tenant-pepsi", "watch-pepsi")
+
+        assert watchlist.brand_name == "Pepsi"
+        assert watchlist.brand_variants == ["Pepsi", "pepsi"]
+
+    def test_build_watchlist_rejects_cross_tenant_override(self, monkeypatch) -> None:
+        module = _import_module("core.watch_runs.collectors.perplexity_discovery")
+        monkeypatch.setattr(
+            module,
+            "get_watchlist",
+            lambda watchlist_id: {
+                "watchlist_id": watchlist_id,
+                "client_id": "tenant-other",
+                "filters": {"brand_name": "Pepsi", "keywords": ["pepsi"]},
+            },
+        )
+
+        watchlist = module._build_watchlist_from_db("tenant-pepsi", "watch-pepsi")
+
+        assert watchlist.brand_name == "Ramy"
+        assert "ramy" in watchlist.brand_variants
+
     def test_channel_attribution_uses_result_url(self, monkeypatch, tmp_path: Path) -> None:
         module = _import_module("core.watch_runs.collectors.perplexity_discovery")
         self._isolate_budget_state(module, monkeypatch, tmp_path)
@@ -263,8 +323,12 @@ class TestPerplexityCollector:
 
         result = module.collect_perplexity_discovery(client_id="ramy_client_001")
 
-        channels = {document["raw_metadata"]["channel"] for document in result}
-        assert "press" in channels or "reddit" in channels
+        channels_by_url = {
+            document["source_url"]: document["raw_metadata"]["channel"]
+            for document in result
+        }
+        assert channels_by_url["https://tsa-algerie.com/ramy-bio-2026/"] == "press"
+        assert channels_by_url["https://reddit.com/r/algeria/comments/abc123"] == "reddit"
 
 
 class TestRunServiceIntegration:

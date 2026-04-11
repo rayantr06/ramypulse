@@ -1,4 +1,4 @@
-"""Perplexity query generation for Discovery Brain V1."""
+"""Generation de requetes Perplexity pour Discovery Brain V1."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ def _contains_arabic(text: str) -> bool:
 
 
 class QueryPlanner:
-    """Generate prioritized search queries for a specific discovery mode."""
+    """Genere des requetes priorisees selon le mode de decouverte."""
 
     SIGNAL_KEYWORDS_FR = [
         "probleme",
@@ -38,9 +38,16 @@ class QueryPlanner:
     ]
 
     def __init__(self, watchlist: BrandWatchlist):
+        """Construit un planner a partir d'une watchlist declarative."""
         self.watchlist = watchlist
 
-    def generate_queries(self, mode: str, max_queries: int = 10) -> list[str]:
+    def _arabic_variant(self) -> str | None:
+        return next(
+            (variant for variant in self.watchlist.brand_variants if _contains_arabic(variant)),
+            None,
+        )
+
+    def _generate_press_queries(self) -> list[str]:
         queries: list[str] = []
         watchlist = self.watchlist
 
@@ -51,12 +58,47 @@ class QueryPlanner:
         for aspect in watchlist.aspects:
             queries.append(f"{watchlist.brand_name} {aspect} avis")
             if "ar" in watchlist.languages:
-                arabic_variant = next(
-                    (variant for variant in watchlist.brand_variants if _contains_arabic(variant)),
-                    None,
-                )
+                arabic_variant = self._arabic_variant()
                 if arabic_variant:
                     queries.append(f"{arabic_variant} {aspect}")
+
+        for signal in self.SIGNAL_KEYWORDS_FR[:3]:
+            queries.append(f"{watchlist.brand_name} {signal}")
+
+        return queries
+
+    def _generate_reddit_queries(self) -> list[str]:
+        queries: list[str] = []
+        watchlist = self.watchlist
+
+        for variant in watchlist.brand_variants[:2]:
+            queries.append(f"{variant} reddit")
+            queries.append(f"{variant} forum")
+
+        for aspect in watchlist.aspects[:3]:
+            queries.append(f"{watchlist.brand_name} {aspect} reddit")
+            queries.append(f"{watchlist.brand_name} {aspect} forum")
+
+        for signal in self.SIGNAL_KEYWORDS_FR[:2]:
+            queries.append(f"{watchlist.brand_name} {signal} reddit")
+            queries.append(f"{watchlist.brand_name} {signal} forum")
+
+        if "ar" in watchlist.languages:
+            arabic_variant = self._arabic_variant()
+            if arabic_variant:
+                for signal in self.SIGNAL_KEYWORDS_AR[:2]:
+                    queries.append(f"{arabic_variant} {signal} reddit")
+
+        return queries
+
+    def generate_queries(self, mode: str, max_queries: int = 10) -> list[str]:
+        """Genere les requetes adaptees au mode `press`, `reddit` ou `discovery`."""
+        watchlist = self.watchlist
+
+        if mode == "reddit":
+            queries = self._generate_reddit_queries()
+        else:
+            queries = self._generate_press_queries()
 
         if mode == "discovery":
             for competitor in watchlist.competitors[:3]:
@@ -65,9 +107,6 @@ class QueryPlanner:
                     continue
                 queries.append(f"{competitor_name} vs {watchlist.brand_name}")
                 queries.append(f"{competitor_name} avis consommateur")
-
-        for signal in self.SIGNAL_KEYWORDS_FR[:3]:
-            queries.append(f"{watchlist.brand_name} {signal}")
 
         limited_queries = queries[:max_queries]
         logger.info(
@@ -79,6 +118,7 @@ class QueryPlanner:
         return limited_queries
 
     def get_domains(self, mode: str) -> list[str] | None:
+        """Retourne les filtres de domaines a appliquer pour le mode."""
         if mode == "press":
             return self.watchlist.priority_domains
         if mode == "reddit":
@@ -86,4 +126,5 @@ class QueryPlanner:
         return None
 
     def get_recency(self, mode: str) -> str:
+        """Retourne le filtre de recence pour le mode demande."""
         return self.watchlist.recency.get(mode, "week")

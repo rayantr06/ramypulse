@@ -1,4 +1,4 @@
-"""Perplexity-based Discovery Brain collectors for watch-first runs."""
+"""Collecteurs Discovery Brain via Perplexity pour les runs watch-first."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ _MIN_INTERVAL = 1.0 / PERPLEXITY_RATE_QPS
 
 
 def _build_watchlist_from_db(client_id: str, watchlist_id: str | None) -> BrandWatchlist:
-    """Build a V1 brand watchlist from DB filters, with default fallback."""
+    """Construit une BrandWatchlist V1 depuis la DB avec repli sur les defauts."""
     if not watchlist_id:
         return BrandWatchlist()
 
@@ -45,6 +45,12 @@ def _build_watchlist_from_db(client_id: str, watchlist_id: str | None) -> BrandW
     keywords = list(filters.get("keywords") or [])
     if keywords:
         overrides["brand_variants"] = keywords
+    elif brand_name:
+        brand_variants: list[str] = []
+        for candidate in (brand_name, brand_name.lower()):
+            if candidate and candidate not in brand_variants:
+                brand_variants.append(candidate)
+        overrides["brand_variants"] = brand_variants
 
     return BrandWatchlist(**overrides) if overrides else BrandWatchlist()
 
@@ -58,7 +64,7 @@ def _search_perplexity(
     recency: str | None = None,
     max_results: int = 10,
 ) -> list[dict[str, Any]]:
-    """Execute a single Search API request using a singular `query` string."""
+    """Execute un appel unitaire a l'API Search avec `query` au singulier."""
     body: dict[str, Any] = {
         "query": query,
         "max_results": max_results,
@@ -92,7 +98,7 @@ def _result_to_document(
     query: str,
     priority_domains: list[str],
 ) -> dict[str, object] | None:
-    """Map one Perplexity search result into the watch raw-document contract."""
+    """Convertit un resultat Perplexity vers le contrat de document watch-first."""
     url = str(result.get("url") or "").strip()
     snippet = str(result.get("snippet") or "").strip()
     title = str(result.get("title") or "").strip()
@@ -135,7 +141,7 @@ def _collect_mode(
     watchlist_id: str | None = None,
     max_results_per_query: int = 10,
 ) -> list[dict[str, object]] | dict[str, object]:
-    """Collect documents for a specific Discovery Brain mode."""
+    """Collecte les documents pour un mode Discovery Brain donne."""
     api_key = config.PERPLEXITY_API_KEY
     if not api_key:
         return {"status": "skipped", "documents": [], "reason": "missing_api_key"}
@@ -227,7 +233,7 @@ def collect_perplexity_discovery(
     watchlist_id: str | None = None,
     **kwargs,
 ) -> list[dict[str, object]] | dict[str, object]:
-    """Replacement for the watch-first Tavily web_search collector."""
+    """Remplace le collecteur `web_search` Tavily du rail watch-first."""
     return _collect_mode("discovery", client_id=client_id, watchlist_id=watchlist_id)
 
 
@@ -237,7 +243,7 @@ def collect_perplexity_press(
     watchlist_id: str | None = None,
     **kwargs,
 ) -> list[dict[str, object]] | dict[str, object]:
-    """Discovery Brain press collector using domain-filtered Search API."""
+    """Collecte la presse via Perplexity avec filtrage sur domaines presse."""
     return _collect_mode("press", client_id=client_id, watchlist_id=watchlist_id)
 
 
@@ -247,5 +253,5 @@ def collect_perplexity_reddit(
     watchlist_id: str | None = None,
     **kwargs,
 ) -> list[dict[str, object]] | dict[str, object]:
-    """Discovery Brain reddit collector using domain-filtered Search API."""
+    """Collecte Reddit via Perplexity avec filtrage sur `reddit.com`."""
     return _collect_mode("reddit", client_id=client_id, watchlist_id=watchlist_id)
