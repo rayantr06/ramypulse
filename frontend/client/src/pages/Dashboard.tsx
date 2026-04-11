@@ -427,7 +427,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-12 gap-6">
           <div className="col-span-12 lg:col-span-7 bg-surface-container p-6 rounded-xl">
             <span className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest block mb-6">
-              VENTES PAR PRODUIT (7 JOURS)
+              PERFORMANCE PRODUIT — Score Sentiment
             </span>
             {summaryLoading ? (
               <div className="space-y-5">

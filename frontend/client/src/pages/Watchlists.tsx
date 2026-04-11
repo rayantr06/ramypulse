@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { AppShell } from "@/components/AppShell";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { apiRequest } from "@/lib/queryClient";
 import { buildWatchlistCreatePayload, type WatchlistFormInput } from "@/lib/apiMappings";
 import { mapWatchlist, mapWatchlistMetrics } from "@/lib/apiMappings";
@@ -36,13 +37,6 @@ interface WatchlistMetricsView {
   last_updated: string;
 }
 
-function buildOwners(filters: Record<string, unknown>): string[] {
-  const candidates = Object.keys(filters)
-    .slice(0, 3)
-    .map((key) => key.charAt(0).toUpperCase());
-  return candidates.length ? candidates : ["R"];
-}
-
 function mapWatchlistView(value: unknown): WatchlistView {
   const watchlist = mapWatchlist(value);
   return {
@@ -51,7 +45,7 @@ function mapWatchlistView(value: unknown): WatchlistView {
     description: watchlist.description || "Aucune description disponible.",
     scope: (watchlist.scope_type || "global").replaceAll("_", " ").toUpperCase(),
     is_active: Boolean(watchlist.is_active),
-    owners: buildOwners(watchlist.filters),
+    owners: [],
   };
 }
 
@@ -286,16 +280,18 @@ export default function Watchlists() {
                     {watchlist.description}
                   </p>
                   <div className="flex items-center justify-between">
-                    <div className="flex -space-x-2">
-                      {watchlist.owners.map((owner) => (
-                        <div
-                          key={owner}
-                          className="w-6 h-6 rounded-full border-2 border-surface bg-surface-container-highest flex items-center justify-center text-[10px] font-bold"
-                        >
-                          {owner}
-                        </div>
-                      ))}
-                    </div>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center border border-outline-variant/20">
+                            <span className="material-symbols-outlined text-on-surface-variant text-sm">group</span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Owners non disponibles</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                     <span className="material-symbols-outlined text-on-surface-variant/30 group-hover:text-primary transition-colors text-lg">
                       chevron_right
                     </span>
@@ -481,7 +477,7 @@ export default function Watchlists() {
                         <span className="text-3xl font-bold text-white tracking-tighter">
                           {metricsData.nss_score}
                         </span>
-                        <div className="flex items-center text-[10px] font-bold text-tertiary">
+                        <div className={`flex items-center text-[10px] font-bold ${metricsData.nss_delta >= 0 ? "text-green-400" : "text-red-400"}`}>
                           <span className="material-symbols-outlined text-sm">
                             {metricsData.nss_delta >= 0 ? "arrow_upward" : "arrow_downward"}
                           </span>

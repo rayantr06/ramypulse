@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { SiTiktok } from "react-icons/si";
 import { AppShell } from "@/components/AppShell";
 import { EmptyTenantState } from "@/components/EmptyTenantState";
 import { apiRequest } from "@/lib/queryClient";
@@ -892,6 +893,8 @@ export default function Campagnes() {
                                     className={iconAsset.className}
                                     src={iconAsset.src}
                                   />
+                                ) : campaign.platform.toLowerCase() === "tiktok" ? (
+                                  <SiTiktok className="w-4 h-4 text-on-surface-variant" />
                                 ) : (
                                   <span className="material-symbols-outlined text-on-surface-variant text-sm">
                                     language
