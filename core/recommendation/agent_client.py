@@ -354,7 +354,6 @@ def _call_gemini(api_key: str, model: str, user_prompt: str, system_prompt: str)
         "generationConfig": {
             "maxOutputTokens": _DEFAULT_MAX_TOKENS,
             "responseMimeType": "application/json",
-            "thinkingConfig": {"thinkingBudget": 0},
         },
     }
     logger.info("Appel Gemini API — modele : %s", model)

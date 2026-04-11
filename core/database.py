@@ -38,6 +38,14 @@ _SCHEMA_STATEMENTS = {
             updated_at TEXT DEFAULT CURRENT_TIMESTAMP
         )
     """,
+    "runtime_settings": """
+        CREATE TABLE IF NOT EXISTS runtime_settings (
+            setting_key TEXT PRIMARY KEY,
+            setting_value TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """,
     "source_registry": """
         CREATE TABLE IF NOT EXISTS source_registry (
             source_id TEXT PRIMARY KEY,
@@ -240,6 +248,39 @@ _SCHEMA_STATEMENTS = {
             delta_volume_pct   REAL,
             aspect_breakdown   TEXT DEFAULT '{}',
             computed_at        TEXT NOT NULL
+        )
+    """,
+    "watch_runs": """
+        CREATE TABLE IF NOT EXISTS watch_runs (
+            run_id             TEXT PRIMARY KEY,
+            client_id          TEXT NOT NULL DEFAULT 'ramy_client_001',
+            watchlist_id       TEXT NOT NULL,
+            requested_channels TEXT DEFAULT '[]',
+            stage              TEXT NOT NULL DEFAULT 'queued',
+            status             TEXT NOT NULL DEFAULT 'queued',
+            records_collected  INTEGER DEFAULT 0,
+            error_message      TEXT,
+            created_at         TEXT NOT NULL,
+            updated_at         TEXT NOT NULL,
+            started_at         TEXT,
+            finished_at        TEXT
+        )
+    """,
+    "watch_run_steps": """
+        CREATE TABLE IF NOT EXISTS watch_run_steps (
+            step_id        TEXT PRIMARY KEY,
+            run_id         TEXT NOT NULL,
+            step_key       TEXT NOT NULL,
+            stage          TEXT,
+            collector_key  TEXT,
+            status         TEXT NOT NULL DEFAULT 'pending',
+            records_seen   INTEGER DEFAULT 0,
+            error_message  TEXT,
+            created_at     TEXT NOT NULL,
+            updated_at     TEXT NOT NULL,
+            started_at     TEXT,
+            finished_at    TEXT,
+            UNIQUE(run_id, step_key)
         )
     """,
     "campaigns": """

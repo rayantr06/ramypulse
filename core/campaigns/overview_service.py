@@ -61,8 +61,11 @@ def _quarter_campaigns(campaigns: list[dict[str, Any]], today: date | None = Non
     return quarter_campaigns, quarter_label
 
 
-def get_quarter_budget_stats(today: date | None = None) -> dict[str, Any]:
-    campaigns = campaign_manager.list_campaigns(limit=1000)
+def get_quarter_budget_stats(
+    today: date | None = None,
+    client_id: str | None = None,
+) -> dict[str, Any]:
+    campaigns = campaign_manager.list_campaigns(limit=1000, client_id=client_id)
     quarter_campaigns, quarter_label = _quarter_campaigns(campaigns, today)
 
     quarterly_budget_allocation = sum(
@@ -169,9 +172,12 @@ def _public_top_performer(candidate: dict[str, Any], basis: str) -> dict[str, An
     }
 
 
-def get_campaigns_overview(today: date | None = None) -> dict[str, Any]:
-    campaigns = campaign_manager.list_campaigns(limit=1000)
-    stats = get_quarter_budget_stats(today=today)
+def get_campaigns_overview(
+    today: date | None = None,
+    client_id: str | None = None,
+) -> dict[str, Any]:
+    campaigns = campaign_manager.list_campaigns(limit=1000, client_id=client_id)
+    stats = get_quarter_budget_stats(today=today, client_id=client_id)
     candidates_scope = _candidate_scope(campaigns, stats["quarter_campaigns"])
 
     top_performer = None

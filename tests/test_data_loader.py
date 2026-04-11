@@ -11,6 +11,7 @@ import pandas as pd
 import config
 from api import data_loader
 from core.database import DatabaseManager
+from core.tenancy.tenant_paths import get_tenant_paths
 
 
 def _reset_loader_cache() -> None:
@@ -171,31 +172,37 @@ def _seed_sqlite_signal(db_path: Path) -> None:
 
 
 def test_load_annotated_prefers_sqlite_and_exports_parquet(monkeypatch, tmp_path: Path) -> None:
-    """Le loader doit préférer SQLite canonique et exporter annotated.parquet."""
+    """Le loader doit préférer SQLite canonique et exporter dans le tenant."""
     db_path = tmp_path / "signals.db"
-    parquet_path = tmp_path / "annotated.parquet"
     _seed_sqlite_signal(db_path)
 
+    monkeypatch.setattr(config, "DATA_DIR", tmp_path, raising=False)
+    monkeypatch.setattr(data_loader.config, "DATA_DIR", tmp_path, raising=False)
     monkeypatch.setattr(config, "SQLITE_DB_PATH", db_path, raising=False)
     monkeypatch.setattr(data_loader.config, "SQLITE_DB_PATH", db_path, raising=False)
-    monkeypatch.setattr(config, "ANNOTATED_PARQUET_PATH", parquet_path, raising=False)
-    monkeypatch.setattr(data_loader.config, "ANNOTATED_PARQUET_PATH", parquet_path, raising=False)
     _reset_loader_cache()
 
-    df = data_loader.load_annotated(ttl=0)
+    tenant_path = get_tenant_paths(config.DEFAULT_CLIENT_ID).annotated_path
+    df = data_loader.load_annotated(client_id=config.DEFAULT_CLIENT_ID, ttl=0)
 
     assert not df.empty
     assert df.iloc[0]["text"] == "texte canonique"
     assert df.iloc[0]["source_url"] == "https://facebook.com/posts/sql-1"
     assert df.iloc[0]["product"] == "Ramy Citron"
-    assert parquet_path.exists()
+    assert tenant_path.exists()
 
 
 def test_load_annotated_falls_back_to_parquet_when_sqlite_empty(monkeypatch, tmp_path: Path) -> None:
-    """Le loader doit revenir au parquet si SQLite canonique est vide."""
+    """Le loader doit revenir au parquet tenant-scopé si SQLite canonique est vide."""
     db_path = tmp_path / "empty.db"
-    parquet_path = tmp_path / "annotated.parquet"
     DatabaseManager(db_path).create_tables()
+
+    monkeypatch.setattr(config, "DATA_DIR", tmp_path, raising=False)
+    monkeypatch.setattr(data_loader.config, "DATA_DIR", tmp_path, raising=False)
+    monkeypatch.setattr(config, "SQLITE_DB_PATH", db_path, raising=False)
+    monkeypatch.setattr(data_loader.config, "SQLITE_DB_PATH", db_path, raising=False)
+    tenant_path = get_tenant_paths(config.DEFAULT_CLIENT_ID).annotated_path
+    tenant_path.parent.mkdir(parents=True, exist_ok=True)
     pd.DataFrame(
         [
             {
@@ -206,15 +213,10 @@ def test_load_annotated_falls_back_to_parquet_when_sqlite_empty(monkeypatch, tmp
                 "sentiment_label": "positif",
             }
         ]
-    ).to_parquet(parquet_path, index=False)
-
-    monkeypatch.setattr(config, "SQLITE_DB_PATH", db_path, raising=False)
-    monkeypatch.setattr(data_loader.config, "SQLITE_DB_PATH", db_path, raising=False)
-    monkeypatch.setattr(config, "ANNOTATED_PARQUET_PATH", parquet_path, raising=False)
-    monkeypatch.setattr(data_loader.config, "ANNOTATED_PARQUET_PATH", parquet_path, raising=False)
+    ).to_parquet(tenant_path, index=False)
     _reset_loader_cache()
 
-    df = data_loader.load_annotated(ttl=0)
+    df = data_loader.load_annotated(client_id=config.DEFAULT_CLIENT_ID, ttl=0)
 
     assert not df.empty
     assert df.iloc[0]["text"] == "depuis parquet"

@@ -8,11 +8,17 @@ l'assemblage de contexte (context_builder) et la persistance
 import logging
 from math import isfinite
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 import config
 from api.data_loader import load_annotated
-from api.schemas import ContextPreview, RecommendationGenerate, RecommendationStatusUpdate
+from api.deps.tenant import resolve_client_id
+from api.schemas import (
+    ContextPreview,
+    RecommendationBulkStatusUpdate,
+    RecommendationGenerate,
+    RecommendationStatusUpdate,
+)
 from core.recommendation import agent_client, context_builder, recommendation_manager
 
 logger = logging.getLogger(__name__)
@@ -53,14 +59,16 @@ def get_context_preview(
     trigger_id: str = None,
     provider: str | None = None,
     model: str | None = None,
+    client_id: str = Depends(resolve_client_id),
 ):
     """Prévisualisation du contexte compilé avant génération LLM."""
     try:
-        df_annotated = load_annotated()
+        df_annotated = load_annotated(client_id=client_id)
         ctx = context_builder.build_recommendation_context(
             trigger_type=trigger_type,
             trigger_id=trigger_id,
             df_annotated=df_annotated,
+            client_id=client_id,
         )
         provider_used = provider or config.DEFAULT_AGENT_PROVIDER
         model_used = model or config.DEFAULT_AGENT_MODEL
@@ -88,10 +96,13 @@ def get_context_preview(
 
 
 @router.post("/generate")
-def generate_recommendations(req: RecommendationGenerate):
+def generate_recommendations(
+    req: RecommendationGenerate,
+    client_id: str = Depends(resolve_client_id),
+):
     """Génère de nouvelles recommandations via le LLM."""
     try:
-        df_annotated = load_annotated()
+        df_annotated = load_annotated(client_id=client_id)
         if df_annotated.empty:
             raise HTTPException(
                 status_code=400,
@@ -102,6 +113,7 @@ def generate_recommendations(req: RecommendationGenerate):
             trigger_type=req.trigger_type,
             trigger_id=req.trigger_id,
             df_annotated=df_annotated,
+            client_id=client_id,
         )
 
         provider = req.provider or config.DEFAULT_AGENT_PROVIDER
@@ -120,6 +132,7 @@ def generate_recommendations(req: RecommendationGenerate):
             result=result,
             trigger_type=req.trigger_type,
             trigger_id=req.trigger_id,
+            client_id=client_id,
         )
 
         return {
@@ -136,12 +149,46 @@ def generate_recommendations(req: RecommendationGenerate):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+_VALID_STATUSES = {"active", "archived", "dismissed"}
+
+
+@router.post("/bulk-status")
+def bulk_update_recommendation_status(payload: RecommendationBulkStatusUpdate):
+    """Met à jour le statut de plusieurs recommandations en une transaction.
+
+    - IDs inexistants : ignorés silencieusement
+    - Status invalide : HTTP 422
+    - Retourne {"updated": N, "ids": [...ids mis à jour...]}
+    """
+    if payload.status not in _VALID_STATUSES:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Statut invalide '{payload.status}'. Valeurs acceptées : {sorted(_VALID_STATUSES)}",
+        )
+
+    if not payload.ids:
+        return {"updated": 0, "ids": []}
+
+    try:
+        updated_ids = recommendation_manager.bulk_update_status(payload.ids, payload.status)
+        return {"updated": len(updated_ids), "ids": updated_ids}
+    except Exception as e:
+        logger.error("Erreur bulk_update_recommendation_status: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("")
-def list_recommendations(status: str = None, limit: int = 50):
+def list_recommendations(
+    status: str = None,
+    limit: int = 50,
+    client_id: str = Depends(resolve_client_id),
+):
     """Récupère l'historique des recommandations générées."""
     try:
         return recommendation_manager.list_recommendations(
-            status=status, limit=limit
+            status=status,
+            limit=limit,
+            client_id=client_id,
         )
     except Exception as e:
         logger.error("Erreur list_recommendations: %s", e)
@@ -149,10 +196,13 @@ def list_recommendations(status: str = None, limit: int = 50):
 
 
 @router.get("/{recommendation_id}")
-def get_recommendation(recommendation_id: str):
+def get_recommendation(
+    recommendation_id: str,
+    client_id: str = Depends(resolve_client_id),
+):
     """Détail d'une recommandation IA."""
     try:
-        rec = recommendation_manager.get_recommendation(recommendation_id)
+        rec = recommendation_manager.get_recommendation(recommendation_id, client_id=client_id)
         if not rec:
             raise HTTPException(status_code=404, detail="Recommendation not found")
         return rec

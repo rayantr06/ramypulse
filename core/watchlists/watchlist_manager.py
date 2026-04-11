@@ -13,7 +13,7 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_FILTERS = {
+_LEGACY_DEFAULT_FILTERS = {
     "channel": None,
     "aspect": None,
     "wilaya": None,
@@ -22,7 +22,29 @@ _DEFAULT_FILTERS = {
     "period_days": 7,
     "min_volume": 10,
 }
-_VALID_SCOPE_TYPES = {"product", "region", "channel", "cross_dimension"}
+_WATCH_SEED_DEFAULT_FILTERS = {
+    "brand_name": None,
+    "product_name": None,
+    "keywords": [],
+    "seed_urls": [],
+    "competitors": [],
+    "channels": [],
+    "languages": [],
+    "hashtags": [],
+    "period_days": 7,
+    "min_volume": 10,
+}
+_WATCH_SEED_SEMANTIC_KEYS = {
+    "brand_name",
+    "product_name",
+    "keywords",
+    "seed_urls",
+    "competitors",
+    "channels",
+    "languages",
+    "hashtags",
+}
+_VALID_SCOPE_TYPES = {"product", "region", "channel", "cross_dimension", "watch_seed"}
 _REQUIRED_COLUMNS = {
     "watchlist_id",
     "client_id",
@@ -87,11 +109,50 @@ def _normalize_int(value: object, default: int) -> int:
         return default
 
 
-def _normalize_filters(filters: dict | None) -> dict:
-    """Valide et complete la structure de filtres contractuelle."""
-    payload = dict(_DEFAULT_FILTERS)
+def _normalize_string_list(
+    value: object,
+    *,
+    lowercase: bool = False,
+) -> list[str]:
+    """Normalise une liste de chaines en conservant l'ordre et l'unicite."""
+    if value in (None, ""):
+        return []
+
+    if isinstance(value, (list, tuple, set)):
+        raw_items = list(value)
+    else:
+        raw_items = [value]
+
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for item in raw_items:
+        text = _normalize_text(item)
+        if not text:
+            continue
+        candidate = text.lower() if lowercase else text
+        if candidate in seen:
+            continue
+        seen.add(candidate)
+        normalized.append(candidate)
+    return normalized
+
+
+def _uses_watch_seed_shape(filters: dict | None, scope_type: str | None = None) -> bool:
+    """Determine si les filtres doivent utiliser le contrat watch_seed."""
+    if scope_type == "watch_seed":
+        return True
+    if scope_type in _VALID_SCOPE_TYPES:
+        return False
+    if not filters:
+        return False
+    return any(key in _WATCH_SEED_SEMANTIC_KEYS for key in filters)
+
+
+def _normalize_legacy_filters(filters: dict | None) -> dict:
+    """Normalise les filtres legacy sans ajouter les cles watch_seed."""
+    payload = dict(_LEGACY_DEFAULT_FILTERS)
     payload.update(filters or {})
-    normalized = {
+    return {
         "channel": _normalize_text(payload.get("channel")),
         "aspect": _normalize_text(payload.get("aspect")),
         "wilaya": _normalize_text(payload.get("wilaya")),
@@ -100,7 +161,47 @@ def _normalize_filters(filters: dict | None) -> dict:
         "period_days": max(1, _normalize_int(payload.get("period_days"), 7)),
         "min_volume": max(0, _normalize_int(payload.get("min_volume"), 10)),
     }
-    return normalized
+
+
+def _normalize_watch_seed_filters(filters: dict | None) -> dict:
+    """Normalise les filtres watch_seed en preservant uniquement ce contrat."""
+    payload = dict(_WATCH_SEED_DEFAULT_FILTERS)
+    payload.update(filters or {})
+    return {
+        "brand_name": _normalize_text(payload.get("brand_name")),
+        "product_name": _normalize_text(payload.get("product_name")),
+        "keywords": _normalize_string_list(payload.get("keywords"), lowercase=True),
+        "seed_urls": _normalize_string_list(payload.get("seed_urls")),
+        "competitors": _normalize_string_list(payload.get("competitors")),
+        "channels": _normalize_string_list(payload.get("channels"), lowercase=True),
+        "languages": _normalize_string_list(payload.get("languages"), lowercase=True),
+        "hashtags": _normalize_string_list(payload.get("hashtags"), lowercase=True),
+        "period_days": max(1, _normalize_int(payload.get("period_days"), 7)),
+        "min_volume": max(0, _normalize_int(payload.get("min_volume"), 10)),
+    }
+
+
+def _normalize_filters(filters: dict | None, *, scope_type: str | None = None) -> dict:
+    """Valide et complete la structure de filtres contractuelle."""
+    if _uses_watch_seed_shape(filters, scope_type):
+        return _normalize_watch_seed_filters(filters)
+    return _normalize_legacy_filters(filters)
+
+
+def _validate_watch_seed_filters(filters: dict) -> None:
+    """Refuse les watchlists watch_seed sans seed semantique exploitable."""
+    meaningful_seed = any(
+        (
+            filters.get("brand_name"),
+            filters.get("product_name"),
+            filters.get("keywords"),
+            filters.get("seed_urls"),
+            filters.get("competitors"),
+            filters.get("hashtags"),
+        )
+    )
+    if not meaningful_seed:
+        raise ValueError("watch_seed requires at least one meaningful seed")
 
 
 def _validate_scope_type(scope_type: str) -> str:
@@ -164,7 +265,10 @@ def _row_to_watchlist(row: sqlite3.Row | None) -> dict | None:
     if row is None:
         return None
     payload = dict(row)
-    payload["filters"] = _normalize_filters(_deserialize_dict(payload.get("filters")))
+    payload["filters"] = _normalize_filters(
+        _deserialize_dict(payload.get("filters")),
+        scope_type=payload.get("scope_type"),
+    )
     payload["is_active"] = int(payload.get("is_active", 0))
     return payload
 
@@ -174,13 +278,16 @@ def create_watchlist(
     description: str,
     scope_type: str,
     filters: dict,
+    client_id: str | None = None,
 ) -> str:
     """Cree une watchlist et retourne son identifiant."""
     if not name or not str(name).strip():
         raise ValueError("name est requis")
 
     normalized_scope_type = _validate_scope_type(scope_type)
-    normalized_filters = _normalize_filters(filters)
+    normalized_filters = _normalize_filters(filters, scope_type=normalized_scope_type)
+    if normalized_scope_type == "watch_seed":
+        _validate_watch_seed_filters(normalized_filters)
     watchlist_id = _new_id()
     timestamp = _now()
 
@@ -202,7 +309,9 @@ def create_watchlist(
             """,
             (
                 watchlist_id,
-                config.DEFAULT_CLIENT_ID,
+                (client_id or config.DEFAULT_CLIENT_ID).strip()
+                if isinstance(client_id, str)
+                else config.DEFAULT_CLIENT_ID,
                 str(name).strip(),
                 description.strip() if description else "",
                 normalized_scope_type,
@@ -273,8 +382,29 @@ def update_watchlist(watchlist_id: str, updates: dict) -> bool:
     if "scope_type" in payload:
         payload["scope_type"] = _validate_scope_type(str(payload["scope_type"]))
 
+    effective_scope_type = str(payload.get("scope_type") or current["scope_type"])
+
     if "filters" in payload:
-        payload["filters"] = _serialize_dict(_normalize_filters(payload["filters"]))
+        merged_filters = _normalize_filters(
+            current.get("filters"),
+            scope_type=effective_scope_type,
+        )
+        merged_filters.update(dict(payload["filters"] or {}))
+        normalized_filters = _normalize_filters(
+            merged_filters,
+            scope_type=effective_scope_type,
+        )
+        if effective_scope_type == "watch_seed":
+            _validate_watch_seed_filters(normalized_filters)
+        payload["filters"] = _serialize_dict(normalized_filters)
+    elif "scope_type" in payload:
+        normalized_filters = _normalize_filters(
+            current.get("filters"),
+            scope_type=effective_scope_type,
+        )
+        if effective_scope_type == "watch_seed":
+            _validate_watch_seed_filters(normalized_filters)
+        payload["filters"] = _serialize_dict(normalized_filters)
 
     if "description" in payload:
         payload["description"] = str(payload["description"] or "").strip()

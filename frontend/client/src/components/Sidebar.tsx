@@ -1,4 +1,5 @@
 import { Link, useLocation } from "wouter";
+import { useTenantId } from "@/lib/tenantContext";
 
 interface NavItem {
   href: string;
@@ -28,6 +29,7 @@ export function Sidebar({
   footerSubtitle,
 }: SidebarProps) {
   const [location] = useLocation();
+  const tenantId = useTenantId();
 
   return (
     <aside className="h-screen w-64 fixed left-0 top-0 bg-[#121315] flex flex-col py-6 px-4 z-50">
@@ -78,7 +80,7 @@ export function Sidebar({
           </div>
           <div className="overflow-hidden">
             <p className="font-headline text-xs font-bold text-on-surface truncate">
-              Ammar, Brand Manager
+              {tenantId || "Démo"}
             </p>
             {footerSubtitle ? (
               <p className="text-[10px] text-on-surface-variant">{footerSubtitle}</p>

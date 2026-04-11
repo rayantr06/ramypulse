@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { SiTiktok } from "react-icons/si";
 import { AppShell } from "@/components/AppShell";
+import { EmptyTenantState } from "@/components/EmptyTenantState";
 import { apiRequest } from "@/lib/queryClient";
 import {
   buildCampaignCreatePayload,
@@ -8,15 +10,11 @@ import {
   mapCampaignOverview,
   mapCampaignImpact,
 } from "@/lib/apiMappings";
+import { toast } from "@/hooks/use-toast";
+import { avatarSVGDataUrl } from "@/lib/avatars";
+import { convertToCSV, downloadCSV } from "@/lib/csvExport";
 import { filterCampaignViews } from "@/lib/pageSearchFilters";
 import { STITCH_AVATARS } from "@/lib/stitchAssets";
-
-const CAMPAIGN_ROW_AVATARS = [
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuAe-qHYLr1lBNJS2zW04-OeHhIs6Wi51BhptWX8z5YE72TYHQwxKDQDrHAAaU6tNYs4tE14HJpPKa-GjTEGy2fD_Bflkxz_ZIYGlHvFu7fr5As5IJ8_V9fsuM5PzTgmgq46CmsW1UmDTSs5MoaA5hF0oeKg72_o8zGp1mnMUB5b3IlPzNGtiYzmYvx_bRQhWyEgKNavdL-AhhbFRIuCgbdcG_NS7cgJlrIFIn8OdwQHEIvhsxHl78Fc8T3qJhSnmCAQi0nsrorqgzIb",
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuCohVkqL6sywZosVDw1uvnbJcW6yvRyreNc9MsFDE52JQIwm683p7H05E8pp6PDN4FrOGVp_LPf3Mz8vs1tpbQGN_4_F_e-jV0H8AeJ3QgWRcVG3_SHYpJMn18XxqGVguSX4HG969i-tTBIYSVko6V3rrU7CBZPf_4u-_YYSGRp9_swBjxU-BPyThIv6rNTTvZtQBpYrA3myVSnpRkRdbjke4Ld-yGT-SHiFLwcuL3AYz-00ah3j9M7dUIqHEF3PldkbM4TtZoyiezH",
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuCIdDfm2qBDICiHPJBx5Pnebx6vFO_aqoL32jzyEgrWyqnxYiMJhBW5J8jv8MXzhmUfj_yrQDGvw-sRS85hbAw5Dcn5VSSpqSMSH9aJSG59yzALTJE_fVPOwT2NWtZvWIddO_k_uDgY5qb4T-bgZKowU-A0ShQKenKoXm6z9ugemufP-a3j_V32B6swTwx39SHWunxQ3UkDrbup44hiFST1DCBC8gpsgZxYxWuc9asZ0scZyOJ0uGpHXKI9ArZ2rOabXrkqNH_aIz0G",
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuAKOS9oMsA1t7QfbZF0fVNW8W4XoMinVLWZoYhLDT2fVlVGjdNvHbeOyVk61ThnnAFZdk10hzE-OtFP8GuaUr0Dsj2pExS5aQMbxI3HY4fKC2gD_W850m1WeRhHSr9Y9Ca3Uj6gvMKsk6OlsW8K1UaX22U7gBMXKUJohmQWZMWfodDSwPhfCO0rnteceKoqechbptW4Sc3V_5r2pbiiivaV1r7DGKtzB3KNbwf50rqYBlF4FiZQqPLAoksGt2GH_YoIfP2BGQdxiaJw",
-];
 
 const PLATFORM_ICON_ASSETS: Record<string, { src: string; className: string }> = {
   instagram: {
@@ -32,9 +30,6 @@ const PLATFORM_ICON_ASSETS: Record<string, { src: string; className: string }> =
     className: "w-4 h-4 grayscale opacity-60",
   },
 };
-
-const TOP_PERFORMER_AVATAR =
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuCIzPFiI1I621n9zcK0kxo-q6Msxqqls35FxSRtfx-19ykBbB_8c3CXueUs9nGtgZOJ-OZic6T92CKFD3HNo721iojRJYb7CF6GIVF7AtGgC_miiV8noUEYFqHUxH40pGulzFbyy82XRSUanacopAv5Iv5E7sq43dWFFVfLOLjSmF8VFpBtrBtzUvihifOZoVNITsBRDV4Sd36Y6NRWNiuRRXfjwRtjWfKinFsBYPkGSy2vthpdMoihyr-EF-_GjTXo8ctMwQ_HtVWN";
 
 const ROWS_PER_PAGE = 4;
 
@@ -171,10 +166,6 @@ function safeRatio(value: number | null, max: number | null): number {
   return Math.max(0, Math.min(100, (value / max) * 100));
 }
 
-function campaignVisualAt(index: number): string {
-  return CAMPAIGN_ROW_AVATARS[index % CAMPAIGN_ROW_AVATARS.length];
-}
-
 function platformAsset(platform: string) {
   return PLATFORM_ICON_ASSETS[platform.toLowerCase()] ?? null;
 }
@@ -227,7 +218,7 @@ function StatusBadge({ status }: { status: string }) {
 export default function Campagnes() {
   const [filter, setFilter] = useState<CampaignFilter>("TOUTES");
   const [currentPage, setCurrentPage] = useState(1);
-  const [isComposerOpen, setIsComposerOpen] = useState(true);
+  const [isComposerOpen, setIsComposerOpen] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [keywords, setKeywords] = useState<string[]>([]);
@@ -298,9 +289,45 @@ export default function Campagnes() {
       });
       setKeywords([]);
     },
+    onError: (error: Error) => {
+      toast({
+        title: "Erreur création",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   const allCampaigns = campaigns ?? [];
+
+  const handleExportCampaigns = () => {
+    try {
+      if (allCampaigns.length === 0) {
+        toast({ title: "Aucune campagne à exporter" });
+        return;
+      }
+      const csv = convertToCSV(allCampaigns as unknown as Record<string, unknown>[], [
+        { key: "name", header: "Nom" },
+        { key: "type", header: "Type" },
+        { key: "platform", header: "Plateforme" },
+        { key: "influencer", header: "Influenceur" },
+        { key: "budget_dza", header: "Budget" },
+        { key: "status", header: "Statut" },
+        { key: "start_date", header: "Date début" },
+        { key: "end_date", header: "Date fin" },
+      ]);
+      const today = new Date().toISOString().split("T")[0];
+      downloadCSV(csv, `campagnes_${today}.csv`);
+      toast({ title: `Export téléchargé (${allCampaigns.length} campagnes)` });
+    } catch (err) {
+      toast({
+        title: "Erreur d'export",
+        description: err instanceof Error ? err.message : "Impossible d'exporter",
+        variant: "destructive",
+      });
+    }
+  };
+
   const filteredCampaigns = useMemo(() => {
     const tabFiltered = allCampaigns.filter((campaign) => {
       if (filter === "ACTIVES") return campaign.status === "ACTIVE";
@@ -387,6 +414,55 @@ export default function Campagnes() {
     }, 120);
   };
 
+  const handleCreateCampaignSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (form.budget_dza.trim() && Number(form.budget_dza) <= 0) {
+      toast({
+        title: "Budget invalide",
+        description: "Le budget doit être supérieur à 0",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (
+      form.end_date &&
+      form.start_date &&
+      new Date(form.end_date) <= new Date(form.start_date)
+    ) {
+      toast({
+        title: "Dates invalides",
+        description: "La date de fin doit être après la date de début",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    createMutation.mutate();
+  };
+
+  if (!campaignsLoading && allCampaigns.length === 0) {
+    return (
+      <AppShell
+        headerSearchPlaceholder="Rechercher une campagne..."
+        onSearch={setSearchQuery}
+        avatarSrc={STITCH_AVATARS.campagnes.src}
+        avatarAlt={STITCH_AVATARS.campagnes.alt}
+        sidebarFooterAvatarSrc={STITCH_AVATARS.campagnes.src}
+        sidebarFooterAvatarAlt={STITCH_AVATARS.campagnes.alt}
+        sidebarFooterSubtitle="Ramy Pulse Pro"
+      >
+        <div className="p-8 max-w-7xl mx-auto">
+          <EmptyTenantState
+            title="Aucune campagne active pour ce tenant"
+            description="Le module Campagnes reste visible en Beta, mais il n'affiche encore aucune campagne tant qu'un tenant n'a pas ete alimente."
+          />
+        </div>
+      </AppShell>
+    );
+  }
+
   return (
     <AppShell
       headerSearchPlaceholder="Rechercher une campagne..."
@@ -403,14 +479,22 @@ export default function Campagnes() {
             <span className="text-[10px] font-bold tracking-[0.2em] text-primary uppercase">
               Gestion Opérationnelle
             </span>
-            <h2 className="text-3xl font-headline font-extrabold tracking-tighter mt-1">
-              Campagnes Marketing
-            </h2>
+            <div className="mt-1 flex items-center gap-3">
+              <h2 className="text-3xl font-headline font-extrabold tracking-tighter">
+                Campagnes Marketing
+              </h2>
+              <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
+                Beta
+              </span>
+            </div>
           </div>
-            <div className="flex gap-3">
-              <button className="px-4 py-2 bg-surface-container-high hover:bg-surface-bright text-on-surface text-xs font-bold transition-all rounded-sm">
-                EXPORTER DATA
-              </button>
+          <div className="flex gap-3">
+            <button
+              className="px-4 py-2 bg-surface-container-high hover:bg-surface-bright text-on-surface text-xs font-bold transition-all rounded-sm"
+              onClick={handleExportCampaigns}
+            >
+              EXPORTER DATA
+            </button>
             <button
               onClick={focusCampaignComposer}
               className="px-6 py-2 bg-gradient-to-r from-primary to-primary-container text-on-primary-fixed text-xs font-bold transition-transform active:scale-95 shadow-lg shadow-primary/10 rounded-sm"
@@ -441,10 +525,7 @@ export default function Campagnes() {
               {isComposerOpen ? (
               <form
                 className="space-y-4"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  createMutation.mutate();
-                }}
+                onSubmit={handleCreateCampaignSubmit}
               >
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">
@@ -802,7 +883,7 @@ export default function Campagnes() {
                                 <img
                                   alt={`Campaign visual ${index + 1}`}
                                   className="w-full h-full object-cover"
-                                  src={campaignVisualAt(index)}
+                                  src={avatarSVGDataUrl(campaign.name)}
                                 />
                               </div>
                               <div>
@@ -824,6 +905,8 @@ export default function Campagnes() {
                                     className={iconAsset.className}
                                     src={iconAsset.src}
                                   />
+                                ) : campaign.platform.toLowerCase() === "tiktok" ? (
+                                  <SiTiktok className="w-4 h-4 text-on-surface-variant" />
                                 ) : (
                                   <span className="material-symbols-outlined text-on-surface-variant text-sm">
                                     language
@@ -904,7 +987,7 @@ export default function Campagnes() {
                     <img
                       alt="Top performer avatar"
                       className="w-full h-full rounded-full object-cover"
-                      src={TOP_PERFORMER_AVATAR}
+                      src={avatarSVGDataUrl(topPerformer?.platform || "Top")}
                     />
                   </div>
                   <div>

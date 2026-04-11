@@ -307,6 +307,7 @@ def update_client_agent_config(
 def list_recommendations(
     status: str | None = None,
     limit: int = 20,
+    client_id: str | None = None,
     db_path=None,
 ) -> list:
     """Retourne la liste des recommandations, triees par date decroissante.
@@ -319,22 +320,32 @@ def list_recommendations(
     Returns:
         Liste de dicts avec recommendations et watchlist_priorities deserialises.
     """
+    clauses: list[str] = []
+    params: list[object] = []
+    if client_id is not None and str(client_id).strip():
+        clauses.append("client_id = ?")
+        params.append(str(client_id).strip())
     if status:
-        sql = "SELECT * FROM recommendations WHERE status = ? ORDER BY created_at DESC LIMIT ?"
-        params: tuple = (status, limit)
-    else:
-        sql = "SELECT * FROM recommendations ORDER BY created_at DESC LIMIT ?"
-        params = (limit,)
+        clauses.append("status = ?")
+        params.append(status)
+
+    where = f" WHERE {' AND '.join(clauses)}" if clauses else ""
+    sql = f"SELECT * FROM recommendations{where} ORDER BY created_at DESC LIMIT ?"
+    params.append(limit)
 
     conn = _get_connection(db_path)
     try:
-        rows = conn.execute(sql, params).fetchall()
+        rows = conn.execute(sql, tuple(params)).fetchall()
         return [_row_to_dict(row) for row in rows]
     finally:
         conn.close()
 
 
-def get_recommendation(recommendation_id: str, db_path=None) -> dict | None:
+def get_recommendation(
+    recommendation_id: str,
+    client_id: str | None = None,
+    db_path=None,
+) -> dict | None:
     """Retourne une recommandation par son ID.
 
     Args:
@@ -346,11 +357,61 @@ def get_recommendation(recommendation_id: str, db_path=None) -> dict | None:
     """
     conn = _get_connection(db_path)
     try:
+        sql = "SELECT * FROM recommendations WHERE recommendation_id = ?"
+        params: list[object] = [recommendation_id]
+        if client_id is not None and str(client_id).strip():
+            sql += " AND client_id = ?"
+            params.append(str(client_id).strip())
         row = conn.execute(
-            "SELECT * FROM recommendations WHERE recommendation_id = ?",
-            (recommendation_id,),
+            sql,
+            tuple(params),
         ).fetchone()
         return _row_to_dict(row) if row else None
+    finally:
+        conn.close()
+
+
+def bulk_update_status(
+    ids: list[str],
+    status: str,
+    db_path=None,
+) -> list[str]:
+    """Met à jour le statut de plusieurs recommandations en une transaction.
+
+    Args:
+        ids: Liste d'UUIDs de recommandations.
+        status: 'active' | 'archived' | 'dismissed'.
+        db_path: Chemin DB optionnel.
+
+    Returns:
+        Liste des IDs effectivement mis à jour (les IDs inexistants sont ignorés).
+    """
+    if not ids:
+        return []
+
+    conn = _get_connection(db_path)
+    try:
+        placeholders = ",".join("?" * len(ids))
+        cursor = conn.execute(
+            f"SELECT recommendation_id FROM recommendations WHERE recommendation_id IN ({placeholders})",
+            ids,
+        )
+        existing_ids = [row[0] for row in cursor.fetchall()]
+
+        if not existing_ids:
+            return []
+
+        placeholders_existing = ",".join("?" * len(existing_ids))
+        conn.execute(
+            f"UPDATE recommendations SET status = ? WHERE recommendation_id IN ({placeholders_existing})",
+            [status, *existing_ids],
+        )
+        conn.commit()
+        return existing_ids
+    except sqlite3.Error as exc:
+        logger.error("Erreur bulk_update_status : %s", exc)
+        conn.rollback()
+        raise
     finally:
         conn.close()
 

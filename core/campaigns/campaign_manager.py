@@ -6,6 +6,7 @@ Chaque fonction ouvre et ferme sa propre connexion.
 
 from __future__ import annotations
 
+import importlib
 import json
 import logging
 import sqlite3
@@ -56,7 +57,8 @@ _VALID_STATUSES = frozenset({"planned", "active", "completed", "cancelled"})
 
 def _get_connection() -> sqlite3.Connection:
     """Ouvre une connexion SQLite et s'assure que la table existe."""
-    conn = sqlite3.connect(str(SQLITE_DB_PATH))
+    cfg = importlib.import_module("config")
+    conn = sqlite3.connect(str(getattr(cfg, "SQLITE_DB_PATH", SQLITE_DB_PATH)))
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     conn.execute(_DDL_CAMPAIGNS)
@@ -151,14 +153,16 @@ def create_campaign(campaign_data: dict) -> str:
     return campaign_id
 
 
-def get_campaign(campaign_id: str) -> dict | None:
+def get_campaign(campaign_id: str, client_id: str | None = None) -> dict | None:
     """Returns dict avec tous les champs, listes JSON désérialisées en list."""
+    sql = "SELECT * FROM campaigns WHERE campaign_id = ?"
+    params: list[object] = [campaign_id]
+    if client_id is not None and str(client_id).strip():
+        sql += " AND client_id = ?"
+        params.append(str(client_id).strip())
     conn = _get_connection()
     try:
-        row = conn.execute(
-            "SELECT * FROM campaigns WHERE campaign_id = ?",
-            (campaign_id,),
-        ).fetchone()
+        row = conn.execute(sql, tuple(params)).fetchone()
     finally:
         conn.close()
     return _row_to_dict(row)
@@ -168,10 +172,14 @@ def list_campaigns(
     status: str | None = None,
     platform: str | None = None,
     limit: int = 50,
+    client_id: str | None = None,
 ) -> list[dict]:
     """Returns liste de campagnes. Champs JSON désérialisés automatiquement."""
     conditions: list[str] = []
     params: list = []
+    if client_id is not None and str(client_id).strip():
+        conditions.append("client_id = ?")
+        params.append(str(client_id).strip())
     if status is not None:
         conditions.append("status = ?")
         params.append(status)

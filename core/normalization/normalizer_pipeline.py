@@ -33,6 +33,13 @@ def _now() -> str:
 
 
 def _analyze_text(text: str) -> dict:
+    # Préférer absa_adapter (context-aware + sarcasm) si disponible et opérationnel,
+    # sinon fallback transparent sur absa_engine (pas de modèle chargé = normal en dev/CI)
+    try:
+        from core.analysis import absa_adapter as _engine
+        return _engine.analyze_text(text)
+    except Exception:
+        pass
     analyze_fn = getattr(absa_engine, "analyze_text", None)
     if callable(analyze_fn):
         return analyze_fn(text)
@@ -62,6 +69,7 @@ def run_normalization_job(
     normalizer_version: str = DEFAULT_NORMALIZER_VERSION,
     client_id: str | None = None,
     source_id: str | None = None,
+    sync_run_id: str | None = None,
 ) -> dict:
     """Traite les raw_documents non normalisés et écrit les tables cibles."""
     with _get_connection(db_path) as connection:
@@ -73,6 +81,9 @@ def run_normalization_job(
         if source_id:
             where_clauses.append("source_id = ?")
             params.append(source_id)
+        if sync_run_id:
+            where_clauses.append("sync_run_id = ?")
+            params.append(sync_run_id)
         where_clause = "WHERE " + " AND ".join(where_clauses)
         params.append(batch_size)
         rows = connection.execute(
@@ -92,7 +103,7 @@ def run_normalization_job(
             raw_text = str(payload.get("raw_text") or "")
             normalized = normalize(raw_text)
             raw_metadata = json.loads(payload.get("raw_metadata") or "{}")
-            analysis = _analyze_text(normalized["normalized"])
+            analysis = _analyze_text(normalized.get("cleaned_raw") or normalized["normalized"])
             resolved = _resolve_entities(normalized["normalized"], raw_metadata, db_path=db_path)
 
             normalized_record_id = _new_id("norm")

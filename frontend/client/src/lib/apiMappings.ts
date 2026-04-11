@@ -27,6 +27,42 @@ import type {
 } from "@shared/schema";
 
 type UnknownRecord = Record<string, unknown>;
+export type WatchlistScopeType =
+  | "product"
+  | "region"
+  | "channel"
+  | "cross_dimension"
+  | "watch_seed";
+
+export interface LegacyWatchlistFilters {
+  channel: string | null;
+  aspect: string | null;
+  wilaya: string | null;
+  product: string | null;
+  sentiment: string | null;
+  period_days: number;
+  min_volume: number;
+}
+
+export interface WatchSeedFilters {
+  brand_name: string | null;
+  product_name: string | null;
+  keywords: string[];
+  seed_urls: string[];
+  competitors: string[];
+  channels: string[];
+  languages: string[];
+  hashtags: string[];
+}
+
+export type WatchlistFilters = LegacyWatchlistFilters | WatchSeedFilters | UnknownRecord;
+
+export interface WatchlistCreatePayload {
+  name: string;
+  description: string;
+  scope_type: WatchlistScopeType;
+  filters: WatchlistFilters;
+}
 
 export interface CampaignFormInput {
   campaign_name: string;
@@ -45,7 +81,7 @@ export interface CampaignFormInput {
 export interface WatchlistFormInput {
   name: string;
   description: string;
-  scope_type: "product" | "region" | "channel" | "cross_dimension";
+  scope_type: Exclude<WatchlistScopeType, "watch_seed">;
   product: string;
   wilaya: string;
   channel: string;
@@ -194,7 +230,7 @@ export function buildCampaignCreatePayload(input: CampaignFormInput): UnknownRec
   return payload;
 }
 
-export function buildWatchlistCreatePayload(input: WatchlistFormInput): UnknownRecord {
+export function buildWatchlistCreatePayload(input: WatchlistFormInput): WatchlistCreatePayload {
   return {
     name: input.name.trim(),
     description: input.description.trim(),

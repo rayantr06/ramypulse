@@ -10,10 +10,11 @@ import logging
 import sqlite3
 from collections import Counter
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
 import config
 from api.data_loader import load_annotated
+from api.deps.tenant import resolve_client_id
 from api.schemas import (
     ActionRecommendation,
     AlertSummary,
@@ -147,7 +148,7 @@ def _compute_period_label(df) -> str:
 
 
 @router.get("/summary", response_model=DashboardSummary)
-def get_dashboard_summary():
+def get_dashboard_summary(client_id: str = Depends(resolve_client_id)):
     """Retourne le score santé de la marque et les tendances générales.
 
     Si la base est vierge, renvoie un fallback métier élégant.
@@ -164,9 +165,12 @@ def get_dashboard_summary():
     try:
         with _get_db_connection() as conn:
             row = conn.execute(
-                "SELECT nss_current, delta_nss "
-                "FROM watchlist_metric_snapshots "
-                "ORDER BY computed_at DESC LIMIT 1"
+                "SELECT wms.nss_current, wms.delta_nss "
+                "FROM watchlist_metric_snapshots wms "
+                "INNER JOIN watchlists w ON w.watchlist_id = wms.watchlist_id "
+                "WHERE w.client_id = ? "
+                "ORDER BY wms.computed_at DESC LIMIT 1",
+                (client_id,),
             ).fetchone()
 
             if row and row["nss_current"] is not None:
@@ -193,7 +197,7 @@ def get_dashboard_summary():
         logger.error("Erreur get_dashboard_summary: %s", e)
 
     try:
-        df = load_annotated()
+        df = load_annotated(client_id=client_id)
         if not df.empty:
             total_mentions = int(len(df))
             period = _compute_period_label(df)
@@ -217,7 +221,7 @@ def get_dashboard_summary():
 
 
 @router.get("/alerts-critical", response_model=DashboardAlerts)
-def get_critical_alerts():
+def get_critical_alerts(client_id: str = Depends(resolve_client_id)):
     """Retourne les 3 alertes critiques les plus récentes."""
     alerts = []
     try:
@@ -225,8 +229,9 @@ def get_critical_alerts():
             rows = conn.execute(
                 "SELECT alert_id, severity, title, description, detected_at "
                 "FROM alerts "
-                "WHERE severity = 'critical' AND status != 'resolved' "
-                "ORDER BY detected_at DESC LIMIT 3"
+                "WHERE client_id = ? AND severity = 'critical' AND status != 'resolved' "
+                "ORDER BY detected_at DESC LIMIT 3",
+                (client_id,),
             ).fetchall()
 
             for row in rows:
@@ -246,7 +251,7 @@ def get_critical_alerts():
 
 
 @router.get("/top-actions", response_model=DashboardActions)
-def get_top_actions():
+def get_top_actions(client_id: str = Depends(resolve_client_id)):
     """Retourne les 3 recommandations / actions prioritaires."""
     actions = []
     try:
@@ -254,8 +259,9 @@ def get_top_actions():
             rows = conn.execute(
                 "SELECT recommendation_id, analysis_summary, recommendations, confidence_score "
                 "FROM recommendations "
-                "WHERE status = 'active' "
-                "ORDER BY created_at DESC LIMIT 3"
+                "WHERE client_id = ? AND status = 'active' "
+                "ORDER BY created_at DESC LIMIT 3",
+                (client_id,),
             ).fetchall()
 
             for row in rows:

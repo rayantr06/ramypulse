@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
+import { EmptyTenantState } from "@/components/EmptyTenantState";
 import { apiRequest } from "@/lib/queryClient";
 import { mapAlert } from "@/lib/apiMappings";
 import { filterAlertViews } from "@/lib/pageSearchFilters";
+import { toast } from "@/hooks/use-toast";
 import { STITCH_AVATARS } from "@/lib/stitchAssets";
 
 type StatusFilter = "NOUVEAU" | "RECONNU" | "RESOLU" | "ECARTE";
@@ -109,6 +111,16 @@ function buildSocialExcerpts(payload: Record<string, unknown>): SocialExcerpt[] 
     .filter((item) => item.text);
 }
 
+function getSourceInitials(platform: string): string {
+  const normalized = platform.toLowerCase();
+  if (normalized === "facebook") return "FB";
+  if (normalized === "youtube") return "YT";
+  if (normalized === "google_maps") return "GM";
+  if (normalized === "instagram") return "IG";
+  if (normalized === "import") return "IM";
+  return platform.slice(0, 2).toUpperCase();
+}
+
 function mapAlertView(value: unknown): AlertView {
   const alert = mapAlert(value);
   const payload = asRecord(alert.alert_payload);
@@ -152,8 +164,8 @@ function SeverityDot({ severity }: { severity: SeverityFilter }) {
   const map: Record<SeverityFilter, string> = {
     CRITIQUE: "bg-error shadow-[0_0_8px_rgba(255,180,171,0.5)]",
     HAUTE: "bg-primary-container",
-    MOYENNE: "bg-yellow-400",
-    BASSE: "bg-tertiary",
+    MOYENNE: "bg-amber-500/20 text-amber-400 border border-amber-400/40",
+    BASSE: "bg-slate-500/20 text-slate-400 border border-slate-400/40",
   };
   return <span className={`w-3 h-3 rounded-full ${map[severity]}`}></span>;
 }
@@ -162,8 +174,8 @@ function severityBorderClass(severity: SeverityFilter): string {
   const map: Record<SeverityFilter, string> = {
     CRITIQUE: "border-error",
     HAUTE: "border-primary-container",
-    MOYENNE: "border-yellow-400",
-    BASSE: "border-tertiary",
+    MOYENNE: "border-amber-400",
+    BASSE: "border-slate-400",
   };
   return map[severity];
 }
@@ -171,7 +183,8 @@ function severityBorderClass(severity: SeverityFilter): string {
 function severityGradient(severity: SeverityFilter): string {
   if (severity === "CRITIQUE") return "from-error to-error-container";
   if (severity === "HAUTE") return "from-primary-container to-primary";
-  return "from-tertiary to-tertiary-container";
+  if (severity === "MOYENNE") return "from-amber-500/80 to-amber-400/40";
+  return "from-slate-500/80 to-slate-400/40";
 }
 
 export default function Alertes() {
@@ -179,10 +192,11 @@ export default function Alertes() {
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [alertLimit, setAlertLimit] = useState(50);
   const queryClientHook = useQueryClient();
 
   const { data: alerts, isLoading: alertsLoading } = useQuery<AlertView[]>({
-    queryKey: ["/api/alerts", statusFilter, severityFilter],
+    queryKey: ["/api/alerts", statusFilter, severityFilter, alertLimit],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (statusFilter) params.set("status", STATUS_TO_API[statusFilter]);
@@ -197,7 +211,7 @@ export default function Alertes() {
                 : "low";
         params.set("severity", severity);
       }
-      params.set("limit", "50");
+      params.set("limit", String(alertLimit));
       const res = await apiRequest("GET", `/api/alerts?${params.toString()}`);
       const payload = await res.json();
       return (Array.isArray(payload) ? payload : []).map(mapAlertView);
@@ -211,6 +225,13 @@ export default function Alertes() {
     },
     onSuccess: () => {
       queryClientHook.invalidateQueries({ queryKey: ["/api/alerts"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erreur",
+        description: error.message || "Une erreur est survenue",
+        variant: "destructive",
+      });
     },
   });
 
@@ -232,6 +253,24 @@ export default function Alertes() {
   const selectedAlert = useMemo(() => {
     return alertsList.find((alert) => alert.id === selectedId) ?? null;
   }, [alertsList, selectedId]);
+
+  if (!alertsLoading && alertsList.length === 0) {
+    return (
+      <AppShell
+        headerSearchPlaceholder="Rechercher une alerte..."
+        onSearch={setSearchQuery}
+        avatarSrc={STITCH_AVATARS.alertes.src}
+        avatarAlt={STITCH_AVATARS.alertes.alt}
+      >
+        <div className="p-8 min-h-[calc(100vh-64px)]">
+          <EmptyTenantState
+            title="Aucune alerte exploitable pour l'instant"
+            description="Les alertes apparaîtront dès que la collecte et l'ABSA auront produit assez de signaux pour détecter une dérive ou un pic négatif."
+          />
+        </div>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell
@@ -287,8 +326,8 @@ export default function Alertes() {
               {[
                 { value: "CRITIQUE" as SeverityFilter, dotClass: "bg-error" },
                 { value: "HAUTE" as SeverityFilter, dotClass: "bg-primary-container" },
-                { value: "MOYENNE" as SeverityFilter, dotClass: "bg-yellow-400" },
-                { value: "BASSE" as SeverityFilter, dotClass: "bg-tertiary" },
+                { value: "MOYENNE" as SeverityFilter, dotClass: "bg-amber-400" },
+                { value: "BASSE" as SeverityFilter, dotClass: "bg-slate-400" },
               ].map(({ value, dotClass }) => (
                 <button
                   key={value}
@@ -357,6 +396,14 @@ export default function Alertes() {
                 </article>
               ))
             )}
+            {alertsList.length >= alertLimit && (
+              <button
+                onClick={() => setAlertLimit((prev) => prev + 50)}
+                className="w-full py-3 text-xs font-bold uppercase tracking-widest text-primary hover:bg-surface-container-high transition-colors rounded-sm"
+              >
+                Charger plus
+              </button>
+            )}
           </div>
 
           <div className="lg:col-span-7">
@@ -409,7 +456,9 @@ export default function Alertes() {
                         <div className="space-y-4">
                           {selectedAlert.social_excerpts.map((excerpt, index) => (
                             <div key={`${excerpt.author}-${index}`} className="flex gap-3">
-                              <div className="h-6 w-6 rounded-full bg-surface-container-highest shrink-0"></div>
+                              <div className="h-6 w-6 rounded-full bg-surface-container-highest shrink-0 flex items-center justify-center text-[9px] font-bold text-on-surface-variant">
+                                {getSourceInitials(excerpt.platform)}
+                              </div>
                               <div>
                                 <span className="text-xs font-bold block mb-1">
                                   {excerpt.author}{" "}
@@ -449,42 +498,63 @@ export default function Alertes() {
                     </div>
 
                     <div className="flex gap-3 pt-6 border-t border-outline-variant/20">
-                      <button
-                        onClick={() =>
-                          updateStatusMutation.mutate({
-                            id: selectedAlert.id,
-                            status: "acknowledged",
-                          })
-                        }
-                        className="flex-1 bg-surface-container-high hover:bg-surface-bright text-on-surface font-bold py-3 px-4 rounded-sm text-xs transition-colors border border-outline-variant/30 uppercase tracking-widest"
-                        data-testid="btn-acknowledge"
-                      >
-                        Reconnaître
-                      </button>
-                      <button
-                        onClick={() =>
-                          updateStatusMutation.mutate({
-                            id: selectedAlert.id,
-                            status: "dismissed",
-                          })
-                        }
-                        className="flex-1 bg-surface-container-high hover:bg-surface-bright text-primary font-bold py-3 px-4 rounded-sm text-xs transition-colors border border-primary/20 uppercase tracking-widest"
-                        data-testid="btn-dismiss"
-                      >
-                        Ecarter
-                      </button>
-                      <button
-                        onClick={() =>
-                          updateStatusMutation.mutate({
-                            id: selectedAlert.id,
-                            status: "resolved",
-                          })
-                        }
-                        className="flex-1 bg-gradient-to-r from-primary to-primary-container text-on-primary-fixed font-bold py-3 px-4 rounded-sm text-xs hover:opacity-90 transition-opacity uppercase tracking-widest"
-                        data-testid="btn-resolve"
-                      >
-                        Résoudre
-                      </button>
+                      {selectedAlert.status !== "RECONNU" && (
+                        <button
+                          onClick={() =>
+                            updateStatusMutation.mutate({
+                              id: selectedAlert.id,
+                              status: "acknowledged",
+                            })
+                          }
+                          disabled={updateStatusMutation.isPending}
+                          className="flex-1 bg-surface-container-high hover:bg-surface-bright text-on-surface font-bold py-3 px-4 rounded-sm text-xs transition-colors border border-outline-variant/30 uppercase tracking-widest disabled:opacity-50"
+                          data-testid="btn-acknowledge"
+                        >
+                          {updateStatusMutation.isPending ? (
+                            <span className="material-symbols-outlined text-sm animate-spin">progress_activity</span>
+                          ) : (
+                            "Reconnaître"
+                          )}
+                        </button>
+                      )}
+                      {selectedAlert.status !== "ECARTE" && (
+                        <button
+                          onClick={() =>
+                            updateStatusMutation.mutate({
+                              id: selectedAlert.id,
+                              status: "dismissed",
+                            })
+                          }
+                          disabled={updateStatusMutation.isPending}
+                          className="flex-1 bg-surface-container-high hover:bg-surface-bright text-primary font-bold py-3 px-4 rounded-sm text-xs transition-colors border border-primary/20 uppercase tracking-widest disabled:opacity-50"
+                          data-testid="btn-dismiss"
+                        >
+                          {updateStatusMutation.isPending ? (
+                            <span className="material-symbols-outlined text-sm animate-spin">progress_activity</span>
+                          ) : (
+                            "Écarter"
+                          )}
+                        </button>
+                      )}
+                      {selectedAlert.status !== "RESOLU" && (
+                        <button
+                          onClick={() =>
+                            updateStatusMutation.mutate({
+                              id: selectedAlert.id,
+                              status: "resolved",
+                            })
+                          }
+                          disabled={updateStatusMutation.isPending}
+                          className="flex-1 bg-gradient-to-r from-primary to-primary-container text-on-primary-fixed font-bold py-3 px-4 rounded-sm text-xs hover:opacity-90 transition-opacity uppercase tracking-widest disabled:opacity-50"
+                          data-testid="btn-resolve"
+                        >
+                          {updateStatusMutation.isPending ? (
+                            <span className="material-symbols-outlined text-sm animate-spin">progress_activity</span>
+                          ) : (
+                            "Résoudre"
+                          )}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>

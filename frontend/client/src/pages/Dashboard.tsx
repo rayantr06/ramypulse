@@ -1,5 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { AppShell } from "@/components/AppShell";
+import { EmptyTenantState } from "@/components/EmptyTenantState";
 import { apiRequest } from "@/lib/queryClient";
 import {
   mapApiStatus,
@@ -138,6 +140,7 @@ function SeverityBadge({ severity }: { severity: string }) {
 }
 
 export default function Dashboard() {
+  const [, navigate] = useLocation();
   const { data: summary, isLoading: summaryLoading } = useQuery<DashboardSummaryView>({
     queryKey: ["/api/dashboard/summary"],
     queryFn: async () => {
@@ -190,6 +193,27 @@ export default function Dashboard() {
     apiStatus: "Indisponible",
     latencyMs: null,
   };
+
+  const shouldShowEmptyTenantState =
+    !summaryLoading &&
+    !alertsLoading &&
+    !actionsLoading &&
+    summaryView.totalMentions === 0 &&
+    currentAlerts.length === 0 &&
+    currentActions.length === 0;
+
+  if (shouldShowEmptyTenantState) {
+    return (
+      <AppShell>
+        <div className="p-8">
+          <EmptyTenantState
+            title="Le dashboard attend les premiers signaux"
+            description="La collecte watch-first est lancée, mais il faut encore quelques documents normalisés pour calculer la santé de marque, les alertes et les recommandations."
+          />
+        </div>
+      </AppShell>
+    );
+  }
 
   const circumference = 2 * Math.PI * 88;
   const dashOffset = circumference * (1 - summaryView.score / 100);
@@ -277,7 +301,7 @@ export default function Dashboard() {
                 {trendCopy(summaryView)}
               </p>
               <p className="text-[11px] text-gray-500 mt-1 italic">
-                Base sur {summaryView.totalMentions.toLocaleString("fr-FR")} mentions {summaryView.period}
+                Basé sur {summaryView.totalMentions.toLocaleString("fr-FR")} mentions {summaryView.period}
               </p>
               <p className="text-[11px] text-gray-500 mt-2 italic">{summaryView.summary}</p>
             </div>
@@ -310,6 +334,7 @@ export default function Dashboard() {
                 {currentAlerts.map((alert) => (
                   <div
                     key={alert.id}
+                    onClick={() => navigate("/alertes")}
                     className="flex items-center gap-4 p-4 bg-surface-container-low hover:bg-surface-container-high transition-colors duration-200 group cursor-pointer rounded-sm"
                     data-testid={`alert-card-${alert.id}`}
                   >
@@ -360,6 +385,7 @@ export default function Dashboard() {
               {currentActions.map((action) => (
                 <div
                   key={action.id}
+                  onClick={() => navigate("/recommandations")}
                   className="bg-surface-container-low border border-outline-variant/10 p-6 hover:bg-surface-container-high transition-all duration-300 group cursor-pointer rounded-sm"
                   data-testid={`action-card-${action.id}`}
                 >
@@ -385,7 +411,11 @@ export default function Dashboard() {
                   <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-3">
                     {action.targetPlatform}
                   </p>
-                  <button className="w-full py-2.5 bg-gradient-to-r from-primary to-primary-container text-on-primary-fixed text-[11px] font-bold rounded-sm group-hover:scale-[1.02] transition-transform uppercase tracking-wider">
+                  <button
+                    className="w-full py-2.5 bg-gradient-to-r from-primary to-primary-container text-on-primary-fixed text-[11px] font-bold rounded-sm group-hover:scale-[1.02] transition-transform uppercase tracking-wider"
+                    onClick={() => navigate("/recommandations")}
+                    type="button"
+                  >
                     {action.ctaLabel}
                   </button>
                 </div>
@@ -397,7 +427,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-12 gap-6">
           <div className="col-span-12 lg:col-span-7 bg-surface-container p-6 rounded-xl">
             <span className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest block mb-6">
-              VENTES PAR PRODUIT (7 JOURS)
+              PERFORMANCE PRODUIT — Score Sentiment
             </span>
             {summaryLoading ? (
               <div className="space-y-5">
@@ -483,7 +513,7 @@ export default function Dashboard() {
                 : `Latency: ${statusView.latencyMs}ms`}
             </span>
           </div>
-          <div>© 2024 RamyPulse Intelligence Unit</div>
+          <div>© {new Date().getFullYear()} RamyPulse Intelligence Unit</div>
         </footer>
       </div>
     </AppShell>

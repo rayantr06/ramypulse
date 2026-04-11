@@ -9,5 +9,6 @@ data/embeddings/
 data/secrets/
 data/*.db
 models/dziribert/
+models/dziribert-sentiment/model.safetensors
 models/whisper/
 .pytest_cache/

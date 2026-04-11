@@ -18,6 +18,7 @@ load_dotenv()
 
 BASE_DIR: Path = Path(__file__).parent.resolve()
 DATA_DIR: Path = BASE_DIR / "data"
+TENANTS_DIR: Path = DATA_DIR / "tenants"
 MODELS_DIR: Path = BASE_DIR / "models"
 RAW_DATA_DIR: Path = DATA_DIR / "raw"
 PROCESSED_DATA_DIR: Path = DATA_DIR / "processed"
@@ -29,6 +30,7 @@ SECRETS_STORE_PATH: Path = SECRETS_DIR / "local_secrets.json"
 
 # Création automatique des dossiers si absents
 DATA_DIR.mkdir(parents=True, exist_ok=True)
+TENANTS_DIR.mkdir(parents=True, exist_ok=True)
 MODELS_DIR.mkdir(parents=True, exist_ok=True)
 RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
 PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -36,14 +38,15 @@ EMBEDDINGS_DIR.mkdir(parents=True, exist_ok=True)
 DEMO_DATA_DIR.mkdir(parents=True, exist_ok=True)
 SECRETS_DIR.mkdir(parents=True, exist_ok=True)
 (MODELS_DIR / "dziribert").mkdir(parents=True, exist_ok=True)
+(MODELS_DIR / "dziribert-sentiment").mkdir(parents=True, exist_ok=True)
 (MODELS_DIR / "whisper").mkdir(parents=True, exist_ok=True)
 
 # ---------------------------------------------------------------------------
 # Modèles ML
 # ---------------------------------------------------------------------------
 
-DZIRIBERT_MODEL_PATH: Path = MODELS_DIR / "dziribert"
-"""Chemin local vers le modèle DziriBERT fine-tuné (5 classes)."""
+DZIRIBERT_MODEL_PATH: Path = MODELS_DIR / "dziribert-sentiment"
+"""Chemin local vers le modèle DziriBERT fine-tuné (3 classes: positive/negative/neutral)."""
 
 WHISPER_MODEL_SIZE: str = os.getenv("WHISPER_MODEL_SIZE", "large-v3")
 """Taille du modèle Whisper: tiny, base, small, medium, large, large-v2, large-v3."""
@@ -95,6 +98,10 @@ CHANNELS: list[str] = [
     "audio",
     "youtube",
     "instagram",
+    "public_url_seed",
+    "web_search",
+    "press",
+    "reddit",
 ]
 """Canaux de collecte supportés."""
 
@@ -188,6 +195,13 @@ BM25_METADATA_PATH: Path = INDEX_DIR / "bm25_metadata.json"
 
 DEFAULT_CLIENT_ID: str = "ramy_client_001"
 """Identifiant client unique pour le PoC mono-tenant."""
+
+SAFE_EXPO_CLIENT_ID: str = os.getenv("SAFE_EXPO_CLIENT_ID", "ramy-demo")
+"""Client de repli pour l'expo quand aucun tenant actif n'est défini."""
+TAVILY_API_KEY: str = os.getenv("TAVILY_API_KEY", "")
+YOUTUBE_API_KEY: str = os.getenv("YOUTUBE_API_KEY", "")
+GOOGLE_MAPS_API_KEY: str = os.getenv("GOOGLE_MAPS_API_KEY", "")
+PERPLEXITY_API_KEY: str = os.getenv("PERPLEXITY_API_KEY", "")
 
 # ---------------------------------------------------------------------------
 # Recommendation Agent

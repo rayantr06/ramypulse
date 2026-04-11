@@ -38,3 +38,14 @@ test("Admin Sources composes the real operations surface", () => {
   assert.ok(source.includes("AdminSourcesOps"));
   assert.ok(source.includes("RamyPulse Admin"));
 });
+
+test("Watch onboarding exposes the watch-first wizard and progress handoff", () => {
+  const source = readPage("WatchOnboarding.tsx");
+  assert.ok(source.includes("WatchOnboardingWizard"));
+  assert.ok(source.includes("RunProgressPanel"));
+});
+
+test("Campaigns page keeps a visible beta badge", () => {
+  const source = readPage("Campagnes.tsx");
+  assert.ok(source.includes("Beta"));
+});

@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { AppShell } from "@/components/AppShell";
+import { EmptyTenantState } from "@/components/EmptyTenantState";
 import { apiRequest } from "@/lib/queryClient";
 import {
   flattenProviderCatalog,
@@ -10,6 +11,9 @@ import {
   mapRecommendation,
 } from "@/lib/apiMappings";
 import { filterRecommendationViews } from "@/lib/pageSearchFilters";
+import { toast } from "@/hooks/use-toast";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 import { STITCH_AVATARS } from "@/lib/stitchAssets";
 
 interface RecommendationContextView {
@@ -204,6 +208,10 @@ function statusLabel(status: string): { label: string; color: string; dotColor: 
   return { label: "ÉCHOUÉ", color: "text-error", dotColor: "bg-error" };
 }
 
+function isMissingBulkStatusEndpoint(error: unknown): boolean {
+  return error instanceof Error && /^(404|405):/.test(error.message);
+}
+
 export default function Recommandations() {
   const queryClientHook = useQueryClient();
   const [genForm, setGenForm] = useState({
@@ -212,6 +220,7 @@ export default function Recommandations() {
     model: "",
   });
   const [searchQuery, setSearchQuery] = useState("");
+  const [isArchivingAll, setIsArchivingAll] = useState(false);
 
   const { data: providersRaw } = useQuery<ProviderGroup[]>({
     queryKey: ["/api/recommendations/providers"],
@@ -274,6 +283,13 @@ export default function Recommandations() {
         ],
       });
     },
+    onError: (error: Error) => {
+      toast({
+        title: "Erreur",
+        description: error.message || "Une erreur est survenue",
+        variant: "destructive",
+      });
+    },
   });
 
   const updateStatusMutation = useMutation({
@@ -281,8 +297,12 @@ export default function Recommandations() {
       const res = await apiRequest("PUT", `/api/recommendations/${id}/status`, { status });
       return res.json();
     },
-    onSuccess: () => {
-      queryClientHook.invalidateQueries({ queryKey: ["/api/recommendations"] });
+    onError: (error: Error) => {
+      toast({
+        title: "Erreur",
+        description: error.message || "Une erreur est survenue",
+        variant: "destructive",
+      });
     },
   });
 
@@ -308,6 +328,66 @@ export default function Recommandations() {
     activeRecos[0]?.provider || latestRecommendation?.provider || "",
     activeRecos[0]?.model || latestRecommendation?.model || "",
   );
+
+  const invalidateRecommendations = async () => {
+    await queryClientHook.invalidateQueries({ queryKey: ["/api/recommendations"] });
+  };
+
+  const handleRecommendationStatusChange = async (
+    id: string,
+    status: "archived" | "dismissed",
+  ) => {
+    await updateStatusMutation.mutateAsync({ id, status });
+    await invalidateRecommendations();
+  };
+
+  const handleArchiveAll = async () => {
+    const ids = activeRecos.map((recommendation) => recommendation.id);
+    if (!ids.length) return;
+
+    setIsArchivingAll(true);
+    try {
+      try {
+        await apiRequest("/api/recommendations/bulk-status", {
+          method: "POST",
+          body: JSON.stringify({ ids, status: "archived" }),
+        });
+      } catch (error) {
+        if (!isMissingBulkStatusEndpoint(error)) {
+          throw error;
+        }
+        await Promise.all(
+          ids.map((id) =>
+            updateStatusMutation.mutateAsync({
+              id,
+              status: "archived",
+            }),
+          ),
+        );
+      }
+      await invalidateRecommendations();
+    } finally {
+      setIsArchivingAll(false);
+    }
+  };
+
+  if (!recoLoading && (recommendations ?? []).length === 0) {
+    return (
+      <AppShell
+        headerSearchPlaceholder="Rechercher une recommandation..."
+        onSearch={setSearchQuery}
+        avatarSrc={STITCH_AVATARS.recommandations.src}
+        avatarAlt={STITCH_AVATARS.recommandations.alt}
+      >
+        <div className="p-8 max-w-7xl mx-auto">
+          <EmptyTenantState
+            title="Les recommandations attendent un premier corpus"
+            description="Le module IA devient utile une fois que la watchlist a produit assez de signaux, d'alertes et de contexte pour générer des actions crédibles."
+          />
+        </div>
+      </AppShell>
+    );
+  }
 
   const runHistory = useMemo(() => {
     return recos.map((recommendation) => ({
@@ -453,7 +533,7 @@ export default function Recommandations() {
                       contextData.volume >= 1000
                         ? `${(contextData.volume / 1000).toFixed(1)}k`
                         : contextData.volume,
-                    label: "Volume (m³)",
+                    label: "Volume mentions",
                   },
                   {
                     icon: "warning",
@@ -466,8 +546,8 @@ export default function Recommandations() {
                     icon: "history",
                     color: "text-gray-500",
                     borderColor: "border-white/5",
-                    value: "Dernière run",
-                    label: lastRunLabel,
+                    value: lastRunLabel,
+                    label: "Dernière run",
                   },
                 ].map(({ icon, color, borderColor, value, label }) => (
                   <div
@@ -478,7 +558,7 @@ export default function Recommandations() {
                     <div>
                       <p
                         className={`font-headline tracking-tighter ${
-                          value === "Dernière run"
+                          label === "Dernière run"
                             ? "text-lg font-bold leading-tight"
                             : "text-2xl font-black"
                         }`}
@@ -509,15 +589,8 @@ export default function Recommandations() {
             <div className="flex gap-2">
               <button
                 className="bg-surface-container-high px-4 py-2 rounded-sm text-xs font-bold hover:bg-surface-bright transition-colors disabled:opacity-50"
-                disabled={!activeRecos.length || updateStatusMutation.isPending}
-                onClick={() => {
-                  activeRecos.forEach((recommendation) => {
-                    updateStatusMutation.mutate({
-                      id: recommendation.id,
-                      status: "archived",
-                    });
-                  });
-                }}
+                disabled={!activeRecos.length || updateStatusMutation.isPending || isArchivingAll}
+                onClick={() => void handleArchiveAll()}
                 type="button"
               >
                 Tout Archiver
@@ -559,7 +632,11 @@ export default function Recommandations() {
                     <span className="material-symbols-outlined text-xs">memory</span>
                     <span>{activeProviderBadge}</span>
                   </div>
-                  <span>{latestRecommendation?.created_at || "-"}</span>
+                  <span>
+                    {latestRecommendation?.created_at
+                      ? format(new Date(latestRecommendation.created_at), "dd/MM/yyyy HH:mm", { locale: fr })
+                      : "-"}
+                  </span>
                 </div>
               </div>
 
@@ -604,10 +681,7 @@ export default function Recommandations() {
                     <div className="flex gap-2">
                       <button
                         onClick={() =>
-                          updateStatusMutation.mutate({
-                            id: recommendation.id,
-                            status: "archived",
-                          })
+                          void handleRecommendationStatusChange(recommendation.id, "archived")
                         }
                         className="flex-1 py-2 rounded-sm bg-primary/10 text-primary text-[11px] font-bold hover:bg-primary/20 transition-all"
                       >
@@ -615,10 +689,7 @@ export default function Recommandations() {
                       </button>
                       <button
                         onClick={() =>
-                          updateStatusMutation.mutate({
-                            id: recommendation.id,
-                            status: "dismissed",
-                          })
+                          void handleRecommendationStatusChange(recommendation.id, "dismissed")
                         }
                         className="p-2 rounded-sm bg-surface-container-highest text-gray-400 hover:text-white transition-all"
                       >
@@ -670,7 +741,9 @@ export default function Recommandations() {
               <tbody className="divide-y divide-white/5">
                 {runHistory.map((run, index) => (
                   <tr key={`${run.date}-${index}`} className="hover:bg-surface-bright/30 transition-colors">
-                    <td className="px-6 py-4 text-xs font-medium text-white">{run.date}</td>
+                    <td className="px-6 py-4 text-xs font-medium text-white">
+                      {run.date && run.date !== "-" ? format(new Date(run.date), "dd/MM/yyyy HH:mm", { locale: fr }) : run.date}
+                    </td>
                     <td className="px-6 py-4">
                       <span className="text-[10px] px-2 py-1 bg-surface-container-highest rounded-full text-gray-400">
                         {run.trigger}
@@ -705,18 +778,17 @@ export default function Recommandations() {
       </div>
 
       <div className="fixed bottom-8 right-8 z-50">
-        <Link href="/explorateur">
-          <a
-            className="w-14 h-14 bg-gradient-to-br from-primary to-primary-container rounded-sm shadow-[0_10px_30px_rgba(245,102,0,0.3)] flex items-center justify-center text-on-primary-container hover:scale-110 active:scale-95 transition-all"
-            data-testid="recommendations-ai-shortcut"
+        <Link
+          href="/explorateur"
+          className="w-14 h-14 bg-gradient-to-br from-primary to-primary-container rounded-sm shadow-[0_10px_30px_rgba(245,102,0,0.3)] flex items-center justify-center text-on-primary-container hover:scale-110 active:scale-95 transition-all"
+          data-testid="recommendations-ai-shortcut"
+        >
+          <span
+            className="material-symbols-outlined text-2xl"
+            style={{ fontVariationSettings: "'FILL' 1" }}
           >
-            <span
-              className="material-symbols-outlined text-2xl"
-              style={{ fontVariationSettings: "'FILL' 1" }}
-            >
-              auto_awesome
-            </span>
-          </a>
+            auto_awesome
+          </span>
         </Link>
       </div>
     </AppShell>
