@@ -12,6 +12,9 @@ Backend FastAPI + SQLite, 51 endpoints, 33 tables.
 Worktree : agent/claude-backend
 Ton fichier de config : CLAUDE.md (lis-le en premier)
 
+IMPORTANT : Tu es peut-être sur Windows (PowerShell) ou Linux/macOS.
+Détecte ton environnement avant d'exécuter des commandes shell.
+
 FICHIERS À LIRE EN PRIORITÉ :
 1. CLAUDE.md
 2. api/main.py
@@ -20,24 +23,33 @@ FICHIERS À LIRE EN PRIORITÉ :
 
 ═══ TÂCHE T03 — Vérification et stabilisation backend ═══
 
-1. Vérifier que l'environnement Python est prêt :
-   source .venv/bin/activate  # ou créer si n'existe pas
+1. Préparer l'environnement Python :
+   # Si .venv existe déjà :
+   #   Linux/macOS/Git Bash : source .venv/bin/activate
+   #   PowerShell Windows   : .\.venv\Scripts\Activate.ps1
+   # Sinon :
+   python -m venv .venv
    pip install -r requirements.txt
 
 2. Lancer le backend :
-   uvicorn api.main:app --reload --port 8000 &
+   uvicorn api.main:app --reload --port 8000
+   # Note : pas de & en fin de commande sur PowerShell
 
-3. Vérifier les endpoints critiques :
+3. Vérifier les endpoints critiques (dans un autre terminal) :
    curl http://localhost:8000/api/health
    curl http://localhost:8000/api/status
    curl -H "X-API-Key: dev" http://localhost:8000/api/dashboard/summary
+   # PowerShell natif (si curl n'est pas disponible) :
+   # Invoke-RestMethod http://localhost:8000/api/health
 
 4. Si des erreurs d'import → corriger UNIQUEMENT les imports manquants
 
-5. Lancer les tests :
+5. Lancer les tests et sauvegarder le résultat :
    pytest tests/ -v --tb=short
+   # Sauvegarder la sortie dans docs/baseline_test_results.md
 
 6. Créer docs/baseline_test_results.md avec le résultat des tests
+   (copier la sortie de pytest, noter les tests qui passent et échouent)
 
 ═══ TÂCHE T32 — Seed data démo (APRÈS que backend démarre) ═══
 

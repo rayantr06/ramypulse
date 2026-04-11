@@ -12,17 +12,23 @@ Frontend : React 18 + Vite 7 + TypeScript strict + Shadcn/ui + Tailwind CSS 3.4.
 Worktree : agent/codex-frontend
 Ton fichier de config : AGENTS.md (lis-le en premier)
 
+IMPORTANT : Tu es peut-être sur Windows (PowerShell) ou Linux/macOS.
+Détecte ton environnement avant d'exécuter des commandes shell.
+
 FICHIERS À LIRE EN PRIORITÉ :
 1. AGENTS.md
-2. frontend/package.json (scripts)
+2. frontend/package.json (scripts disponibles)
 3. frontend/client/src/App.tsx (routing)
 4. frontend/shared/schema.ts (contrats — LECTURE SEULE)
 
 ═══ TÂCHE SETUP ═══
 
-1. cd frontend && npm install
-2. npm run check > /tmp/ts_baseline.txt 2>&1  (script "check" = tsc)
-3. Documenter les erreurs TypeScript dans docs/frontend_baseline.md
+1. cd frontend
+2. npm install
+3. npm run check   (script "check" = tsc — typecheck strict)
+   Sauvegarder la sortie dans docs/frontend_baseline.md
+4. Documenter les erreurs TypeScript préexistantes dans docs/frontend_baseline.md
+   (ces erreurs sont connues, ne pas les corriger maintenant sauf si elles bloquent)
 
 ═══ TÂCHE : Inventorier les boutons morts ═══
 

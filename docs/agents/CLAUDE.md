@@ -6,12 +6,36 @@ Backend : FastAPI + SQLite (33 tables), 51 endpoints, branche `feat/watch-first-
 Tu travailles dans le worktree `agent/claude-backend` — ne touche JAMAIS aux fichiers de `frontend/client/src/`.
 
 ## Commandes essentielles
-- Activer l'environnement : `source .venv/bin/activate` (ou `uv sync` si uv est installé)
-- Lancer le backend : `uvicorn api.main:app --reload --port 8000`
-- Tests Python : `pytest tests/ -v --tb=short`
-- Test unique : `pytest tests/test_dashboard.py -v`
-- Vérifier un endpoint : `curl -H "X-API-Key: dev" http://localhost:8000/api/health`
-- Lint Python : `ruff check api/` (si ruff installé) ou `flake8 api/`
+
+**Environnement Python :**
+```bash
+# Linux / macOS / Git Bash (Windows)
+source .venv/bin/activate
+# PowerShell (Windows natif)
+.\.venv\Scripts\Activate.ps1
+# Si pas de venv existant :
+python -m venv .venv && pip install -r requirements.txt
+```
+
+**Lancer et tester :**
+```bash
+# Lancer le backend (toutes plateformes)
+uvicorn api.main:app --reload --port 8000
+
+# Tests Python
+pytest tests/ -v --tb=short
+
+# Test unique
+pytest tests/test_dashboard.py -v
+
+# Vérifier un endpoint
+curl -H "X-API-Key: dev" http://localhost:8000/api/health
+# PowerShell alternatif :
+# Invoke-RestMethod -Uri http://localhost:8000/api/health -Headers @{"X-API-Key"="dev"}
+
+# Lint Python
+ruff check api/
+```
 
 ## Architecture backend
 - Point d'entrée : `api/main.py`
@@ -50,4 +74,4 @@ Tu travailles dans le worktree `agent/claude-backend` — ne touche JAMAIS aux f
 ## Seed data démo (priorité P0 J1)
 Script à créer : `scripts/seed_demo.py`
 Tenant cible : `demo-expo-2026`, marque `YaghurtPlus`
-Voir feuille_de_route_expo.md §4.1 pour le schéma exact des données
+Voir docs/feuille_de_route_expo.md §4.1 pour le schéma exact des données

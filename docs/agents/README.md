@@ -39,39 +39,82 @@ J9  → P4-01 (Codex)
 J10 → MERGE FINAL → tag v1.0-expo
 ```
 
-## Setup worktrees
+## Setup worktrees (Windows — PowerShell)
 
-Ton repo utilise la structure `.worktrees/` existante. Voici les commandes adaptées :
+> **Prérequis** : le repo root `G:\ramypulse` est sur `main` et ne doit PAS être basculé.
+> Les branches `origin/agent/claude-backend` et `origin/agent/codex-frontend` existent
+> déjà sur GitHub avec un commit chacune. On crée des worktrees qui trackent ces branches.
 
-```bash
-# 1. Récupérer la branche expo/main-dev depuis GitHub
-git fetch origin expo/main-dev
-git checkout expo/main-dev
+```powershell
+# Depuis G:\ramypulse (repo root sur main — NE PAS changer de branche ici)
 
-# 2. Créer les branches agents
-git branch agent/claude-backend
-git branch agent/codex-frontend
+# 1. Récupérer les branches distantes
+git fetch origin
 
-# 3. Créer les worktrees (dans ta structure .worktrees/ existante)
-git worktree add .worktrees/agent-backend agent/claude-backend
-git worktree add .worktrees/agent-frontend agent/codex-frontend
+# 2. Créer les worktrees qui trackent les branches distantes existantes
+#    (pas de "git branch" — les branches existent déjà sur origin)
+git worktree add .worktrees\agent-backend origin/agent/claude-backend
+git worktree add .worktrees\agent-frontend origin/agent/codex-frontend
 
-# 4. Copier les configs agents
-copy docs\agents\CLAUDE.md .worktrees\agent-backend\CLAUDE.md
-copy docs\agents\AGENTS.md .worktrees\agent-frontend\AGENTS.md
-copy .env .worktrees\agent-backend\.env
-copy .env .worktrees\agent-frontend\.env
+# 3. Dans chaque worktree, configurer le tracking upstream
+cd .worktrees\agent-backend
+git branch --set-upstream-to=origin/agent/claude-backend
+cd ..\agent-frontend
+git branch --set-upstream-to=origin/agent/codex-frontend
+cd ..\..
 
-# 5. Vérification
+# 4. Copier les configs agents depuis docs/agents/
+#    (les fichiers sont sur expo/main-dev, pas main — on les récupère via git show)
+git show origin/expo/main-dev:docs/agents/CLAUDE.md > .worktrees\agent-backend\CLAUDE.md
+git show origin/expo/main-dev:docs/agents/AGENTS.md > .worktrees\agent-frontend\AGENTS.md
+
+# 5. Copier le .env dans les worktrees
+Copy-Item .env .worktrees\agent-backend\.env -ErrorAction SilentlyContinue
+Copy-Item .env .worktrees\agent-frontend\.env -ErrorAction SilentlyContinue
+
+# 6. Vérification
 git worktree list
-# Attendu : ...agent-backend [agent/claude-backend] + ...agent-frontend [agent/codex-frontend]
+# Attendu (parmi les 18+ existants) :
+# G:/ramypulse/.worktrees/agent-backend   99023f2 [agent/claude-backend]
+# G:/ramypulse/.worktrees/agent-frontend  a26c0a2 [agent/codex-frontend]
 ```
 
-> **Note Windows** : Les commandes `copy` sont en syntaxe Windows. Sur Git Bash, utiliser `cp` à la place.
+### Créer un worktree pour expo/main-dev (accès aux docs)
+
+```powershell
+# Si tu veux accéder aux fichiers de docs/agents/ localement sans toucher main :
+git worktree add .worktrees\expo-main-dev origin/expo/main-dev
+# Les 13 fichiers de docs/agents/ seront dans :
+# G:\ramypulse\.worktrees\expo-main-dev\docs\agents\
+```
+
+## Lancer les agents
+
+### Claude Code (backend)
+
+```powershell
+cd G:\ramypulse\.worktrees\agent-backend
+
+# Lancer Claude Code
+claude
+
+# Copier-coller le prompt P0-01 (depuis docs/agents/prompts/)
+```
+
+### Codex CLI (frontend)
+
+```powershell
+cd G:\ramypulse\.worktrees\agent-frontend
+
+# Lancer Codex
+codex --model o4-mini
+
+# Copier-coller le prompt P0-02
+```
 
 ## Références
 
-- [Plan multi-agent complet](../../plan_multi_agent_ramypulse.md) — 1404 lignes, document maître
-- [Feuille de route expo](../../feuille_de_route_expo.md) — 36 tâches, 4 phases
-- [Contrats pages](../../contrats_pages.md) — 14 contrats page-par-page
-- [Synthèse croisée](../../synthese_croisee.md) — Score maturité 72/100
+- [Plan multi-agent complet](../plan_multi_agent_ramypulse.md) — 1404 lignes, document maître
+- [Feuille de route expo](../feuille_de_route_expo.md) — 36 tâches, 4 phases
+- [Contrats pages](../contrats_pages.md) — 14 contrats page-par-page
+- [Synthèse croisée](../synthese_croisee.md) — Score maturité 72/100
