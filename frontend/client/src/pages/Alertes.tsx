@@ -5,6 +5,7 @@ import { EmptyTenantState } from "@/components/EmptyTenantState";
 import { apiRequest } from "@/lib/queryClient";
 import { mapAlert } from "@/lib/apiMappings";
 import { filterAlertViews } from "@/lib/pageSearchFilters";
+import { toast } from "@/hooks/use-toast";
 import { STITCH_AVATARS } from "@/lib/stitchAssets";
 
 type StatusFilter = "NOUVEAU" | "RECONNU" | "RESOLU" | "ECARTE";
@@ -180,10 +181,11 @@ export default function Alertes() {
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [alertLimit, setAlertLimit] = useState(50);
   const queryClientHook = useQueryClient();
 
   const { data: alerts, isLoading: alertsLoading } = useQuery<AlertView[]>({
-    queryKey: ["/api/alerts", statusFilter, severityFilter],
+    queryKey: ["/api/alerts", statusFilter, severityFilter, alertLimit],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (statusFilter) params.set("status", STATUS_TO_API[statusFilter]);
@@ -198,7 +200,7 @@ export default function Alertes() {
                 : "low";
         params.set("severity", severity);
       }
-      params.set("limit", "50");
+      params.set("limit", String(alertLimit));
       const res = await apiRequest("GET", `/api/alerts?${params.toString()}`);
       const payload = await res.json();
       return (Array.isArray(payload) ? payload : []).map(mapAlertView);
@@ -212,6 +214,13 @@ export default function Alertes() {
     },
     onSuccess: () => {
       queryClientHook.invalidateQueries({ queryKey: ["/api/alerts"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erreur",
+        description: error.message || "Une erreur est survenue",
+        variant: "destructive",
+      });
     },
   });
 
@@ -376,6 +385,14 @@ export default function Alertes() {
                 </article>
               ))
             )}
+            {alertsList.length >= alertLimit && (
+              <button
+                onClick={() => setAlertLimit((prev) => prev + 50)}
+                className="w-full py-3 text-xs font-bold uppercase tracking-widest text-primary hover:bg-surface-container-high transition-colors rounded-sm"
+              >
+                Charger plus
+              </button>
+            )}
           </div>
 
           <div className="lg:col-span-7">
@@ -468,42 +485,63 @@ export default function Alertes() {
                     </div>
 
                     <div className="flex gap-3 pt-6 border-t border-outline-variant/20">
-                      <button
-                        onClick={() =>
-                          updateStatusMutation.mutate({
-                            id: selectedAlert.id,
-                            status: "acknowledged",
-                          })
-                        }
-                        className="flex-1 bg-surface-container-high hover:bg-surface-bright text-on-surface font-bold py-3 px-4 rounded-sm text-xs transition-colors border border-outline-variant/30 uppercase tracking-widest"
-                        data-testid="btn-acknowledge"
-                      >
-                        Reconnaître
-                      </button>
-                      <button
-                        onClick={() =>
-                          updateStatusMutation.mutate({
-                            id: selectedAlert.id,
-                            status: "dismissed",
-                          })
-                        }
-                        className="flex-1 bg-surface-container-high hover:bg-surface-bright text-primary font-bold py-3 px-4 rounded-sm text-xs transition-colors border border-primary/20 uppercase tracking-widest"
-                        data-testid="btn-dismiss"
-                      >
-                        Ecarter
-                      </button>
-                      <button
-                        onClick={() =>
-                          updateStatusMutation.mutate({
-                            id: selectedAlert.id,
-                            status: "resolved",
-                          })
-                        }
-                        className="flex-1 bg-gradient-to-r from-primary to-primary-container text-on-primary-fixed font-bold py-3 px-4 rounded-sm text-xs hover:opacity-90 transition-opacity uppercase tracking-widest"
-                        data-testid="btn-resolve"
-                      >
-                        Résoudre
-                      </button>
+                      {selectedAlert.status !== "RECONNU" && (
+                        <button
+                          onClick={() =>
+                            updateStatusMutation.mutate({
+                              id: selectedAlert.id,
+                              status: "acknowledged",
+                            })
+                          }
+                          disabled={updateStatusMutation.isPending}
+                          className="flex-1 bg-surface-container-high hover:bg-surface-bright text-on-surface font-bold py-3 px-4 rounded-sm text-xs transition-colors border border-outline-variant/30 uppercase tracking-widest disabled:opacity-50"
+                          data-testid="btn-acknowledge"
+                        >
+                          {updateStatusMutation.isPending ? (
+                            <span className="material-symbols-outlined text-sm animate-spin">progress_activity</span>
+                          ) : (
+                            "Reconnaître"
+                          )}
+                        </button>
+                      )}
+                      {selectedAlert.status !== "ECARTE" && (
+                        <button
+                          onClick={() =>
+                            updateStatusMutation.mutate({
+                              id: selectedAlert.id,
+                              status: "dismissed",
+                            })
+                          }
+                          disabled={updateStatusMutation.isPending}
+                          className="flex-1 bg-surface-container-high hover:bg-surface-bright text-primary font-bold py-3 px-4 rounded-sm text-xs transition-colors border border-primary/20 uppercase tracking-widest disabled:opacity-50"
+                          data-testid="btn-dismiss"
+                        >
+                          {updateStatusMutation.isPending ? (
+                            <span className="material-symbols-outlined text-sm animate-spin">progress_activity</span>
+                          ) : (
+                            "Ecarter"
+                          )}
+                        </button>
+                      )}
+                      {selectedAlert.status !== "RESOLU" && (
+                        <button
+                          onClick={() =>
+                            updateStatusMutation.mutate({
+                              id: selectedAlert.id,
+                              status: "resolved",
+                            })
+                          }
+                          disabled={updateStatusMutation.isPending}
+                          className="flex-1 bg-gradient-to-r from-primary to-primary-container text-on-primary-fixed font-bold py-3 px-4 rounded-sm text-xs hover:opacity-90 transition-opacity uppercase tracking-widest disabled:opacity-50"
+                          data-testid="btn-resolve"
+                        >
+                          {updateStatusMutation.isPending ? (
+                            <span className="material-symbols-outlined text-sm animate-spin">progress_activity</span>
+                          ) : (
+                            "Résoudre"
+                          )}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
