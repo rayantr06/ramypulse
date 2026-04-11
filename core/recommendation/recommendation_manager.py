@@ -371,6 +371,51 @@ def get_recommendation(
         conn.close()
 
 
+def bulk_update_status(
+    ids: list[str],
+    status: str,
+    db_path=None,
+) -> list[str]:
+    """Met à jour le statut de plusieurs recommandations en une transaction.
+
+    Args:
+        ids: Liste d'UUIDs de recommandations.
+        status: 'active' | 'archived' | 'dismissed'.
+        db_path: Chemin DB optionnel.
+
+    Returns:
+        Liste des IDs effectivement mis à jour (les IDs inexistants sont ignorés).
+    """
+    if not ids:
+        return []
+
+    conn = _get_connection(db_path)
+    try:
+        placeholders = ",".join("?" * len(ids))
+        cursor = conn.execute(
+            f"SELECT recommendation_id FROM recommendations WHERE recommendation_id IN ({placeholders})",
+            ids,
+        )
+        existing_ids = [row[0] for row in cursor.fetchall()]
+
+        if not existing_ids:
+            return []
+
+        placeholders_existing = ",".join("?" * len(existing_ids))
+        conn.execute(
+            f"UPDATE recommendations SET status = ? WHERE recommendation_id IN ({placeholders_existing})",
+            [status, *existing_ids],
+        )
+        conn.commit()
+        return existing_ids
+    except sqlite3.Error as exc:
+        logger.error("Erreur bulk_update_status : %s", exc)
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
 def update_recommendation_status(
     recommendation_id: str,
     status: str,
