@@ -7,7 +7,7 @@ from typing import Any
 from core.ingestion.orchestrator import IngestionOrchestrator
 from core.onboarding.brand_discovery import discover_brand_signals
 from core.onboarding.suggestion_engine import _slugify, build_suggestions
-from core.tenancy.client_manager import get_or_create_client, set_active_client
+from core.tenancy.client_manager import get_or_create_client
 from core.watch_runs.run_service import start_watch_run, validate_requested_channels
 from core.watchlists.watchlist_manager import create_watchlist
 
@@ -174,7 +174,6 @@ def confirm_onboarding(
         industry=industry,
     )
     client_id = str(client["client_id"])
-    set_active_client(client_id)
 
     watch_seed_filters = _merge_watch_seed_filters(
         watch_seed,

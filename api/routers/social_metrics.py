@@ -17,6 +17,7 @@ from api.schemas import (
     CredentialCreate,
     ManualMetricsInput,
 )
+from core.campaigns.campaign_manager import get_campaign
 from core.social_metrics import credential_manager, metrics_aggregator
 from core.social_metrics.instagram_graph_collector import collect_and_save, save_metrics
 from core.social_metrics.screenshot_parser import save_screenshot
@@ -94,8 +95,14 @@ def deactivate_credential(
 
 
 @router.post("/campaigns/{campaign_id}/posts", status_code=201)
-def add_campaign_post(campaign_id: str, data: CampaignPostAdd):
+def add_campaign_post(
+    campaign_id: str,
+    data: CampaignPostAdd,
+    client_id: str = Depends(resolve_client_id),
+):
     """Lie un post social à une campagne."""
+    if not get_campaign(campaign_id, client_id=client_id):
+        raise HTTPException(status_code=404, detail="Campaign not found")
     try:
         post_id = f"post-{uuid.uuid4().hex[:12]}"
         now = datetime.now().isoformat()
@@ -127,8 +134,13 @@ def add_campaign_post(campaign_id: str, data: CampaignPostAdd):
 
 
 @router.get("/campaigns/{campaign_id}/posts")
-def list_campaign_posts(campaign_id: str):
+def list_campaign_posts(
+    campaign_id: str,
+    client_id: str = Depends(resolve_client_id),
+):
     """Liste les posts rattachés à une campagne."""
+    if not get_campaign(campaign_id, client_id=client_id):
+        raise HTTPException(status_code=404, detail="Campaign not found")
     try:
         with _get_db() as conn:
             rows = conn.execute(
@@ -142,21 +154,29 @@ def list_campaign_posts(campaign_id: str):
 
 
 @router.delete("/posts/{post_id}", status_code=204)
-def delete_campaign_post(post_id: str):
+def delete_campaign_post(
+    post_id: str,
+    client_id: str = Depends(resolve_client_id),
+):
     """Supprime un post de campagne et ses métriques associées."""
     try:
         with _get_db() as conn:
+            post_row = conn.execute(
+                "SELECT campaign_id FROM campaign_posts WHERE post_id = ?",
+                [post_id],
+            ).fetchone()
+            if not post_row:
+                raise HTTPException(status_code=404, detail="Campaign post not found")
+            if not get_campaign(post_row["campaign_id"], client_id=client_id):
+                raise HTTPException(status_code=404, detail="Campaign post not found")
             conn.execute(
                 "DELETE FROM post_engagement_metrics WHERE post_id = ?",
                 [post_id],
             )
-            post_cursor = conn.execute(
+            conn.execute(
                 "DELETE FROM campaign_posts WHERE post_id = ?",
                 [post_id],
             )
-            if post_cursor.rowcount == 0:
-                conn.rollback()
-                raise HTTPException(status_code=404, detail="Campaign post not found")
             conn.commit()
     except HTTPException:
         raise
@@ -166,8 +186,13 @@ def delete_campaign_post(post_id: str):
 
 
 @router.post("/campaigns/{campaign_id}/collect")
-def collect_campaign_metrics(campaign_id: str):
+def collect_campaign_metrics(
+    campaign_id: str,
+    client_id: str = Depends(resolve_client_id),
+):
     """Déclenche une collecte Graph API pour les posts liés."""
+    if not get_campaign(campaign_id, client_id=client_id):
+        raise HTTPException(status_code=404, detail="Campaign not found")
     try:
         with _get_db() as conn:
             posts = conn.execute(
@@ -281,8 +306,13 @@ async def upload_screenshot(
 
 
 @router.get("/campaigns/{campaign_id}")
-def get_campaign_engagement(campaign_id: str):
+def get_campaign_engagement(
+    campaign_id: str,
+    client_id: str = Depends(resolve_client_id),
+):
     """Retourne les métriques agrégées d'une campagne."""
+    if not get_campaign(campaign_id, client_id=client_id):
+        raise HTTPException(status_code=404, detail="Campaign not found")
     try:
         result = metrics_aggregator.get_campaign_engagement(campaign_id)
         if "error" in result:
@@ -296,8 +326,14 @@ def get_campaign_engagement(campaign_id: str):
 
 
 @router.patch("/campaigns/{campaign_id}/revenue")
-def set_campaign_revenue(campaign_id: str, data: CampaignRevenuePatch):
+def set_campaign_revenue(
+    campaign_id: str,
+    data: CampaignRevenuePatch,
+    client_id: str = Depends(resolve_client_id),
+):
     """Met à jour le revenu attribué à une campagne."""
+    if not get_campaign(campaign_id, client_id=client_id):
+        raise HTTPException(status_code=404, detail="Campaign not found")
     try:
         now = datetime.now().isoformat()
         with _get_db() as conn:

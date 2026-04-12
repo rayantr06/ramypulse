@@ -405,11 +405,10 @@ def _campaign_columns(connection: sqlite3.Connection) -> set[str]:
 
 def _matching_campaigns(watchlist: dict, reference_time: pd.Timestamp) -> list[dict]:
     """Retourne les campagnes actives compatibles avec la watchlist si disponibles."""
-    effective_client_id = (
-        str(watchlist.get("client_id")).strip()
-        if isinstance(watchlist.get("client_id"), str) and str(watchlist.get("client_id")).strip()
-        else config.DEFAULT_CLIENT_ID
-    )
+    wl_client_id = watchlist.get("client_id")
+    if not isinstance(wl_client_id, str) or not str(wl_client_id).strip():
+        return []
+    effective_client_id = str(wl_client_id).strip()
     try:
         connection = sqlite3.connect(config.SQLITE_DB_PATH)
         connection.row_factory = sqlite3.Row
