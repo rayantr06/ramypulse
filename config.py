@@ -223,24 +223,28 @@ ALERT_NOTIFICATION_MIN_SEVERITY: str = os.getenv("ALERT_NOTIFICATION_MIN_SEVERIT
 
 # Estimated prompt input pricing, expressed in USD per 1K input tokens.
 # Used only for pre-generation cost previews in the UI.
+# Source : pages de pricing officielles (vérifier régulièrement)
 LLM_INPUT_PRICING_USD_PER_1K_TOKENS: dict[str, dict[str, float]] = {
     "anthropic": {
-        "claude-opus-4-6": 0.015,
-        "claude-sonnet-4-6": 0.003,
-        "claude-haiku-4-5-20251001": 0.0008,
+        "claude-opus-4-6": 0.015,       # $15 / MTok
+        "claude-sonnet-4-6": 0.003,     # $3 / MTok
+        "claude-haiku-4-5-20251001": 0.0008,  # $0.80 / MTok
     },
     "openai": {
-        "gpt-4o": 0.0025,
-        "gpt-4-turbo": 0.01,
-        "o1-preview": 0.015,
+        "gpt-4o": 0.0025,               # $2.50 / MTok
+        "gpt-4o-mini": 0.00015,         # $0.15 / MTok
+        "o1": 0.015,                    # $15 / MTok (remplace o1-preview)
+        "o3-mini": 0.0011,              # $1.10 / MTok
     },
     "google_gemini": {
-        "gemini-2.5-flash": 0.0003,
-        "gemini-2.5-pro": 0.00125,
-        "gemini-2.0-flash": 0.0001,
+        "gemini-2.5-pro": 0.00125,      # $1.25 / MTok (≤200K tokens)
+        "gemini-2.5-flash": 0.00015,    # $0.15 / MTok
+        "gemini-2.0-flash": 0.0001,     # $0.10 / MTok
     },
     "ollama_local": {
         "qwen2.5:14b": 0.0,
+        "qwen2.5:32b": 0.0,
+        "llama3.3:70b": 0.0,
         "llama3.2:3b": 0.0,
         "mistral:7b": 0.0,
     },
