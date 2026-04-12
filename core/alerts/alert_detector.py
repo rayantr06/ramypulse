@@ -229,8 +229,16 @@ def _rule_key(rule_id: str) -> str:
     return rule_id
 
 
-def _load_rule_settings(connection: sqlite3.Connection) -> dict[str, dict]:
+def _load_rule_settings(
+    connection: sqlite3.Connection,
+    client_id: str | None,
+) -> dict[str, dict]:
     """Charge les paramètres de règles seedés en base avec repli silencieux."""
+    effective_client_id = (
+        str(client_id).strip()
+        if isinstance(client_id, str) and str(client_id).strip()
+        else config.DEFAULT_CLIENT_ID
+    )
     try:
         rows = connection.execute(
             """
@@ -239,7 +247,7 @@ def _load_rule_settings(connection: sqlite3.Connection) -> dict[str, dict]:
             WHERE client_id = ?
               AND is_active = 1
             """,
-            (config.DEFAULT_CLIENT_ID,),
+            (effective_client_id,),
         ).fetchall()
     except sqlite3.Error:
         return {}
@@ -397,6 +405,10 @@ def _campaign_columns(connection: sqlite3.Connection) -> set[str]:
 
 def _matching_campaigns(watchlist: dict, reference_time: pd.Timestamp) -> list[dict]:
     """Retourne les campagnes actives compatibles avec la watchlist si disponibles."""
+    wl_client_id = watchlist.get("client_id")
+    if not isinstance(wl_client_id, str) or not str(wl_client_id).strip():
+        return []
+    effective_client_id = str(wl_client_id).strip()
     try:
         connection = sqlite3.connect(config.SQLITE_DB_PATH)
         connection.row_factory = sqlite3.Row
@@ -423,16 +435,11 @@ def _matching_campaigns(watchlist: dict, reference_time: pd.Timestamp) -> list[d
             WHERE client_id = ?
               AND status = 'active'
             """,
-            (config.DEFAULT_CLIENT_ID,),
+            (effective_client_id,),
         ).fetchall()
     except sqlite3.Error:
         logger.debug("Table campaigns indisponible pour enrichissement des alertes", exc_info=True)
         return []
-    finally:
-        try:
-            connection.close()
-        except Exception:  # pragma: no cover - fermeture defensive
-            pass
 
     current_date = reference_time.date().isoformat()
     filters = watchlist.get("filters", {})
@@ -441,49 +448,55 @@ def _matching_campaigns(watchlist: dict, reference_time: pd.Timestamp) -> list[d
     wilaya_slug = _slug(filters.get("wilaya"))
 
     matches: list[dict] = []
-    for row in rows:
-        if row["start_date"] and row["start_date"] > current_date:
-            continue
-        if row["end_date"] and row["end_date"] < current_date:
-            continue
+    try:
+        for row in rows:
+            if row["start_date"] and row["start_date"] > current_date:
+                continue
+            if row["end_date"] and row["end_date"] < current_date:
+                continue
 
-        platform_slug = _slug(row["platform"])
-        if channel_slug and platform_slug not in {"", "multi_platform", channel_slug}:
-            continue
+            platform_slug = _slug(row["platform"])
+            if channel_slug and platform_slug not in {"", "multi_platform", channel_slug}:
+                continue
 
-        campaign_aspects = _deserialize_list(row["target_aspects"])
-        if aspect_slug and campaign_aspects and aspect_slug not in {_slug(item) for item in campaign_aspects}:
-            continue
+            campaign_aspects = _deserialize_list(row["target_aspects"])
+            if aspect_slug and campaign_aspects and aspect_slug not in {_slug(item) for item in campaign_aspects}:
+                continue
 
-        campaign_regions = _deserialize_list(row["target_regions"])
-        if wilaya_slug and campaign_regions and wilaya_slug not in {_slug(item) for item in campaign_regions}:
-            continue
+            campaign_regions = _deserialize_list(row["target_regions"])
+            if wilaya_slug and campaign_regions and wilaya_slug not in {_slug(item) for item in campaign_regions}:
+                continue
 
-        current_uplift = None
-        try:
-            snapshot = connection.execute(
-                """
-                SELECT nss_uplift
-                FROM campaign_metrics_snapshots
-                WHERE campaign_id = ?
-                ORDER BY computed_at DESC, metric_date DESC
-                LIMIT 1
-                """,
-                (row["campaign_id"],),
-            ).fetchone()
-            if snapshot is not None and snapshot["nss_uplift"] is not None:
-                current_uplift = float(snapshot["nss_uplift"])
-        except sqlite3.Error:
             current_uplift = None
+            try:
+                snapshot = connection.execute(
+                    """
+                    SELECT nss_uplift
+                    FROM campaign_metrics_snapshots
+                    WHERE campaign_id = ?
+                    ORDER BY computed_at DESC, metric_date DESC
+                    LIMIT 1
+                    """,
+                    (row["campaign_id"],),
+                ).fetchone()
+                if snapshot is not None and snapshot["nss_uplift"] is not None:
+                    current_uplift = float(snapshot["nss_uplift"])
+            except sqlite3.Error:
+                current_uplift = None
 
-        matches.append(
-            {
-                "campaign_id": row["campaign_id"],
-                "campaign_name": row["campaign_name"],
-                "phase": "active",
-                "current_uplift": current_uplift,
-            }
-        )
+            matches.append(
+                {
+                    "campaign_id": row["campaign_id"],
+                    "campaign_name": row["campaign_name"],
+                    "phase": "active",
+                    "current_uplift": current_uplift,
+                }
+            )
+    finally:
+        try:
+            connection.close()
+        except Exception:  # pragma: no cover - fermeture defensive
+            pass
     return matches
 
 
@@ -554,6 +567,7 @@ def _create_detection_alert(
         watchlist_id=watchlist["watchlist_id"],
         dedup_key=dedup_key,
         navigation_url=_build_navigation_url(watchlist.get("filters", {})),
+        client_id=watchlist.get("client_id"),
     )
 
 
@@ -596,10 +610,18 @@ def run_alert_detection(df_annotated: pd.DataFrame) -> list[str]:
     dataframe = _prepare_dataframe(df_annotated)
     reference_time = _reference_time(dataframe)
     created_alert_ids: list[str] = []
-    with _get_connection() as connection:
-        rule_settings = _load_rule_settings(connection)
+    rule_settings_cache: dict[str, dict[str, dict]] = {}
 
     for watchlist in list_watchlists():
+        client_id = (
+            str(watchlist.get("client_id")).strip()
+            if isinstance(watchlist.get("client_id"), str) and str(watchlist.get("client_id")).strip()
+            else config.DEFAULT_CLIENT_ID
+        )
+        if client_id not in rule_settings_cache:
+            with _get_connection() as connection:
+                rule_settings_cache[client_id] = _load_rule_settings(connection, client_id)
+        rule_settings = rule_settings_cache[client_id]
         scoped = _filter_scope(watchlist, dataframe)
         metrics = compute_watchlist_metrics(watchlist, dataframe)
         with _get_connection() as connection:

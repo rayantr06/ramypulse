@@ -64,6 +64,86 @@ export interface WatchlistCreatePayload {
   filters: WatchlistFilters;
 }
 
+export interface OnboardingTenantSetup {
+  client_name: string;
+  client_slug: string;
+  country: string;
+}
+
+export interface OnboardingSuggestedSource {
+  type: string;
+  label: string;
+  url: string;
+  channel: string;
+  confidence: number;
+  status: string;
+  reason: string;
+}
+
+export interface OnboardingRequiredCredential {
+  platform: string;
+  credential_type: string;
+  required: boolean;
+  reason: string;
+}
+
+export interface OnboardingRecommendedChannel {
+  channel: string;
+  enabled_by_default: boolean;
+  reason: string;
+}
+
+export interface OnboardingSuggestedWatchlist {
+  name: string;
+  description: string;
+  scope_type: WatchlistScopeType;
+  role: "seed" | "analysis";
+  filters: Record<string, unknown>;
+  enabled_by_default: boolean;
+  reason: string;
+}
+
+export interface OnboardingAlertRule {
+  rule_id: string;
+  threshold_value: number | string | null;
+  comparator: string;
+  lookback_window: string;
+  severity_level: string;
+  reason: string;
+}
+
+export interface OnboardingAlertProfile {
+  watchlist_ref: string;
+  profile_name: string;
+  enabled_by_default: boolean;
+  rules: OnboardingAlertRule[];
+  reason: string;
+}
+
+export interface OnboardingDeferredAgentConfig {
+  key: string;
+  value: unknown;
+  reason: string;
+}
+
+export interface OnboardingWarning {
+  code: string;
+  message: string;
+  severity: string;
+}
+
+export interface OnboardingAnalysis {
+  tenant_setup: OnboardingTenantSetup;
+  suggested_sources: OnboardingSuggestedSource[];
+  required_credentials: OnboardingRequiredCredential[];
+  recommended_channels: OnboardingRecommendedChannel[];
+  suggested_watchlists: OnboardingSuggestedWatchlist[];
+  suggested_alert_profiles: OnboardingAlertProfile[];
+  deferred_agent_config: OnboardingDeferredAgentConfig[];
+  warnings: OnboardingWarning[];
+  fallback_used: boolean;
+}
+
 export interface CampaignFormInput {
   campaign_name: string;
   campaign_type?: string;
@@ -124,6 +204,75 @@ function asNumberRecord(value: unknown): Record<string, number> {
   return Object.fromEntries(
     Object.entries(record).map(([key, rawValue]) => [key, asNumber(rawValue)]),
   );
+}
+
+export function mapOnboardingAnalysis(value: unknown): OnboardingAnalysis {
+  const record = asRecord(value);
+  const tenantSetup = asRecord(record.tenant_setup);
+  return {
+    tenant_setup: {
+      client_name: asString(tenantSetup.client_name),
+      client_slug: asString(tenantSetup.client_slug),
+      country: asString(tenantSetup.country, "DZ"),
+    },
+    suggested_sources: asObjectArray(record.suggested_sources).map((item) => ({
+      type: asString(item.type),
+      label: asString(item.label),
+      url: asString(item.url),
+      channel: asString(item.channel),
+      confidence: asNumber(item.confidence),
+      status: asString(item.status),
+      reason: asString(item.reason),
+    })),
+    required_credentials: asObjectArray(record.required_credentials).map((item) => ({
+      platform: asString(item.platform),
+      credential_type: asString(item.credential_type),
+      required: Boolean(item.required),
+      reason: asString(item.reason),
+    })),
+    recommended_channels: asObjectArray(record.recommended_channels).map((item) => ({
+      channel: asString(item.channel),
+      enabled_by_default: Boolean(item.enabled_by_default),
+      reason: asString(item.reason),
+    })),
+    suggested_watchlists: asObjectArray(record.suggested_watchlists).map((item) => ({
+      name: asString(item.name),
+      description: asString(item.description),
+      scope_type: (asString(item.scope_type, "watch_seed") as WatchlistScopeType),
+      role: (asString(item.role, "analysis") as "seed" | "analysis"),
+      filters: asRecord(item.filters),
+      enabled_by_default: Boolean(item.enabled_by_default),
+      reason: asString(item.reason),
+    })),
+    suggested_alert_profiles: asObjectArray(record.suggested_alert_profiles).map((item) => ({
+      watchlist_ref: asString(item.watchlist_ref),
+      profile_name: asString(item.profile_name),
+      enabled_by_default: Boolean(item.enabled_by_default),
+      rules: asObjectArray(item.rules).map((rule) => ({
+        rule_id: asString(rule.rule_id),
+        threshold_value:
+          typeof rule.threshold_value === "number" || typeof rule.threshold_value === "string"
+            ? rule.threshold_value
+            : null,
+        comparator: asString(rule.comparator),
+        lookback_window: asString(rule.lookback_window),
+        severity_level: asString(rule.severity_level),
+        reason: asString(rule.reason),
+      })),
+      reason: asString(item.reason),
+    })),
+    deferred_agent_config: asObjectArray(record.deferred_agent_config).map((item) => ({
+      key: asString(item.key),
+      value: item.value,
+      reason: asString(item.reason),
+    })),
+    warnings: asObjectArray(record.warnings).map((item) => ({
+      code: asString(item.code),
+      message: asString(item.message),
+      severity: asString(item.severity),
+    })),
+    fallback_used: Boolean(record.fallback_used),
+  };
 }
 
 export function mapDashboardSummary(value: unknown): DashboardSummary {

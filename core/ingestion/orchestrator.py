@@ -8,7 +8,7 @@ import sqlite3
 import uuid
 from datetime import datetime, timezone
 
-from config import DEFAULT_CLIENT_ID, SQLITE_DB_PATH
+import config
 from core.connectors.batch_import_connector import BatchImportConnector
 from core.connectors.source_config import parse_source_config, resolve_credentials
 from core.connectors.facebook_connector import FacebookConnector
@@ -43,7 +43,7 @@ class IngestionOrchestrator:
     """Fondation SQLite pour le registre de sources et les runs d'ingestion."""
 
     def __init__(self, db_path=None) -> None:
-        self.db_path = str(db_path or SQLITE_DB_PATH)
+        self.db_path = str(db_path or config.SQLITE_DB_PATH)
         self._connectors = {
             "import": BatchImportConnector(),
             "facebook": FacebookConnector(),
@@ -71,7 +71,7 @@ class IngestionOrchestrator:
             stored_config_json = "{}"
         source = {
             "source_id": payload.get("source_id") or _new_id("src"),
-            "client_id": payload.get("client_id") or DEFAULT_CLIENT_ID,
+            "client_id": payload.get("client_id") or config.DEFAULT_CLIENT_ID,
             "source_name": str(payload.get("source_name") or "").strip(),
             "platform": str(payload.get("platform") or "").strip(),
             "source_type": str(payload.get("source_type") or "").strip(),
@@ -126,7 +126,7 @@ class IngestionOrchestrator:
         return self.get_source(source["source_id"], client_id=source["client_id"])
 
     def get_source(self, source_id: str, *, client_id: str | None = None) -> dict | None:
-        effective_client_id = client_id or DEFAULT_CLIENT_ID
+        effective_client_id = client_id or config.DEFAULT_CLIENT_ID
         with self._get_connection() as connection:
             row = connection.execute(
                 "SELECT * FROM sources WHERE source_id = ? AND client_id = ?",
@@ -239,7 +239,7 @@ class IngestionOrchestrator:
                     raw_document_id = _new_id("raw")
                     content_item_id, canonical_key, canonical_url = resolve_or_create_content_item(
                         connection,
-                        client_id=source.get("client_id") or DEFAULT_CLIENT_ID,
+                        client_id=source.get("client_id") or config.DEFAULT_CLIENT_ID,
                         platform=source.get("platform"),
                         external_content_id=document.get("external_document_id"),
                         canonical_url=canonical_url,
@@ -259,7 +259,7 @@ class IngestionOrchestrator:
                         """,
                         (
                             raw_document_id,
-                            source.get("client_id") or DEFAULT_CLIENT_ID,
+                            source.get("client_id") or config.DEFAULT_CLIENT_ID,
                             source_id,
                             sync_run_id,
                             document.get("external_document_id"),
@@ -293,7 +293,7 @@ class IngestionOrchestrator:
                     normalization_result = run_normalization_job(
                         batch_size=inserted,
                         db_path=self.db_path,
-                        client_id=source.get("client_id") or DEFAULT_CLIENT_ID,
+                        client_id=source.get("client_id") or config.DEFAULT_CLIENT_ID,
                         source_id=source_id,
                     )
                 except Exception as exc:

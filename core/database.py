@@ -338,7 +338,7 @@ _SCHEMA_STATEMENTS = {
     """,
     "alert_rules": """
         CREATE TABLE IF NOT EXISTS alert_rules (
-            alert_rule_id       TEXT PRIMARY KEY,
+            alert_rule_id       TEXT NOT NULL,
             client_id           TEXT NOT NULL DEFAULT 'ramy_client_001',
             watchlist_id        TEXT,
             rule_name           TEXT NOT NULL,
@@ -347,7 +347,8 @@ _SCHEMA_STATEMENTS = {
             comparator          TEXT,
             lookback_window     TEXT,
             severity_level      TEXT NOT NULL,
-            is_active           INTEGER NOT NULL DEFAULT 1
+            is_active           INTEGER NOT NULL DEFAULT 1,
+            PRIMARY KEY (client_id, alert_rule_id)
         )
     """,
     "alerts": """
@@ -934,6 +935,70 @@ def _migrate_alerts_if_needed(connection: sqlite3.Connection) -> None:
     connection.execute("DROP TABLE alerts_legacy")
 
 
+def _migrate_alert_rules_multitenant_if_needed(connection: sqlite3.Connection) -> None:
+    """Rend alert_rules compatible multi-tenant avec une PK composite."""
+    if not _table_exists(connection, "alert_rules"):
+        return
+
+    table_info = connection.execute("PRAGMA table_info(alert_rules)").fetchall()
+    pk_columns = [
+        row["name"]
+        for row in sorted(table_info, key=lambda item: int(item["pk"] or 0))
+        if int(row["pk"] or 0) > 0
+    ]
+    if pk_columns == ["client_id", "alert_rule_id"]:
+        return
+
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS alert_rules_v2 (
+            alert_rule_id       TEXT NOT NULL,
+            client_id           TEXT NOT NULL DEFAULT 'ramy_client_001',
+            watchlist_id        TEXT,
+            rule_name           TEXT NOT NULL,
+            rule_type           TEXT NOT NULL,
+            threshold_value     REAL,
+            comparator          TEXT,
+            lookback_window     TEXT,
+            severity_level      TEXT NOT NULL,
+            is_active           INTEGER NOT NULL DEFAULT 1,
+            PRIMARY KEY (client_id, alert_rule_id)
+        )
+        """
+    )
+    connection.execute(
+        """
+        INSERT OR IGNORE INTO alert_rules_v2 (
+            alert_rule_id,
+            client_id,
+            watchlist_id,
+            rule_name,
+            rule_type,
+            threshold_value,
+            comparator,
+            lookback_window,
+            severity_level,
+            is_active
+        )
+        SELECT
+            alert_rule_id,
+            COALESCE(client_id, ?),
+            watchlist_id,
+            rule_name,
+            rule_type,
+            threshold_value,
+            comparator,
+            lookback_window,
+            severity_level,
+            COALESCE(is_active, 1)
+        FROM alert_rules
+        """,
+        (DEFAULT_CLIENT_ID,),
+    )
+    connection.execute("DROP TABLE alert_rules")
+    connection.execute("ALTER TABLE alert_rules_v2 RENAME TO alert_rules")
+
+
 def _migrate_notifications_if_needed(connection: sqlite3.Connection) -> None:
     """Migre la table notifications du schema legacy main vers Wave 5."""
     if not _table_exists(connection, "notifications"):
@@ -1053,7 +1118,10 @@ def _migrate_recommendations_if_needed(connection: sqlite3.Connection) -> None:
     connection.execute("DROP TABLE recommendations_legacy")
 
 
-def _seed_default_alert_rules(connection: sqlite3.Connection) -> None:
+def _seed_default_alert_rules(
+    connection: sqlite3.Connection,
+    client_id: str = DEFAULT_CLIENT_ID,
+) -> None:
     """Insere les regles v1 si elles sont absentes."""
     defaults = [
         ("nss_critical_low", "NSS critique bas", "absolute", 20.0, "lt", "7d", "high"),
@@ -1085,7 +1153,7 @@ def _seed_default_alert_rules(connection: sqlite3.Connection) -> None:
             """,
             (
                 alert_rule_id,
-                DEFAULT_CLIENT_ID,
+                client_id,
                 None,
                 rule_name,
                 rule_type,
@@ -1387,6 +1455,7 @@ class DatabaseManager:
             _migrate_watchlists_if_needed(connection)
             _migrate_campaigns_if_needed(connection)
             _migrate_alerts_if_needed(connection)
+            _migrate_alert_rules_multitenant_if_needed(connection)
             _migrate_notifications_if_needed(connection)
             _migrate_recommendations_if_needed(connection)
 
@@ -1397,7 +1466,7 @@ class DatabaseManager:
             _migrate_raw_documents_identity_if_needed(connection)
             _backfill_content_items_if_needed(connection)
             _seed_default_client(connection)
-            _seed_default_alert_rules(connection)
+            _seed_default_alert_rules(connection, DEFAULT_CLIENT_ID)
             _seed_default_client_agent_config(connection)
             _seed_default_api_key(connection)
             connection.commit()

@@ -9,7 +9,9 @@ from typing import Callable
 
 from core.normalization.normalizer_pipeline import run_normalization_job
 from core.tenancy.artifact_refresh import refresh_tenant_artifacts
+from core.watch_runs.collectors.facebook_apify import collect_facebook_comments_apify
 from core.watch_runs.collectors.google_maps_reviews import collect_google_maps_reviews
+from core.watch_runs.collectors.instagram_apify import collect_instagram_comments_apify
 from core.watch_runs.collectors.perplexity_discovery import (
     collect_perplexity_discovery,
     collect_perplexity_press,
@@ -27,7 +29,7 @@ from core.watch_runs.run_manager import (
     start_step,
 )
 
-CollectorFn = Callable[..., list[dict[str, object]]]
+CollectorFn = Callable[..., list[dict[str, object]] | dict[str, object]]
 
 DEFAULT_COLLECTORS: dict[str, CollectorFn] = {
     "public_url_seed": collect_public_url_seed,
@@ -36,6 +38,8 @@ DEFAULT_COLLECTORS: dict[str, CollectorFn] = {
     "reddit": collect_perplexity_reddit,
     "youtube": collect_youtube_search_results,
     "google_maps": collect_google_maps_reviews,
+    "facebook": collect_facebook_comments_apify,
+    "instagram": collect_instagram_comments_apify,
 }
 
 
