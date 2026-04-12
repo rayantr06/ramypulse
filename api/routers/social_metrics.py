@@ -7,9 +7,10 @@ import sqlite3
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 
 import config
+from api.deps.tenant import resolve_client_id
 from api.schemas import (
     CampaignPostAdd,
     CampaignRevenuePatch,
@@ -32,7 +33,10 @@ def _get_db() -> sqlite3.Connection:
 
 
 @router.post("/credentials", status_code=201)
-def create_credential(data: CredentialCreate):
+def create_credential(
+    data: CredentialCreate,
+    client_id: str = Depends(resolve_client_id),
+):
     """Enregistre un credential plateforme."""
     try:
         credential_id = credential_manager.create_credential(
@@ -44,6 +48,7 @@ def create_credential(data: CredentialCreate):
             app_id=data.app_id,
             app_secret=data.app_secret,
             extra_config=data.extra_config,
+            client_id=client_id,
         )
         return {"credential_id": credential_id, "status": "created"}
     except Exception as exc:
@@ -56,6 +61,7 @@ def list_credentials(
     platform: str | None = None,
     entity_type: str | None = None,
     is_active: bool = True,
+    client_id: str = Depends(resolve_client_id),
 ):
     """Liste les credentials enregistrés."""
     try:
@@ -63,6 +69,7 @@ def list_credentials(
             platform=platform,
             entity_type=entity_type,
             is_active=is_active,
+            client_id=client_id,
         )
     except Exception as exc:
         logger.error("Erreur list_credentials : %s", exc)
@@ -70,10 +77,13 @@ def list_credentials(
 
 
 @router.delete("/credentials/{credential_id}", status_code=204)
-def deactivate_credential(credential_id: str):
+def deactivate_credential(
+    credential_id: str,
+    client_id: str = Depends(resolve_client_id),
+):
     """Désactive logiquement un credential."""
     try:
-        ok = credential_manager.deactivate_credential(credential_id)
+        ok = credential_manager.deactivate_credential(credential_id, client_id=client_id)
         if not ok:
             raise HTTPException(status_code=404, detail="Credential not found")
     except HTTPException:

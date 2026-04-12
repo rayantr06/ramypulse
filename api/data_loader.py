@@ -7,6 +7,7 @@ Expose aussi un export parquet transitoire pour la compatibilité RAG.
 
 from __future__ import annotations
 
+import importlib
 import logging
 import os
 import sqlite3
@@ -23,6 +24,11 @@ logger = logging.getLogger(__name__)
 _lock = threading.Lock()
 _df_cache: dict[str, pd.DataFrame] | None = {}
 _cache_time: dict[str, float] | None = {}
+
+
+def _config_module():
+    """Retourne le module config courant, même après reload dans les tests."""
+    return importlib.import_module("config")
 
 
 def reset_cache() -> None:
@@ -56,7 +62,7 @@ def _cache_maps() -> tuple[dict[str, pd.DataFrame], dict[str, float]]:
 
 def _load_from_sqlite(client_id: str) -> pd.DataFrame:
     """Charge le dataset canonique depuis SQLite Wave 5."""
-    db_path = str(config.SQLITE_DB_PATH)
+    db_path = str(getattr(_config_module(), "SQLITE_DB_PATH", config.SQLITE_DB_PATH))
     if not os.path.exists(db_path):
         return pd.DataFrame()
 
@@ -129,7 +135,7 @@ def _resolve_client_id(client_id: str | None) -> str:
     """Normalise le tenant cible pour les lectures annotées."""
     if isinstance(client_id, str) and client_id.strip():
         return client_id.strip()
-    return config.SAFE_EXPO_CLIENT_ID
+    return getattr(_config_module(), "SAFE_EXPO_CLIENT_ID", config.SAFE_EXPO_CLIENT_ID)
 
 
 def load_annotated(client_id: str | None = None, ttl: int = 300) -> pd.DataFrame:

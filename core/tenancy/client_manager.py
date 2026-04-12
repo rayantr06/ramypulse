@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import importlib
 import re
 import sqlite3
 import uuid
 from datetime import datetime
 
 import config
-from core.database import DatabaseManager
+from core.database import DatabaseManager, _seed_default_alert_rules
 from core.runtime.runtime_settings_manager import get_runtime_setting, set_runtime_setting
 
 ACTIVE_CLIENT_SETTING_KEY = "active_client_id"
@@ -16,16 +17,23 @@ ACTIVE_CLIENT_SETTING_KEY = "active_client_id"
 _SLUG_PATTERN = re.compile(r"[^a-z0-9]+")
 
 
+def _config_module():
+    """Retourne le module config courant, même après reload dans les tests."""
+    return importlib.import_module("config")
+
+
 def _get_connection() -> sqlite3.Connection:
     """Ouvre une connexion SQLite courte duree avec row_factory."""
-    connection = sqlite3.connect(str(config.SQLITE_DB_PATH))
+    cfg = _config_module()
+    connection = sqlite3.connect(str(getattr(cfg, "SQLITE_DB_PATH", config.SQLITE_DB_PATH)))
     connection.row_factory = sqlite3.Row
     return connection
 
 
 def _ensure_schema() -> None:
     """Garantit que le schema plateforme est initialise."""
-    DatabaseManager(str(config.SQLITE_DB_PATH)).create_tables()
+    cfg = _config_module()
+    DatabaseManager(str(getattr(cfg, "SQLITE_DB_PATH", config.SQLITE_DB_PATH))).create_tables()
 
 
 def _row_to_dict(row: sqlite3.Row | None) -> dict[str, object] | None:
@@ -116,6 +124,7 @@ def create_client(
                 now,
             ),
         )
+        _seed_default_alert_rules(connection, resolved_client_id)
         connection.commit()
     client = get_client(resolved_client_id)
     if client is None:
@@ -159,7 +168,9 @@ def get_active_client() -> dict[str, object]:
     client = get_client(resolved_client_id)
     if client is not None:
         return client
-    if resolved_client_id == config.SAFE_EXPO_CLIENT_ID:
+    cfg = _config_module()
+    safe_expo_client_id = getattr(cfg, "SAFE_EXPO_CLIENT_ID", config.SAFE_EXPO_CLIENT_ID)
+    if resolved_client_id == safe_expo_client_id:
         return create_client(
             client_name="Safe Expo",
             client_id=resolved_client_id,
@@ -172,4 +183,5 @@ def resolve_active_client_id() -> str:
     runtime_client_id = get_runtime_setting(ACTIVE_CLIENT_SETTING_KEY)
     if isinstance(runtime_client_id, str) and runtime_client_id.strip():
         return runtime_client_id.strip()
-    return config.SAFE_EXPO_CLIENT_ID
+    cfg = _config_module()
+    return getattr(cfg, "SAFE_EXPO_CLIENT_ID", config.SAFE_EXPO_CLIENT_ID)

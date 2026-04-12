@@ -1,4 +1,8 @@
-import type { WatchSeedFilters, WatchlistCreatePayload } from "./apiMappings";
+import type {
+  OnboardingAnalysis,
+  WatchSeedFilters,
+  WatchlistCreatePayload,
+} from "./apiMappings";
 
 export interface WatchWizardInput {
   name: string;
@@ -10,6 +14,16 @@ export interface WatchWizardInput {
   channels?: string[];
   languages?: string[];
   hashtags?: string[];
+}
+
+export interface SmartOnboardingConfirmInput {
+  analysis: OnboardingAnalysis;
+  brand_name: string;
+  industry?: string;
+  selected_source_urls: string[];
+  selected_channels: string[];
+  selected_watchlist_names: string[];
+  selected_alert_profile_names: string[];
 }
 
 function normalizeText(value: string | null | undefined): string | null {
@@ -79,5 +93,32 @@ export function buildWatchWizardPayload(input: WatchWizardInput): WatchlistCreat
     description: input.description?.trim() ?? "",
     scope_type: "watch_seed",
     filters,
+  };
+}
+
+export function buildSmartOnboardingConfirmPayload(
+  input: SmartOnboardingConfirmInput,
+): Record<string, unknown> {
+  const selectedSourceUrls = new Set(normalizeStringList(input.selected_source_urls));
+  const selectedWatchlistNames = new Set(normalizeStringList(input.selected_watchlist_names));
+  const selectedAlertProfileNames = new Set(normalizeStringList(input.selected_alert_profile_names));
+  const normalizedIndustry = normalizeText(input.industry);
+
+  return {
+    review_confirmed: true,
+    tenant_setup: input.analysis.tenant_setup,
+    brand_name: normalizeText(input.brand_name) ?? input.analysis.tenant_setup.client_name,
+    ...(normalizedIndustry ? { industry: normalizedIndustry } : {}),
+    selected_sources: input.analysis.suggested_sources.filter((source) =>
+      selectedSourceUrls.has(source.url),
+    ),
+    selected_channels: normalizeStringList(input.selected_channels),
+    selected_watchlists: input.analysis.suggested_watchlists.filter((watchlist) =>
+      selectedWatchlistNames.has(watchlist.name),
+    ),
+    selected_alert_profiles: input.analysis.suggested_alert_profiles.filter((profile) =>
+      selectedAlertProfileNames.has(profile.profile_name),
+    ),
+    deferred_agent_config: input.analysis.deferred_agent_config,
   };
 }

@@ -325,12 +325,26 @@ def _persist_campaign_signal_links(
     )
 
 
-def _campaign_alert_threshold(connection: sqlite3.Connection, rule_id: str, default: float) -> float:
+def _campaign_alert_threshold(
+    connection: sqlite3.Connection,
+    rule_id: str,
+    default: float,
+    client_id: str | None = None,
+) -> float:
     """Lit un seuil de règle d'alerte en base avec repli sur une valeur par défaut."""
+    effective_client_id = (
+        str(client_id).strip()
+        if isinstance(client_id, str) and str(client_id).strip()
+        else config.DEFAULT_CLIENT_ID
+    )
     try:
         row = connection.execute(
-            "SELECT threshold_value FROM alert_rules WHERE alert_rule_id = ?",
-            (rule_id,),
+            """
+            SELECT threshold_value
+            FROM alert_rules
+            WHERE alert_rule_id = ? AND client_id = ?
+            """,
+            (rule_id, effective_client_id),
         ).fetchone()
     except sqlite3.Error:
         return default
@@ -359,8 +373,14 @@ def _maybe_create_campaign_alerts(
     pre_nss = pre_metrics.get("nss")
     active_nss = active_metrics.get("nss")
     post_nss = post_metrics.get("nss")
+    client_id = campaign.get("client_id")
 
-    positive_threshold = _campaign_alert_threshold(connection, "campaign_impact_positive", 10.0)
+    positive_threshold = _campaign_alert_threshold(
+        connection,
+        "campaign_impact_positive",
+        10.0,
+        client_id=client_id,
+    )
     post_uplift = None
     if pre_nss is not None and post_nss is not None:
         post_uplift = round(float(post_nss) - float(pre_nss), 2)
@@ -385,9 +405,15 @@ def _maybe_create_campaign_alerts(
                 "uplift_nss": post_uplift,
                 "computed_at": computed_at,
             },
+            client_id=client_id,
         )
 
-    underperformance_threshold = _campaign_alert_threshold(connection, "campaign_underperformance", 0.0)
+    underperformance_threshold = _campaign_alert_threshold(
+        connection,
+        "campaign_underperformance",
+        0.0,
+        client_id=client_id,
+    )
     active_uplift = None
     if pre_nss is not None and active_nss is not None:
         active_uplift = round(float(active_nss) - float(pre_nss), 2)
@@ -436,6 +462,7 @@ def _maybe_create_campaign_alerts(
                 "active_duration_days": active_duration_days,
                 "computed_at": computed_at,
             },
+            client_id=client_id,
         )
 
 

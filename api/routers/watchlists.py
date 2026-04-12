@@ -92,7 +92,11 @@ def get_watchlist(
 
 
 @router.put("/{watchlist_id}")
-def update_watchlist(watchlist_id: str, data: WatchlistUpdate):
+def update_watchlist(
+    watchlist_id: str,
+    data: WatchlistUpdate,
+    client_id: str = Depends(resolve_client_id),
+):
     """Met à jour les champs d'une watchlist existante."""
     try:
         updates = {
@@ -100,7 +104,7 @@ def update_watchlist(watchlist_id: str, data: WatchlistUpdate):
         }
         if "name" in updates:
             updates["watchlist_name"] = updates.pop("name")
-        updated = _core_update_watchlist(watchlist_id, updates)
+        updated = _core_update_watchlist(watchlist_id, updates, client_id=client_id)
         if not updated:
             raise HTTPException(status_code=404, detail="Watchlist not found")
         return {"watchlist_id": watchlist_id, "status": "updated"}
@@ -114,10 +118,13 @@ def update_watchlist(watchlist_id: str, data: WatchlistUpdate):
 
 
 @router.delete("/{watchlist_id}", status_code=204)
-def deactivate_watchlist(watchlist_id: str):
+def deactivate_watchlist(
+    watchlist_id: str,
+    client_id: str = Depends(resolve_client_id),
+):
     """Désactive une watchlist (suppression logique)."""
     try:
-        deactivated = _core_deactivate_watchlist(watchlist_id)
+        deactivated = _core_deactivate_watchlist(watchlist_id, client_id=client_id)
         if not deactivated:
             raise HTTPException(status_code=404, detail="Watchlist not found")
     except HTTPException:

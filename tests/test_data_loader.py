@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 import sqlite3
 import uuid
 from pathlib import Path
@@ -12,6 +13,10 @@ import config
 from api import data_loader
 from core.database import DatabaseManager
 from core.tenancy.tenant_paths import get_tenant_paths
+
+
+def _current_config():
+    return importlib.import_module("config")
 
 
 def _reset_loader_cache() -> None:
@@ -176,9 +181,12 @@ def test_load_annotated_prefers_sqlite_and_exports_parquet(monkeypatch, tmp_path
     db_path = tmp_path / "signals.db"
     _seed_sqlite_signal(db_path)
 
+    current_config = _current_config()
     monkeypatch.setattr(config, "DATA_DIR", tmp_path, raising=False)
+    monkeypatch.setattr(current_config, "DATA_DIR", tmp_path, raising=False)
     monkeypatch.setattr(data_loader.config, "DATA_DIR", tmp_path, raising=False)
     monkeypatch.setattr(config, "SQLITE_DB_PATH", db_path, raising=False)
+    monkeypatch.setattr(current_config, "SQLITE_DB_PATH", db_path, raising=False)
     monkeypatch.setattr(data_loader.config, "SQLITE_DB_PATH", db_path, raising=False)
     _reset_loader_cache()
 
@@ -197,9 +205,12 @@ def test_load_annotated_falls_back_to_parquet_when_sqlite_empty(monkeypatch, tmp
     db_path = tmp_path / "empty.db"
     DatabaseManager(db_path).create_tables()
 
+    current_config = _current_config()
     monkeypatch.setattr(config, "DATA_DIR", tmp_path, raising=False)
+    monkeypatch.setattr(current_config, "DATA_DIR", tmp_path, raising=False)
     monkeypatch.setattr(data_loader.config, "DATA_DIR", tmp_path, raising=False)
     monkeypatch.setattr(config, "SQLITE_DB_PATH", db_path, raising=False)
+    monkeypatch.setattr(current_config, "SQLITE_DB_PATH", db_path, raising=False)
     monkeypatch.setattr(data_loader.config, "SQLITE_DB_PATH", db_path, raising=False)
     tenant_path = get_tenant_paths(config.DEFAULT_CLIENT_ID).annotated_path
     tenant_path.parent.mkdir(parents=True, exist_ok=True)

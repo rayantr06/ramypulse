@@ -3,6 +3,7 @@ ne peut pas lire, modifier ou supprimer les données d'un tenant A."""
 from __future__ import annotations
 
 import hashlib
+import importlib
 import sqlite3
 
 import pytest
@@ -29,16 +30,17 @@ def setup_tenants(tmp_path, monkeypatch):
     """Crée deux tenants distincts en base pour chaque test."""
     db_path = tmp_path / "test_guard.db"
     db_str = str(db_path)
+    current_config = importlib.import_module("config")
 
     # Patch config module AND all modules that imported SQLITE_DB_PATH directly
-    monkeypatch.setattr(config, "SQLITE_DB_PATH", db_str)
+    monkeypatch.setattr(config, "SQLITE_DB_PATH", db_str, raising=False)
+    monkeypatch.setattr(current_config, "SQLITE_DB_PATH", db_str, raising=False)
     import core.ingestion.orchestrator as _orch_mod
     import core.ingestion.source_admin_service as _sas_mod
     import core.ingestion.scheduler as _sched_mod
-    import core.security.auth as _auth_mod
-    monkeypatch.setattr(_orch_mod, "SQLITE_DB_PATH", db_str)
-    monkeypatch.setattr(_sas_mod, "SQLITE_DB_PATH", db_str)
-    monkeypatch.setattr(_sched_mod, "SQLITE_DB_PATH", db_str)
+    monkeypatch.setattr(_orch_mod, "SQLITE_DB_PATH", db_str, raising=False)
+    monkeypatch.setattr(_sas_mod, "SQLITE_DB_PATH", db_str, raising=False)
+    monkeypatch.setattr(_sched_mod, "SQLITE_DB_PATH", db_str, raising=False)
     # auth uses config.SQLITE_DB_PATH via _get_connection(), already patched above
 
     from core.database import DatabaseManager
@@ -46,7 +48,7 @@ def setup_tenants(tmp_path, monkeypatch):
     create_client(CLIENT_A, client_id=CLIENT_A)
     create_client(CLIENT_B, client_id=CLIENT_B)
     # Seed the operator "dev" key so auth middleware accepts it
-    operator_client_id = config.SAFE_EXPO_CLIENT_ID
+    operator_client_id = getattr(current_config, "SAFE_EXPO_CLIENT_ID", config.SAFE_EXPO_CLIENT_ID)
     create_client("Expo Operator", client_id=operator_client_id)
     conn = sqlite3.connect(db_str)
     conn.execute(
@@ -77,7 +79,7 @@ def test_admin_sources_scoped_to_tenant(client):
         json={
             "platform": "facebook",
             "source_type": "page",
-            "owner_type": "brand",
+            "owner_type": "owned",
             "source_name": "Ramy Page A",
             "config_json": {},
         },
@@ -105,7 +107,7 @@ def test_admin_source_create_uses_tenant(client):
         json={
             "platform": "google_maps",
             "source_type": "place",
-            "owner_type": "brand",
+            "owner_type": "owned",
             "source_name": "Ramy Maps A",
             "config_json": {},
         },
@@ -160,13 +162,12 @@ def test_alert_status_update_wrong_tenant(client):
         name="WL-alert", description="", scope_type="product", filters={}, client_id=CLIENT_A
     )
     alert_id = create_alert(
-        watchlist_id=wl_id,
-        rule_id="nss_critical_low",
-        client_id=CLIENT_A,
         title="Test alerte",
-        message="msg",
+        description="msg",
         severity="high",
-        nss_value=-50.0,
+        alert_payload={"rule_id": "nss_critical_low", "nss_value": -50.0},
+        watchlist_id=wl_id,
+        client_id=CLIENT_A,
     )
     resp = client.put(
         f"/api/alerts/{alert_id}/status",

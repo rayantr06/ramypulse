@@ -417,7 +417,11 @@ def list_alerts(
     return [_row_to_alert(row) for row in rows]
 
 
-def update_alert_status(alert_id: str, status: str) -> bool:
+def update_alert_status(
+    alert_id: str,
+    status: str,
+    client_id: str | None = None,
+) -> bool:
     """Met a jour le statut d'une alerte selon le cycle de vie autorise."""
     if status not in _VALID_STATUSES:
         raise ValueError(f"status invalide: {status}")
@@ -425,13 +429,22 @@ def update_alert_status(alert_id: str, status: str) -> bool:
     resolved_at = _now() if status in {"resolved", "dismissed"} else None
     with _get_connection() as connection:
         _ensure_alerts_table(connection)
-        cursor = connection.execute(
-            """
+        sql = """
             UPDATE alerts
             SET status = ?, resolved_at = ?
             WHERE alert_id = ?
-            """,
-            (status, resolved_at, alert_id),
+            """
+        params: list[object] = [status, resolved_at, alert_id]
+        if client_id is not None and str(client_id).strip():
+            sql = """
+            UPDATE alerts
+            SET status = ?, resolved_at = ?
+            WHERE alert_id = ? AND client_id = ?
+            """
+            params.append(str(client_id).strip())
+        cursor = connection.execute(
+            sql,
+            tuple(params),
         )
         connection.commit()
 
