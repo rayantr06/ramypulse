@@ -2,6 +2,7 @@
 ne peut pas lire, modifier ou supprimer les données d'un tenant A."""
 from __future__ import annotations
 
+import hashlib
 import sqlite3
 
 import pytest
@@ -16,19 +17,48 @@ from core.alerts.alert_manager import create_alert
 
 CLIENT_A = "test-tenant-alpha"
 CLIENT_B = "test-tenant-beta"
+# "dev" is seeded as an operator key (SAFE_EXPO_CLIENT_ID) so X-Ramy-Client-Id override works
 HEADERS_A = {"X-API-Key": "dev", "X-Ramy-Client-Id": CLIENT_A}
 HEADERS_B = {"X-API-Key": "dev", "X-Ramy-Client-Id": CLIENT_B}
+
+_DEV_KEY_HASH = hashlib.sha256(b"dev").hexdigest()
 
 
 @pytest.fixture(autouse=True)
 def setup_tenants(tmp_path, monkeypatch):
     """Crée deux tenants distincts en base pour chaque test."""
     db_path = tmp_path / "test_guard.db"
-    monkeypatch.setattr(config, "SQLITE_DB_PATH", str(db_path))
+    db_str = str(db_path)
+
+    # Patch config module AND all modules that imported SQLITE_DB_PATH directly
+    monkeypatch.setattr(config, "SQLITE_DB_PATH", db_str)
+    import core.ingestion.orchestrator as _orch_mod
+    import core.ingestion.source_admin_service as _sas_mod
+    import core.ingestion.scheduler as _sched_mod
+    import core.security.auth as _auth_mod
+    monkeypatch.setattr(_orch_mod, "SQLITE_DB_PATH", db_str)
+    monkeypatch.setattr(_sas_mod, "SQLITE_DB_PATH", db_str)
+    monkeypatch.setattr(_sched_mod, "SQLITE_DB_PATH", db_str)
+    # auth uses config.SQLITE_DB_PATH via _get_connection(), already patched above
+
     from core.database import DatabaseManager
-    DatabaseManager(str(db_path)).create_tables()
+    DatabaseManager(db_str).create_tables()
     create_client(CLIENT_A, client_id=CLIENT_A)
     create_client(CLIENT_B, client_id=CLIENT_B)
+    # Seed the operator "dev" key so auth middleware accepts it
+    operator_client_id = config.SAFE_EXPO_CLIENT_ID
+    create_client("Expo Operator", client_id=operator_client_id)
+    conn = sqlite3.connect(db_str)
+    conn.execute(
+        """
+        INSERT OR IGNORE INTO api_keys
+            (key_id, client_id, key_hash, key_prefix, label, scopes, is_active, created_at)
+        VALUES ('key-dev-test', ?, ?, 'dev', 'test dev key', '["*"]', 1, '2026-01-01')
+        """,
+        (operator_client_id, _DEV_KEY_HASH),
+    )
+    conn.commit()
+    conn.close()
     yield
 
 
@@ -48,8 +78,8 @@ def test_admin_sources_scoped_to_tenant(client):
             "platform": "facebook",
             "source_type": "page",
             "owner_type": "brand",
-            "label": "Ramy Page A",
-            "config_json": "{}",
+            "source_name": "Ramy Page A",
+            "config_json": {},
         },
         headers=HEADERS_A,
     )
@@ -76,8 +106,8 @@ def test_admin_source_create_uses_tenant(client):
             "platform": "google_maps",
             "source_type": "place",
             "owner_type": "brand",
-            "label": "Ramy Maps A",
-            "config_json": "{}",
+            "source_name": "Ramy Maps A",
+            "config_json": {},
         },
         headers=HEADERS_A,
     )

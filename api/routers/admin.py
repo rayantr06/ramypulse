@@ -7,9 +7,9 @@ des synchronisations, et de vérifier la santé des connecteurs.
 
 import logging
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
-from config import DEFAULT_CLIENT_ID
+from api.deps.tenant import resolve_client_id
 from api.schemas import (
     AutomationCycleTrigger,
     NormalizationTrigger,
@@ -29,11 +29,16 @@ router = APIRouter(prefix="/admin", tags=["Admin"])
 
 
 @router.post("/sources")
-def create_source(payload: SourceCreate):
+def create_source(
+    payload: SourceCreate,
+    client_id: str = Depends(resolve_client_id),
+):
     """Crée une nouvelle source via l'orchestrateur."""
     try:
         orchestrator = IngestionOrchestrator()
-        result = orchestrator.create_source(payload.model_dump(exclude_unset=True))
+        data = payload.model_dump(exclude_unset=True)
+        data["client_id"] = client_id
+        result = orchestrator.create_source(data)
         return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -44,7 +49,7 @@ def create_source(payload: SourceCreate):
 
 @router.get("/sources")
 def list_sources(
-    client_id: str = Query(DEFAULT_CLIENT_ID),
+    client_id: str = Depends(resolve_client_id),
     platform: str | None = None,
     owner_type: str | None = None,
     status: str = "all",
@@ -64,7 +69,10 @@ def list_sources(
 
 
 @router.get("/sources/{source_id}")
-def get_source_trace(source_id: str, client_id: str = Query(DEFAULT_CLIENT_ID)):
+def get_source_trace(
+    source_id: str,
+    client_id: str = Depends(resolve_client_id),
+):
     """Retourne la source détaillée, sa dernière synchro, et son dernier health snapshot."""
     try:
         service = SourceAdminService()
@@ -77,15 +85,18 @@ def get_source_trace(source_id: str, client_id: str = Query(DEFAULT_CLIENT_ID)):
 
 
 @router.put("/sources/{source_id}")
-def update_source(source_id: str, payload: SourceUpdate):
+def update_source(
+    source_id: str,
+    payload: SourceUpdate,
+    client_id: str = Depends(resolve_client_id),
+):
     """Met à jour les paramètres administrables d'une source."""
     try:
         service = SourceAdminService()
-        cid = payload.client_id or DEFAULT_CLIENT_ID
         return service.update_source(
             source_id=source_id,
             updates=payload.model_dump(exclude_unset=True, exclude={"client_id"}),
-            client_id=cid,
+            client_id=client_id,
         )
     except KeyError:
         raise HTTPException(status_code=404, detail="Source introuvable")
@@ -95,18 +106,21 @@ def update_source(source_id: str, payload: SourceUpdate):
 
 
 @router.post("/sources/{source_id}/sync")
-def trigger_source_sync(source_id: str, payload: SourceSyncTrigger):
+def trigger_source_sync(
+    source_id: str,
+    payload: SourceSyncTrigger,
+    client_id: str = Depends(resolve_client_id),
+):
     """Déclenche manuellement ou active un run de synchronisation pour la source."""
     try:
         orchestrator = IngestionOrchestrator()
-        cid = payload.client_id or DEFAULT_CLIENT_ID
         return orchestrator.run_source_sync(
             source_id=source_id,
             manual_file_path=payload.manual_file_path,
             column_mapping=payload.column_mapping,
             run_mode=payload.run_mode,
             credentials=payload.credentials,
-            client_id=cid,
+            client_id=client_id,
         )
     except KeyError:
         raise HTTPException(status_code=404, detail="Source introuvable")
@@ -118,7 +132,10 @@ def trigger_source_sync(source_id: str, payload: SourceSyncTrigger):
 
 
 @router.post("/sources/{source_id}/health")
-def trigger_source_health(source_id: str, client_id: str | None = Query(DEFAULT_CLIENT_ID)):
+def trigger_source_health(
+    source_id: str,
+    client_id: str = Depends(resolve_client_id),
+):
     """Calcule immédiatement la santé d'une source et crée un snapshot."""
     try:
         return compute_source_health(source_id=source_id, client_id=client_id)
@@ -132,7 +149,7 @@ def trigger_source_health(source_id: str, client_id: str | None = Query(DEFAULT_
 @router.get("/sources/{source_id}/runs")
 def list_sync_runs(
     source_id: str,
-    client_id: str | None = Query(DEFAULT_CLIENT_ID),
+    client_id: str = Depends(resolve_client_id),
     limit: int = 50,
 ):
     """Affiche l'historique d'exécution (sync runs) pour la source."""
@@ -151,7 +168,7 @@ def list_sync_runs(
 @router.get("/sources/{source_id}/snapshots")
 def list_health_snapshots(
     source_id: str,
-    client_id: str | None = Query(DEFAULT_CLIENT_ID),
+    client_id: str = Depends(resolve_client_id),
     limit: int = 50,
 ):
     """Affiche l'historique des snapshots de santé pour la source."""
@@ -172,7 +189,7 @@ def trigger_normalization(payload: NormalizationTrigger):
     """Déclenche le pipeline de normalisation de façon asynchrone / batch."""
     try:
         orchestrator = IngestionOrchestrator()
-        cid = payload.client_id or DEFAULT_CLIENT_ID
+        cid = payload.client_id
         return orchestrator.run_normalization_cycle(
             batch_size=payload.batch_size,
             client_id=cid,
@@ -184,7 +201,7 @@ def trigger_normalization(payload: NormalizationTrigger):
 
 @router.post("/scheduler/tick")
 def scheduler_tick(
-    client_id: str = Query(DEFAULT_CLIENT_ID),
+    client_id: str = Depends(resolve_client_id),
     now: str | None = Query(None),
 ):
     """Exécute les synchronisations dues avec priorité/fallback par coverage_key."""
@@ -199,7 +216,7 @@ def scheduler_tick(
 def trigger_runtime_cycle(payload: AutomationCycleTrigger):
     """Exécute un cycle one-shot du runtime d'automatisation."""
     try:
-        cid = payload.client_id or DEFAULT_CLIENT_ID
+        cid = payload.client_id
         return run_automation_cycle(
             client_id=cid,
             run_sync=payload.run_sync,
