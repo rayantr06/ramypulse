@@ -101,7 +101,7 @@ def test_admin_source_create_uses_tenant(client):
 def test_watchlist_update_wrong_tenant(client):
     """PUT /watchlists/{id} avec tenant B sur watchlist de A → 404."""
     wl_id = create_watchlist(
-        name="WL-A", description="", scope_type="manual", filters={}, client_id=CLIENT_A
+        name="WL-A", description="", scope_type="product", filters={}, client_id=CLIENT_A
     )
     resp = client.put(
         f"/api/watchlists/{wl_id}",
@@ -116,7 +116,7 @@ def test_watchlist_update_wrong_tenant(client):
 def test_watchlist_delete_wrong_tenant(client):
     """DELETE /watchlists/{id} avec tenant B sur watchlist de A → 404."""
     wl_id = create_watchlist(
-        name="WL-A-del", description="", scope_type="manual", filters={}, client_id=CLIENT_A
+        name="WL-A-del", description="", scope_type="product", filters={}, client_id=CLIENT_A
     )
     resp = client.delete(f"/api/watchlists/{wl_id}", headers=HEADERS_B)
     assert resp.status_code == 404
@@ -127,7 +127,7 @@ def test_watchlist_delete_wrong_tenant(client):
 def test_alert_status_update_wrong_tenant(client):
     """PUT /alerts/{id}/status avec tenant B sur alerte de A → 404."""
     wl_id = create_watchlist(
-        name="WL-alert", description="", scope_type="manual", filters={}, client_id=CLIENT_A
+        name="WL-alert", description="", scope_type="product", filters={}, client_id=CLIENT_A
     )
     alert_id = create_alert(
         watchlist_id=wl_id,
