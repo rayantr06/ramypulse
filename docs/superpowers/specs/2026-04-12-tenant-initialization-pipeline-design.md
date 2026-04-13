@@ -13,6 +13,7 @@ Replace the current ambiguous "empty dashboard" experience with a production-gra
 - stops immediately when one stage fails
 - explains clearly which stage failed and why
 - only reveals the real dashboard when the tenant is actually ready
+- never leaves a product page in a black-screen state when data is missing or a route is not yet operational
 
 ## Problem
 
@@ -31,6 +32,12 @@ This is not production-safe because the user cannot distinguish between:
 - a failed stage
 - a completed run with no usable data
 - a tenant that was never initialized correctly
+
+It also allows product pages to degrade badly when readiness assumptions are false.
+
+Observed symptom to eliminate:
+
+- the recommendations route can collapse to a black screen instead of showing an explicit empty/error state
 
 ## Existing Relevant Code
 
@@ -94,6 +101,18 @@ This state explains:
 ### State E: Tenant is ready
 
 Only then does the app route to the real dashboard.
+
+### Global rule: no black screens
+
+Any product route reached before readiness or before data availability must show one of these explicit states:
+
+- onboarding wizard
+- initialization pipeline
+- failed pipeline
+- completed without usable data
+- route-specific operational empty state
+
+A silent black screen is considered a product failure.
 
 ## Proposed Frontend Architecture
 
@@ -179,6 +198,17 @@ Suggested CTA set on failure:
 - `Relancer l'initialisation`
 - `Basculer vers un tenant de démonstration` (optional existing shortcut)
 
+### 6. Enforce route-safe rendering for pre-ready modules
+
+Modules such as recommendations must remain render-safe when:
+
+- the tenant is not ready
+- provider data is empty
+- generated recommendation history is empty
+- backend context preview is unavailable
+
+The route must render an explicit state card instead of crashing or rendering black.
+
 ## Readiness Rules
 
 Readiness must be explicit.
@@ -249,6 +279,7 @@ Required frontend coverage:
 - successful run with usable data unlocks dashboard
 - successful run with zero usable data shows explicit completion-without-data state
 - refresh during in-progress run preserves the pipeline state
+- recommendations route never renders a black screen when recommendations are empty or readiness is incomplete
 
 ## Risks
 
