@@ -11,6 +11,7 @@ def test_collect_facebook_comments_apify_skips_without_api_key(monkeypatch) -> N
     collector = _import_module("core.watch_runs.collectors.facebook_apify")
 
     monkeypatch.setattr(collector.config, "APIFY_API_KEY", "", raising=False)
+    monkeypatch.setenv("APIFY_API_KEY", "")
 
     result = collector.collect_facebook_comments_apify(
         client_id="tenant-alpha",
@@ -310,6 +311,7 @@ def test_collect_facebook_comments_apify_skips_when_only_apify_token_set(monkeyp
     collector = _import_module("core.watch_runs.collectors.facebook_apify")
 
     monkeypatch.setattr(collector.config, "APIFY_API_KEY", "", raising=False)
+    monkeypatch.setenv("APIFY_API_KEY", "")
     monkeypatch.setenv("APIFY_API_TOKEN", "legacy-token")
 
     result = collector.collect_facebook_comments_apify(
@@ -324,6 +326,7 @@ def test_collect_instagram_comments_apify_skips_without_api_key(monkeypatch) -> 
     collector = _import_module("core.watch_runs.collectors.instagram_apify")
 
     monkeypatch.setattr(collector.config, "APIFY_API_KEY", "", raising=False)
+    monkeypatch.setenv("APIFY_API_KEY", "")
 
     result = collector.collect_instagram_comments_apify(
         client_id="tenant-alpha",
@@ -335,12 +338,14 @@ def test_collect_instagram_comments_apify_skips_without_api_key(monkeypatch) -> 
 
 def test_collect_instagram_comments_apify_returns_documents(monkeypatch) -> None:
     collector = _import_module("core.watch_runs.collectors.instagram_apify")
+    captured_inputs: list[dict] = []
 
     class _FakeActor:
         def __init__(self, dataset_id: str):
             self.dataset_id = dataset_id
 
         def call(self, **kwargs):
+            captured_inputs.append(kwargs)
             return {"defaultDatasetId": self.dataset_id}
 
     class _FakeDataset:
@@ -384,6 +389,46 @@ def test_collect_instagram_comments_apify_returns_documents(monkeypatch) -> None
     assert documents[0]["raw_metadata"]["channel"] == "instagram"
     assert documents[0]["raw_metadata"]["date"] == "2026-01-20T12:00:00Z"
     assert documents[0]["raw_metadata"]["replies_count"] == 0
+    assert captured_inputs[0]["run_input"]["username"] == ["ramy"]
+
+
+def test_collect_instagram_comments_apify_skips_when_no_public_posts(monkeypatch) -> None:
+    collector = _import_module("core.watch_runs.collectors.instagram_apify")
+
+    class _FakeActor:
+        def __init__(self, dataset_id: str):
+            self.dataset_id = dataset_id
+
+        def call(self, **kwargs):
+            return {"defaultDatasetId": self.dataset_id}
+
+    class _FakeDataset:
+        def __init__(self, items):
+            self._items = items
+
+        def iterate_items(self):
+            return iter(self._items)
+
+    class _FakeClient:
+        def actor(self, actor_id: str):
+            if "post-scraper" in actor_id:
+                return _FakeActor("ig-posts")
+            return _FakeActor("ig-comments")
+
+        def dataset(self, dataset_id: str):
+            if dataset_id == "ig-posts":
+                return _FakeDataset([{"url": "https://www.instagram.com/ramy/"}])
+            return _FakeDataset([])
+
+    monkeypatch.setattr(collector.config, "APIFY_API_KEY", "apify-key", raising=False)
+    monkeypatch.setattr(collector, "ApifyClient", lambda token: _FakeClient())
+
+    result = collector.collect_instagram_comments_apify(
+        client_id="tenant-alpha",
+        seed_urls=["https://www.instagram.com/ramy/"],
+    )
+
+    assert result == {"status": "skipped", "documents": [], "reason": "no_public_posts"}
 
 
 def test_facebook_and_instagram_registered_as_channels() -> None:

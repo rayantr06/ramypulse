@@ -4,10 +4,38 @@ import { buildTenantHeaders, getStoredTenantId } from "./tenantContext";
 const ANONYMOUS_TENANT_CACHE_KEY = "__anonymous__";
 const tenantQueryClients = new Map<string, QueryClient>();
 
-function getConfiguredApiKey(): string {
-  const env = (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env;
+type ViteEnvMap = Record<string, string | undefined> | undefined;
+
+function getViteEnv(): ViteEnvMap {
+  return (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env;
+}
+
+function getConfiguredApiKey(env: ViteEnvMap = getViteEnv()): string {
   const rawValue = env?.VITE_RAMYPULSE_API_KEY;
   return typeof rawValue === "string" ? rawValue.trim() : "";
+}
+
+export function getConfiguredApiBaseUrl(env: ViteEnvMap = getViteEnv()): string {
+  const rawValue = env?.VITE_API_BASE_URL;
+  if (typeof rawValue !== "string") return "";
+  return rawValue.trim().replace(/\/+$/, "");
+}
+
+export function resolveApiUrl(url: string, env: ViteEnvMap = getViteEnv()): string {
+  if (/^https?:\/\//i.test(url)) {
+    return url;
+  }
+
+  const baseUrl = getConfiguredApiBaseUrl(env);
+  if (!baseUrl) {
+    return url;
+  }
+
+  if (url.startsWith("/")) {
+    return `${baseUrl}${url}`;
+  }
+
+  return `${baseUrl}/${url}`;
 }
 
 function buildAuthHeaders(): Record<string, string> {
@@ -100,7 +128,7 @@ export async function apiRequest(
   const rawBody = isLegacyCall ? data : requestInit.body;
   const headers = mergeHeaders(buildAuthHeaders(), tenantHeaders, requestInit.headers);
   const body = normalizeRequestBody(rawBody, headers);
-  const res = await fetch(requestUrl, {
+  const res = await fetch(resolveApiUrl(requestUrl), {
     ...requestInit,
     method,
     headers,
@@ -117,7 +145,7 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey.join("/"), {
+    const res = await fetch(resolveApiUrl(queryKey.join("/")), {
       headers: {
         ...buildAuthHeaders(),
         ...buildTenantHeaders(getStoredTenantId()),

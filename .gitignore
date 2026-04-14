@@ -3,6 +3,7 @@ __pycache__/
 *.pyo
 .env
 *.parquet
+data/tenants/
 data/raw/
 data/processed/
 data/embeddings/

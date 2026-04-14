@@ -139,6 +139,39 @@ def _split_periods(
     return current, previous
 
 
+def _build_signal_examples(current: pd.DataFrame, limit: int = 3) -> tuple[list[dict[str, str]], list[str]]:
+    """Extract recent signal excerpts and their source URLs for alert payloads."""
+    if current.empty:
+        return [], []
+
+    ordered = current.sort_values("timestamp", ascending=False)
+    examples: list[dict[str, str]] = []
+    source_urls: list[str] = []
+    seen_urls: set[str] = set()
+
+    for _, row in ordered.iterrows():
+        text = str(row.get("text") or row.get("text_original") or "").strip()
+        source_url = str(row.get("source_url") or "").strip()
+        channel = str(row.get("channel") or "web").strip() or "web"
+
+        if source_url and source_url not in seen_urls:
+            seen_urls.add(source_url)
+            source_urls.append(source_url)
+        if text:
+            examples.append(
+                {
+                    "author": "Signal client",
+                    "platform": channel,
+                    "text": text[:280],
+                    "source_url": source_url,
+                }
+            )
+        if len(examples) >= limit and len(source_urls) >= limit:
+            break
+
+    return examples[:limit], source_urls[:limit]
+
+
 def _nss_or_none(dataframe: pd.DataFrame, metrics: dict[str, object]) -> float | None:
     """Retourne le NSS si des lignes existent, sinon None."""
     if dataframe.empty:
@@ -510,6 +543,7 @@ def _base_payload(
     extra: dict | None = None,
 ) -> dict:
     """Assemble le payload standard partage par toutes les alertes v1."""
+    source_urls = list(metrics.get("source_urls") or [])
     payload = {
         "rule_id": rule_id,
         "watchlist_id": watchlist["watchlist_id"],
@@ -521,6 +555,10 @@ def _base_payload(
         "delta_pct": metrics.get("delta_volume_pct"),
         "period": _iso_week_label(pd.Timestamp(metrics["computed_at"])),
         "aspect_breakdown": metrics.get("aspect_breakdown", {}),
+        "examples": metrics.get("examples", []),
+        "social_excerpts": metrics.get("examples", []),
+        "source_urls": source_urls,
+        "primary_source_url": source_urls[0] if source_urls else None,
     }
     if extra:
         payload.update(extra)
@@ -587,6 +625,7 @@ def compute_watchlist_metrics(
     nss_previous = _nss_or_none(previous, previous_metrics)
     volume_current = int(len(current))
     volume_previous = int(len(previous))
+    examples, source_urls = _build_signal_examples(current)
 
     return {
         "watchlist_id": watchlist["watchlist_id"],
@@ -601,11 +640,16 @@ def compute_watchlist_metrics(
         ),
         "delta_volume_pct": _volume_delta_pct(volume_current, volume_previous),
         "aspect_breakdown": dict(current_metrics["nss_by_aspect"]),
+        "examples": examples,
+        "source_urls": source_urls,
         "computed_at": reference_time.isoformat(),
     }
 
 
-def run_alert_detection(df_annotated: pd.DataFrame) -> list[str]:
+def run_alert_detection(
+    df_annotated: pd.DataFrame,
+    client_id: str | None = None,
+) -> list[str]:
     """Evalue toutes les watchlists actives et cree les alertes detectees."""
     dataframe = _prepare_dataframe(df_annotated)
     reference_time = _reference_time(dataframe)
@@ -613,15 +657,17 @@ def run_alert_detection(df_annotated: pd.DataFrame) -> list[str]:
     rule_settings_cache: dict[str, dict[str, dict]] = {}
 
     for watchlist in list_watchlists():
-        client_id = (
+        watchlist_client_id = (
             str(watchlist.get("client_id")).strip()
             if isinstance(watchlist.get("client_id"), str) and str(watchlist.get("client_id")).strip()
             else config.DEFAULT_CLIENT_ID
         )
-        if client_id not in rule_settings_cache:
+        if client_id and watchlist_client_id != str(client_id).strip():
+            continue
+        if watchlist_client_id not in rule_settings_cache:
             with _get_connection() as connection:
-                rule_settings_cache[client_id] = _load_rule_settings(connection, client_id)
-        rule_settings = rule_settings_cache[client_id]
+                rule_settings_cache[watchlist_client_id] = _load_rule_settings(connection, watchlist_client_id)
+        rule_settings = rule_settings_cache[watchlist_client_id]
         scoped = _filter_scope(watchlist, dataframe)
         metrics = compute_watchlist_metrics(watchlist, dataframe)
         with _get_connection() as connection:

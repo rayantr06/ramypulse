@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { getTenantQueryClient } from "../client/src/lib/queryClient";
+import { getConfiguredApiBaseUrl, getTenantQueryClient, resolveApiUrl } from "../client/src/lib/queryClient";
 
 test("getTenantQueryClient returns a stable QueryClient per tenant id", () => {
   const first = getTenantQueryClient("ramy_client_001");
@@ -29,4 +29,31 @@ test("getTenantQueryClient isolates cached query data between tenants", () => {
   assert.deepEqual(firstTenantClient.getQueryData(queryKey), { tenant: "ramy_client_001" });
   assert.deepEqual(secondTenantClient.getQueryData(queryKey), { tenant: "ramy_client_002" });
   assert.deepEqual(anonymousClient.getQueryData(queryKey), { tenant: null });
+});
+
+test("getConfiguredApiBaseUrl trims the configured Vite base URL", () => {
+  assert.equal(
+    getConfiguredApiBaseUrl({
+      VITE_API_BASE_URL: " http://127.0.0.1:8123/ ",
+    }),
+    "http://127.0.0.1:8123",
+  );
+});
+
+test("resolveApiUrl prefixes relative API paths when a base URL is configured", () => {
+  assert.equal(
+    resolveApiUrl("/api/dashboard/summary", {
+      VITE_API_BASE_URL: "http://127.0.0.1:8123/",
+    }),
+    "http://127.0.0.1:8123/api/dashboard/summary",
+  );
+});
+
+test("resolveApiUrl leaves absolute URLs untouched", () => {
+  assert.equal(
+    resolveApiUrl("https://example.com/api/health", {
+      VITE_API_BASE_URL: "http://127.0.0.1:8123",
+    }),
+    "https://example.com/api/health",
+  );
 });

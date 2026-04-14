@@ -1,4 +1,7 @@
 import { defineConfig } from "@playwright/test";
+import { buildPlaywrightRuntimeConfig } from "./playwright.runtime";
+
+const runtime = buildPlaywrightRuntimeConfig();
 
 export default defineConfig({
   testDir: "./tests",
@@ -13,16 +16,11 @@ export default defineConfig({
   fullyParallel: false,
   reporter: [["list"]],
   use: {
-    baseURL: "http://127.0.0.1:4173",
+    baseURL: runtime.baseURL,
     browserName: "chromium",
     channel: "msedge",
     viewport: { width: 1600, height: 1200 },
     colorScheme: "dark",
   },
-  webServer: {
-    command: "npm run preview -- --host 127.0.0.1 --port 4173",
-    port: 4173,
-    reuseExistingServer: true,
-    timeout: 120_000,
-  },
+  ...(runtime.webServer ? { webServer: runtime.webServer } : {}),
 });

@@ -11,12 +11,14 @@ from __future__ import annotations
 import json
 import logging
 import sqlite3
+from pathlib import Path
 from typing import Any
 
 import pandas as pd
 
 import config
 from config import ASPECT_LIST, FAISS_INDEX_PATH
+from core.tenancy.tenant_paths import get_tenant_paths
 
 logger = logging.getLogger(__name__)
 
@@ -199,7 +201,14 @@ def _top_negative_aspects(df: pd.DataFrame, n: int = 3) -> list[str]:
     return [aspect for aspect, _ in scored[:n]]
 
 
-def _load_retriever() -> Any | None:
+def _rag_index_prefix(client_id: str | None) -> Path:
+    """Retourne l'index tenant-scopé quand un client est fourni."""
+    if client_id and str(client_id).strip():
+        return get_tenant_paths(str(client_id).strip()).faiss_index_prefix
+    return Path(FAISS_INDEX_PATH)
+
+
+def _load_retriever(client_id: str | None = None) -> Any | None:
     """Charge le retriever hybride si l'index local est disponible."""
     try:
         from core.rag.embedder import Embedder
@@ -207,7 +216,7 @@ def _load_retriever() -> Any | None:
         from core.rag.vector_store import VectorStore
 
         vector_store = VectorStore()
-        vector_store.load(str(FAISS_INDEX_PATH))
+        vector_store.load(str(_rag_index_prefix(client_id)))
         if not vector_store.metadata:
             return None
         return Retriever(vector_store, Embedder())
@@ -442,7 +451,7 @@ def build_recommendation_context(
     context["recent_campaigns"] = recent_campaigns
 
     rag_chunks: list[dict] = []
-    retriever = _load_retriever()
+    retriever = _load_retriever(client_id)
     if retriever is not None:
         try:
             query = _build_rag_query(trigger_type, trigger_id, context["current_metrics"])

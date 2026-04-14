@@ -9,14 +9,28 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-# Charger les variables d'environnement depuis .env (optionnel)
-load_dotenv()
+_CONFIG_DIR = Path(__file__).parent.resolve()
+
+
+def _load_env_chain() -> None:
+    """Load .env files from the parent repo root to the current worktree."""
+    candidates: list[Path] = []
+    for candidate_root in reversed((_CONFIG_DIR, *_CONFIG_DIR.parents)):
+        env_path = candidate_root / ".env"
+        if env_path.exists() and env_path not in candidates:
+            candidates.append(env_path)
+
+    for env_path in candidates:
+        load_dotenv(env_path, override=True)
+
+
+_load_env_chain()
 
 # ---------------------------------------------------------------------------
 # Chemins de base
 # ---------------------------------------------------------------------------
 
-BASE_DIR: Path = Path(__file__).parent.resolve()
+BASE_DIR: Path = _CONFIG_DIR
 DATA_DIR: Path = BASE_DIR / "data"
 TENANTS_DIR: Path = DATA_DIR / "tenants"
 MODELS_DIR: Path = BASE_DIR / "models"
@@ -48,13 +62,13 @@ SECRETS_DIR.mkdir(parents=True, exist_ok=True)
 DZIRIBERT_MODEL_PATH: Path = MODELS_DIR / "dziribert-sentiment"
 """Chemin local vers le modèle DziriBERT fine-tuné (3 classes: positive/negative/neutral)."""
 
-WHISPER_MODEL_SIZE: str = os.getenv("WHISPER_MODEL_SIZE", "large-v3")
+WHISPER_MODEL_SIZE: str = os.getenv("WHISPER_MODEL_SIZE") or "large-v3"
 """Taille du modèle Whisper: tiny, base, small, medium, large, large-v2, large-v3."""
 
-OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "llama3.2:3b")
+OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL") or "llama3.2:3b"
 """Modèle Ollama utilisé pour la génération RAG."""
 
-OLLAMA_BASE_URL: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+OLLAMA_BASE_URL: str = os.getenv("OLLAMA_BASE_URL") or "http://localhost:11434"
 """URL de base de l'API Ollama locale."""
 
 EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "intfloat/multilingual-e5-base")
@@ -211,8 +225,8 @@ ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
 OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
 SERPAPI_API_KEY: str = os.getenv("SERPAPI_API_KEY", "")
 GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")
-DEFAULT_AGENT_PROVIDER: str = os.getenv("AGENT_PROVIDER", "google_gemini")
-DEFAULT_AGENT_MODEL: str = os.getenv("AGENT_MODEL", "gemini-2.5-flash")
+DEFAULT_AGENT_PROVIDER: str = os.getenv("AGENT_PROVIDER") or "google_gemini"
+DEFAULT_AGENT_MODEL: str = os.getenv("AGENT_MODEL") or "gemini-2.5-flash"
 DEFAULT_RUNTIME_MODE: str = os.getenv("RAMYPULSE_RUNTIME_MODE", "")
 RECOMMENDATION_AGENT_PROMPT_VERSION: str = "1.1"
 WEEKLY_REPORT_EMAIL_TO: str = os.getenv("WEEKLY_REPORT_EMAIL_TO", "")

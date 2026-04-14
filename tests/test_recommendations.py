@@ -223,6 +223,32 @@ def test_parse_json_response_ajoute_parse_success_true() -> None:
     assert result["parse_success"] is True
 
 
+def test_parse_json_response_recovers_partial_gemini_payload() -> None:
+    """Une réponse Gemini tronquée doit conserver le résumé et les recommandations complètes déjà fermées."""
+    from core.recommendation.agent_client import _parse_json_response
+
+    raw = """
+    {
+      "analysis_summary": "Situation critique sur le gout.",
+      "recommendations": [
+        {
+          "id": "rec_001",
+          "priority": "critical",
+          "title": "Corriger le gout",
+          "content": {"hooks": ["hook 1"]},
+          "data_basis": "NSS gout -100"
+        },
+        {
+          "id": "rec_002",
+          "priority": "high",
+    """
+    result = _parse_json_response(raw)
+    assert result["parse_success"] is False
+    assert result["analysis_summary"] == "Situation critique sur le gout."
+    assert len(result["recommendations"]) == 1
+    assert result["recommendations"][0]["id"] == "rec_001"
+
+
 def test_generate_recommendations_structure_retour_ollama_mock() -> None:
     """generate_recommendations doit retourner les clés obligatoires (mock Ollama)."""
     from core.recommendation.agent_client import generate_recommendations

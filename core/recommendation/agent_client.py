@@ -36,7 +36,11 @@ _OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
 _GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 _ANTHROPIC_VERSION_HEADER = "2023-06-01"
 _DEFAULT_MAX_TOKENS = 4096
+_GEMINI_MAX_OUTPUT_TOKENS = 8192
 _TIMEOUT_SECONDS = 180
+_GEMINI_MAX_RECOMMENDATIONS = 2
+_GEMINI_MAX_LIST_ITEMS = 2
+_GEMINI_MAX_TEXT_CHARS = 240
 
 # Catalogue des modèles recommandés par provider — utilisé par l'UI
 MODEL_CATALOG: dict[str, list[dict]] = {
@@ -112,6 +116,11 @@ def _parse_json_response(raw_text: str) -> dict:
         except json.JSONDecodeError:
             pass
 
+    # Tentative 4 : recuperer ce qui a deja ete genere avant une coupure MAX_TOKENS
+    partial_payload = _recover_partial_json_payload(cleaned)
+    if partial_payload is not None:
+        return partial_payload
+
     # Fallback : structure d'erreur exploitable
     logger.warning("Impossible de parser la reponse LLM en JSON. Retour du fallback.")
     return {
@@ -124,11 +133,222 @@ def _parse_json_response(raw_text: str) -> dict:
     }
 
 
+def _decode_json_string_token(token: str) -> str:
+    """Decode une chaine JSON extraite via regex."""
+    try:
+        return json.loads(f'"{token}"')
+    except json.JSONDecodeError:
+        return token
+
+
+def _extract_complete_json_objects(array_payload: str) -> list[dict]:
+    """Extrait les objets JSON complets d'un tableau potentiellement tronque."""
+    objects: list[dict] = []
+    depth = 0
+    start: int | None = None
+    in_string = False
+    escaped = False
+
+    for index, char in enumerate(array_payload):
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+            continue
+
+        if char == '"':
+            in_string = True
+            continue
+        if char == "{":
+            if depth == 0:
+                start = index
+            depth += 1
+            continue
+        if char == "}":
+            if depth == 0:
+                continue
+            depth -= 1
+            if depth == 0 and start is not None:
+                fragment = array_payload[start : index + 1]
+                try:
+                    parsed = json.loads(fragment)
+                except json.JSONDecodeError:
+                    parsed = None
+                if isinstance(parsed, dict):
+                    objects.append(parsed)
+                start = None
+            continue
+        if char == "]" and depth == 0:
+            break
+
+    return objects
+
+
+def _recover_partial_json_payload(raw_text: str) -> dict | None:
+    """Recupere un payload minimal quand le JSON est coupe en milieu de flux."""
+    analysis_match = re.search(
+        r'"analysis_summary"\s*:\s*"((?:\\.|[^"\\])*)"',
+        raw_text,
+        flags=re.DOTALL,
+    )
+    recommendations_match = re.search(
+        r'"recommendations"\s*:\s*(\[[\s\S]*)',
+        raw_text,
+        flags=re.DOTALL,
+    )
+    confidence_match = re.search(r'"confidence_score"\s*:\s*([0-9]+(?:\.[0-9]+)?)', raw_text)
+    watchlist_match = re.search(
+        r'"watchlist_priorities"\s*:\s*(\[[\s\S]*?\])',
+        raw_text,
+        flags=re.DOTALL,
+    )
+    data_quality_match = re.search(
+        r'"data_quality_note"\s*:\s*"((?:\\.|[^"\\])*)"',
+        raw_text,
+        flags=re.DOTALL,
+    )
+
+    analysis_summary = _decode_json_string_token(analysis_match.group(1)) if analysis_match else ""
+    recommendations = (
+        _extract_complete_json_objects(recommendations_match.group(1))
+        if recommendations_match
+        else []
+    )
+
+    if not analysis_summary and not recommendations:
+        return None
+
+    watchlist_priorities: list[str] = []
+    if watchlist_match:
+        try:
+            parsed_watchlists = json.loads(watchlist_match.group(1))
+        except json.JSONDecodeError:
+            parsed_watchlists = []
+        if isinstance(parsed_watchlists, list):
+            watchlist_priorities = [str(item) for item in parsed_watchlists if str(item).strip()]
+
+    confidence_score = 0.0
+    if confidence_match:
+        try:
+            confidence_score = float(confidence_match.group(1))
+        except ValueError:
+            confidence_score = 0.0
+
+    logger.warning(
+        "Reponse LLM tronquee detectee. Recuperation partielle: %d recommendation(s) exploitable(s).",
+        len(recommendations),
+    )
+    return {
+        "analysis_summary": analysis_summary or "Reponse partielle du modele.",
+        "recommendations": recommendations,
+        "watchlist_priorities": watchlist_priorities,
+        "confidence_score": confidence_score,
+        "data_quality_note": (
+            _decode_json_string_token(data_quality_match.group(1))
+            if data_quality_match
+            else "Reponse partielle du modele: sortie tronquee."
+        ),
+        "parse_success": False,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Construction du prompt utilisateur
 # ---------------------------------------------------------------------------
 
-def _build_user_prompt(context: dict) -> str:
+def _compact_text(value: object, max_chars: int = _GEMINI_MAX_TEXT_CHARS) -> str:
+    """Tronque defensivement un texte sans perdre l'information utile."""
+    text = str(value or "").strip()
+    if len(text) <= max_chars:
+        return text
+    return text[: max_chars - 1].rstrip() + "…"
+
+
+def _compact_gemini_context(context: dict) -> dict:
+    """Construit un contexte plus compact pour Gemini afin d'eviter les reponses tronquees."""
+    metrics = context.get("current_metrics", {})
+    active_alerts = []
+    for alert in context.get("active_alerts", [])[:3]:
+        payload = alert.get("alert_payload") or {}
+        active_alerts.append(
+            {
+                "alert_id": alert.get("alert_id"),
+                "title": _compact_text(alert.get("title") or alert.get("alert_type") or "Alerte"),
+                "severity": alert.get("severity"),
+                "status": alert.get("status"),
+                "watchlist_id": alert.get("watchlist_id"),
+                "summary": _compact_text(
+                    alert.get("message")
+                    or payload.get("summary")
+                    or payload.get("reason")
+                    or payload.get("description")
+                ),
+                "source_urls": [
+                    str(url)
+                    for url in (payload.get("source_urls") or payload.get("post_urls") or [])[:_GEMINI_MAX_LIST_ITEMS]
+                ],
+            }
+        )
+
+    active_watchlists = []
+    for watchlist in context.get("active_watchlists", [])[:3]:
+        latest_metrics = watchlist.get("latest_metrics") or {}
+        active_watchlists.append(
+            {
+                "watchlist_id": watchlist.get("watchlist_id"),
+                "watchlist_name": watchlist.get("watchlist_name"),
+                "channels": (watchlist.get("filters") or {}).get("channels", [])[:_GEMINI_MAX_LIST_ITEMS],
+                "keywords": (watchlist.get("filters") or {}).get("keywords", [])[:_GEMINI_MAX_LIST_ITEMS],
+                "nss": latest_metrics.get("nss"),
+                "delta_nss": latest_metrics.get("delta_nss"),
+                "volume_total": latest_metrics.get("volume_total"),
+            }
+        )
+
+    recent_campaigns = []
+    for campaign in context.get("recent_campaigns", [])[:2]:
+        recent_campaigns.append(
+            {
+                "campaign_id": campaign.get("campaign_id"),
+                "campaign_name": campaign.get("campaign_name"),
+                "status": campaign.get("status"),
+                "latest_uplift_nss": campaign.get("latest_uplift_nss"),
+                "latest_volume_lift_pct": campaign.get("latest_volume_lift_pct"),
+            }
+        )
+
+    rag_chunks = []
+    for chunk in context.get("rag_chunks", [])[:3]:
+        rag_chunks.append(
+            {
+                "text": _compact_text(chunk.get("text"), max_chars=280),
+                "channel": chunk.get("channel"),
+                "timestamp": chunk.get("timestamp"),
+            }
+        )
+
+    return {
+        "client_profile": context.get("client_profile", {}),
+        "trigger": context.get("trigger", {}),
+        "current_metrics": {
+            "nss_global": metrics.get("nss_global"),
+            "nss_by_aspect": metrics.get("nss_by_aspect"),
+            "nss_by_channel": metrics.get("nss_by_channel"),
+            "volume_total": metrics.get("volume_total"),
+            "top_negative_aspects": (metrics.get("top_negative_aspects") or [])[:_GEMINI_MAX_LIST_ITEMS],
+        },
+        "active_alerts": active_alerts,
+        "active_watchlists": active_watchlists,
+        "recent_campaigns": recent_campaigns,
+        "rag_chunks": rag_chunks,
+        "data_quality": context.get("data_quality", {}),
+    }
+
+
+def _build_user_prompt(context: dict, provider: str) -> str:
     """Construit le prompt utilisateur a partir du contexte assemble.
 
     Args:
@@ -148,6 +368,20 @@ def _build_user_prompt(context: dict) -> str:
     rag_chunks = context.get("rag_chunks", [])
     metrics = context.get("current_metrics", {})
 
+    if provider == "google_gemini":
+        compact_context = _compact_gemini_context(context)
+        return (
+            "Voici un resume compact des donnees RamyPulse a analyser.\n\n"
+            f"{json.dumps(compact_context, ensure_ascii=False, indent=2)}\n\n"
+            "Contraintes obligatoires de sortie:\n"
+            f"- retourne EXACTEMENT {_GEMINI_MAX_RECOMMENDATIONS} recommandations maximum\n"
+            "- analysis_summary: 2 phrases maximum\n"
+            "- rationale: 2 phrases maximum\n"
+            f"- target_regions, hooks, key_messages, watchlist_priorities: {_GEMINI_MAX_LIST_ITEMS} elements maximum\n"
+            "- garde les champs textuels concis mais complets\n"
+            "- reponds UNIQUEMENT en JSON valide selon le schema demande\n"
+        )
+
     return (
         f"Voici les donnees de la plateforme RamyPulse pour cette analyse :\n\n"
         f"CLIENT : {client_name}\n"
@@ -164,6 +398,21 @@ def _build_user_prompt(context: dict) -> str:
         f"{json.dumps(rag_chunks, ensure_ascii=False, indent=2)}\n\n"
         "Genere les recommandations marketing les plus actionnables pour cette situation.\n"
         "Reponds UNIQUEMENT en JSON selon le format defini."
+    )
+
+
+def _build_system_prompt(provider: str) -> str:
+    """Ajoute des garde-fous provider-specifiques sans forcer un modele."""
+    system_prompt = get_system_prompt()
+    if provider != "google_gemini":
+        return system_prompt
+    return (
+        system_prompt
+        + "\n\nCONTRAINTE ADDITIONNELLE POUR GEMINI:\n"
+        + f"- maximum {_GEMINI_MAX_RECOMMENDATIONS} recommandations\n"
+        + "- chaque champ texte doit rester court et directement fonde sur les donnees\n"
+        + f"- maximum {_GEMINI_MAX_LIST_ITEMS} hooks, key_messages, target_regions et watchlist_priorities\n"
+        + "- priorise des sorties completes plutot que nombreuses\n"
     )
 
 
@@ -352,7 +601,7 @@ def _call_gemini(api_key: str, model: str, user_prompt: str, system_prompt: str)
         "system_instruction": {"parts": [{"text": system_prompt}]},
         "contents": [{"parts": [{"text": user_prompt}]}],
         "generationConfig": {
-            "maxOutputTokens": _DEFAULT_MAX_TOKENS,
+            "maxOutputTokens": _GEMINI_MAX_OUTPUT_TOKENS,
             "responseMimeType": "application/json",
         },
     }
@@ -406,7 +655,7 @@ def _call_ollama(model: str, user_prompt: str, system_prompt: str) -> dict:
 
 def generate_recommendations(
     context: dict,
-    provider: str = DEFAULT_AGENT_PROVIDER,
+    provider: str | None = None,
     model: str | None = None,
     api_key: str | None = None,
 ) -> dict:
@@ -429,36 +678,37 @@ def generate_recommendations(
     Raises:
         ValueError: Si le provider n'est pas supporte.
     """
-    system_prompt = get_system_prompt()
-    user_prompt = _build_user_prompt(context)
+    resolved_provider = str(provider or DEFAULT_AGENT_PROVIDER or "google_gemini").strip() or "google_gemini"
+    system_prompt = _build_system_prompt(resolved_provider)
+    user_prompt = _build_user_prompt(context, resolved_provider)
 
     t_start = time.monotonic()
 
-    if provider == "anthropic":
+    if resolved_provider == "anthropic":
         resolved_model = model or _DEFAULT_MODELS["anthropic"]
         resolved_key = api_key or ANTHROPIC_API_KEY
         result = _call_anthropic(resolved_key, resolved_model, user_prompt, system_prompt)
-    elif provider == "openai":
+    elif resolved_provider == "openai":
         resolved_model = model or _DEFAULT_MODELS["openai"]
         resolved_key = api_key or OPENAI_API_KEY
         result = _call_openai(resolved_key, resolved_model, user_prompt, system_prompt)
-    elif provider == "google_gemini":
+    elif resolved_provider == "google_gemini":
         resolved_model = model or _DEFAULT_MODELS["google_gemini"]
         resolved_key = api_key or _GOOGLE_API_KEY
         result = _call_gemini(resolved_key, resolved_model, user_prompt, system_prompt)
-    elif provider == "ollama_local":
+    elif resolved_provider == "ollama_local":
         resolved_model = model or _DEFAULT_MODELS.get("ollama_local", DEFAULT_AGENT_MODEL)
         result = _call_ollama(resolved_model, user_prompt, system_prompt)
     else:
         raise ValueError(
-            f"Provider non supporte : {provider!r}. "
+            f"Provider non supporte : {resolved_provider!r}. "
             "Valeurs valides : anthropic, openai, google_gemini, ollama_local"
         )
 
     generation_ms = int((time.monotonic() - t_start) * 1000)
 
     result = _finalize_result_payload(result, context)
-    result["provider_used"] = provider
+    result["provider_used"] = resolved_provider
     result["model_used"] = resolved_model
     result["generation_ms"] = generation_ms
     result.setdefault("parse_success", True)
@@ -470,6 +720,6 @@ def generate_recommendations(
 
     logger.info(
         "Generation complete — provider=%s modele=%s duree=%dms parse_success=%s",
-        provider, resolved_model, generation_ms, result["parse_success"],
+        resolved_provider, resolved_model, generation_ms, result["parse_success"],
     )
     return result

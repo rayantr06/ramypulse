@@ -176,12 +176,10 @@ class TestApifyApiKey:
         cfg = _reload_config()
         assert hasattr(cfg, "APIFY_API_KEY")
 
-    def test_apify_api_key_none_sans_env(self, monkeypatch):
-        """Sans variable d'environnement, la clé vaut None ou chaîne vide."""
-        monkeypatch.delenv("APIFY_API_KEY", raising=False)
+    def test_apify_api_key_est_optionnelle(self):
+        """La clé APIFY peut venir du .env repo ou rester vide, mais doit rester exploitable."""
         cfg = _reload_config()
-        # Doit être None ou "" sans .env
-        assert cfg.APIFY_API_KEY is None or cfg.APIFY_API_KEY == ""
+        assert cfg.APIFY_API_KEY is None or isinstance(cfg.APIFY_API_KEY, str)
 
 
 class TestValeursSansEnv:
@@ -205,3 +203,11 @@ class TestValeursSansEnv:
         ]
         for nom in obligatoires:
             assert hasattr(cfg, nom), f"Constante manquante: {nom}"
+
+    def test_agent_defaults_fallback_when_env_values_are_blank(self, monkeypatch):
+        """AGENT_PROVIDER/MODEL vides dans .env ne doivent pas casser les defaults."""
+        monkeypatch.setenv("AGENT_PROVIDER", "")
+        monkeypatch.setenv("AGENT_MODEL", "")
+        cfg = _reload_config()
+        assert cfg.DEFAULT_AGENT_PROVIDER == "google_gemini"
+        assert cfg.DEFAULT_AGENT_MODEL == "gemini-2.5-flash"

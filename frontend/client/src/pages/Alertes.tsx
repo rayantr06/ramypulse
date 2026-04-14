@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { AppShell } from "@/components/AppShell";
 import { EmptyTenantState } from "@/components/EmptyTenantState";
 import { apiRequest } from "@/lib/queryClient";
@@ -15,6 +16,7 @@ interface SocialExcerpt {
   author: string;
   platform: string;
   text: string;
+  source_url: string;
 }
 
 interface AlertView {
@@ -27,6 +29,8 @@ interface AlertView {
   estimated_impact: string;
   detected_at: string;
   social_excerpts: SocialExcerpt[];
+  navigation_url: string | null;
+  source_links: string[];
 }
 
 const STATUS_TO_API: Record<StatusFilter, string> = {
@@ -107,8 +111,29 @@ function buildSocialExcerpts(payload: Record<string, unknown>): SocialExcerpt[] 
       author: typeof item.author === "string" ? item.author : "Source",
       platform: typeof item.platform === "string" ? item.platform : "web",
       text: typeof item.text === "string" ? item.text : "",
+      source_url: typeof item.source_url === "string" ? item.source_url : "",
     }))
     .filter((item) => item.text);
+}
+
+function buildSourceLinks(payload: Record<string, unknown>, excerpts: SocialExcerpt[]): string[] {
+  const links = new Set<string>();
+  if (typeof payload.primary_source_url === "string" && payload.primary_source_url) {
+    links.add(payload.primary_source_url);
+  }
+  if (Array.isArray(payload.source_urls)) {
+    payload.source_urls.forEach((item) => {
+      if (typeof item === "string" && item) {
+        links.add(item);
+      }
+    });
+  }
+  excerpts.forEach((excerpt) => {
+    if (excerpt.source_url) {
+      links.add(excerpt.source_url);
+    }
+  });
+  return Array.from(links);
 }
 
 function getSourceInitials(platform: string): string {
@@ -124,6 +149,7 @@ function getSourceInitials(platform: string): string {
 function mapAlertView(value: unknown): AlertView {
   const alert = mapAlert(value);
   const payload = asRecord(alert.alert_payload);
+  const socialExcerpts = buildSocialExcerpts(payload);
   return {
     id: alert.alert_id,
     title: alert.title,
@@ -133,7 +159,9 @@ function mapAlertView(value: unknown): AlertView {
     location: buildLocation(payload, alert.navigation_url),
     estimated_impact: buildImpactLabel(payload),
     detected_at: alert.detected_at || "-",
-    social_excerpts: buildSocialExcerpts(payload),
+    social_excerpts: socialExcerpts,
+    navigation_url: alert.navigation_url || null,
+    source_links: buildSourceLinks(payload, socialExcerpts),
   };
 }
 
@@ -188,6 +216,7 @@ function severityGradient(severity: SeverityFilter): string {
 }
 
 export default function Alertes() {
+  const [, setLocation] = useLocation();
   const [statusFilter, setStatusFilter] = useState<StatusFilter | null>(null);
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -469,6 +498,17 @@ export default function Alertes() {
                                 <p className="text-xs italic text-on-surface-variant">
                                   {excerpt.text}
                                 </p>
+                                {excerpt.source_url ? (
+                                  <a
+                                    className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:text-primary/80 transition-colors"
+                                    href={excerpt.source_url}
+                                    rel="noreferrer"
+                                    target="_blank"
+                                  >
+                                    Voir la source
+                                    <span className="material-symbols-outlined text-sm">open_in_new</span>
+                                  </a>
+                                ) : null}
                               </div>
                             </div>
                           ))}
@@ -496,6 +536,32 @@ export default function Alertes() {
                         </span>
                       </div>
                     </div>
+
+                    {selectedAlert.source_links.length > 0 || selectedAlert.navigation_url ? (
+                      <div className="flex flex-wrap gap-3">
+                        {selectedAlert.source_links[0] ? (
+                          <a
+                            className="inline-flex items-center gap-2 rounded-sm border border-primary/25 bg-primary/10 px-4 py-2 text-xs font-bold uppercase tracking-widest text-primary hover:bg-primary/15 transition-colors"
+                            href={selectedAlert.source_links[0]}
+                            rel="noreferrer"
+                            target="_blank"
+                          >
+                            Ouvrir la source
+                            <span className="material-symbols-outlined text-sm">open_in_new</span>
+                          </a>
+                        ) : null}
+                        {selectedAlert.navigation_url ? (
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-2 rounded-sm border border-outline-variant/30 bg-surface-container-high px-4 py-2 text-xs font-bold uppercase tracking-widest text-on-surface hover:bg-surface-bright transition-colors"
+                            onClick={() => setLocation(selectedAlert.navigation_url || "/explorateur")}
+                          >
+                            Ouvrir dans l'explorateur
+                            <span className="material-symbols-outlined text-sm">travel_explore</span>
+                          </button>
+                        ) : null}
+                      </div>
+                    ) : null}
 
                     <div className="flex gap-3 pt-6 border-t border-outline-variant/20">
                       {selectedAlert.status !== "RECONNU" && (

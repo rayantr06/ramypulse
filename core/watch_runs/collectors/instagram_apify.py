@@ -23,6 +23,10 @@ logger = logging.getLogger(__name__)
 
 APIFY_IG_POSTS = "apify/instagram-post-scraper"
 APIFY_IG_COMMENTS = "apify/instagram-comment-scraper"
+_INSTAGRAM_POST_URL_RE = re.compile(
+    r"^https?://(?:www\.)?instagram\.com/(?:(?:[^!@#$%^&*(){},'\"/\s`\\=-]+/)?(?:p|reel)|reels)/[^/]+/?$",
+    flags=re.IGNORECASE,
+)
 
 
 def _resolve_apify_token() -> str | None:
@@ -46,6 +50,22 @@ def _normalize_seed_urls(seed_urls: Iterable[str] | None) -> list[str]:
         seen.add(seed_url)
         normalized.append(seed_url)
     return normalized
+
+
+def _extract_profile_reference(profile_url: str) -> str | None:
+    """Convertit une URL Instagram en reference compatible avec l'acteur Apify."""
+    normalized = str(profile_url or "").strip().rstrip("/")
+    if not normalized:
+        return None
+    match = re.search(r"instagram\.com/([^/?#]+)/?$", normalized, flags=re.IGNORECASE)
+    if match:
+        return match.group(1).strip() or None
+    return normalized
+
+
+def _is_instagram_post_url(url: str) -> bool:
+    """Valide les URLs de posts/reels acceptées par l'acteur commentaires."""
+    return bool(_INSTAGRAM_POST_URL_RE.match(str(url or "").strip()))
 
 
 def _resolve_seed_urls(
@@ -84,12 +104,15 @@ def _document_id(*, author: str, text: str) -> str:
 
 
 def _discover_post_urls(apify_client, profile_url: str, max_posts: int) -> list[str]:
+    profile_reference = _extract_profile_reference(profile_url)
+    if not profile_reference:
+        return []
     try:
         run = apify_client.actor(APIFY_IG_POSTS).call(
             run_input={
-                "directUrls": [profile_url],
+                "username": [profile_reference],
                 "resultsLimit": max_posts,
-                "resultsType": "posts",
+                "dataDetailLevel": "basicData",
             },
             timeout_secs=300,
         )
@@ -103,7 +126,7 @@ def _discover_post_urls(apify_client, profile_url: str, max_posts: int) -> list[
         short_code = str(item.get("shortCode") or "").strip()
         if not post_url and short_code:
             post_url = f"https://www.instagram.com/p/{short_code}/"
-        if post_url:
+        if _is_instagram_post_url(post_url):
             post_urls.append(post_url)
     return post_urls
 
@@ -199,6 +222,9 @@ def collect_instagram_comments_apify(
     seen_ids: set[str] = set()
     for profile_url in resolved_seed_urls:
         post_urls = _discover_post_urls(apify_client, profile_url, max_posts)
+        if not post_urls:
+            logger.info("No public Instagram posts discovered for %s", profile_url)
+            continue
         for post_index, post_url in enumerate(post_urls):
             raw_items = _collect_post_items(
                 apify_client,
@@ -218,4 +244,6 @@ def collect_instagram_comments_apify(
                 documents.append(document)
             if post_index < len(post_urls) - 1 and delay_between_calls > 0:
                 time.sleep(delay_between_calls)
+    if not documents:
+        return {"status": "skipped", "documents": [], "reason": "no_public_posts"}
     return documents
