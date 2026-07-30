@@ -165,7 +165,7 @@
     "Le gold V0.3 n est PAS utilisable tel quel pour l entrainement sur ses 41 items arabizi : biais partage confirme par relecture humaine. Reannotation requise avant usage.",
     "harcelement_discrimination jamais exercee : 0 alerte sur 305 items, 0 detection sur 2 candidats.",
     "Portes d alerte NON EVALUABLES : 16 evenements distincts, IC 95 pourcent [0,444 ; 0,931]. Le pool est epuise — 1589 items organisation non echantillonnes ne fournissent que la meme rumeur repetee et 6 candidats reels, majoritairement synthetiques. Nouvelle collecte requise.",
-    "Plafonds issus d un accord machine-machine. Validation humaine en cours sur echantillon.",
+    "Plafonds issus d un accord machine-machine. Validation humaine FAITE le 2026-07-30 sur 60 items : pas de biais global (90 pourcent), mais biais localise confirme sur l arabizi.",
     "requires_parent_context plafonne a 0,530, non derivable. Correctif en amont : capturer le post parent.",
     "Scope secteur non teste. Trois marques seulement, toutes agroalimentaires.",
     "D13 (accusation circulante contre incident rapporte) non validee par la mesure."
