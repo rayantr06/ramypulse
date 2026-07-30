@@ -2,8 +2,8 @@
   "version": "0.2.0",
   "measurement_scope": "end_to_end",
   "purpose": "Autoriser ou refuser la generation du pilote d'entrainement SLM V2.",
-  "calibration_principle": "Aucune porte ne depasse l'accord inter-annotateurs mesure sur le meme contrat. Un modele ne peut pas depasser durablement la coherence de sa propre reference. Plafond mesure A/B le 2026-07-30, marge de securite ~10 a 15 pourcent sous le plafond.",
-  "status": "PROVISOIRE — a recalculer sur les annotations V0.2 avant tout gel",
+  "calibration_principle": "Aucune porte ne depasse l'accord inter-annotateurs MESURE sur le meme contrat. Plafonds A3 vs C, campagne V0.2, 304 paires. Marge de securite ~10 a 15 pourcent sous le plafond.",
+  "status": "MESURE — plafonds issus de l accord A3 vs C sur 304 items (2026-07-30)",
   "evaluation_policy": {
     "missing_or_invalid_output": "scored_as_wrong",
     "maximum_controlled_retry": 1,
@@ -31,69 +31,111 @@
     },
     "is_exploitable.macro_f1": {
       "operator": ">=",
-      "threshold": 0.85,
+      "threshold": 0.78,
       "critical": true,
-      "ceiling_observed": 0.98
+      "ceiling_observed": 0.889,
+      "ceiling_source": "A3 vs C, campagne V0.2, 304 paires"
     },
     "business_relevance.macro_f1": {
       "operator": ">=",
-      "threshold": 0.8,
+      "threshold": 0.85,
       "critical": true,
-      "ceiling_observed": 0.97
+      "ceiling_observed": 0.95,
+      "ceiling_source": "A3 vs C, campagne V0.2, 304 paires"
     },
     "sentiment.macro_f1": {
       "operator": ">=",
-      "threshold": 0.7,
+      "threshold": 0.75,
       "critical": true,
-      "ceiling_observed": 0.788
+      "ceiling_observed": 0.855,
+      "ceiling_source": "A3 vs C, campagne V0.2, 304 paires"
     },
     "language.macro_f1": {
       "operator": ">=",
-      "threshold": 0.6,
+      "threshold": 0.78,
       "critical": false,
-      "ceiling_observed": 0.66
+      "ceiling_observed": 0.881,
+      "ceiling_source": "A3 vs C, campagne V0.2, 304 paires"
     },
     "intents.micro_f1": {
       "operator": ">=",
-      "threshold": 0.65,
+      "threshold": 0.68,
       "critical": true,
-      "ceiling_observed": 0.741
+      "ceiling_observed": 0.777,
+      "ceiling_source": "A3 vs C, campagne V0.2, 304 paires"
     },
     "aspects_family_sentiment.micro_f1": {
       "operator": ">=",
-      "threshold": 0.55,
+      "threshold": 0.62,
       "critical": true,
-      "ceiling_observed": 0.64
-    },
-    "alerts_type_severity.precision": {
-      "operator": ">=",
-      "threshold": 0.75,
-      "critical": true,
-      "ceiling_observed": 0.6,
-      "note": "Plafond sous le seuil : 5 alertes seulement apres R1. Porte non evaluable en l'etat."
-    },
-    "alerts_type_severity.recall": {
-      "operator": ">=",
-      "threshold": 0.55,
-      "critical": true,
-      "ceiling_observed": 0.75
+      "ceiling_observed": 0.711,
+      "ceiling_source": "A3 vs C, campagne V0.2, 304 paires"
     },
     "entities_type_name.micro_f1": {
       "operator": ">=",
       "threshold": 0.55,
       "critical": false,
-      "ceiling_observed": 0.627
+      "ceiling_observed": 0.627,
+      "ceiling_source": "A3 vs C, campagne V0.2, 304 paires"
     },
     "actionability.actionable.macro_f1": {
       "operator": ">=",
-      "threshold": 0.8,
+      "threshold": 0.85,
       "critical": false,
-      "ceiling_observed": 0.97
+      "ceiling_observed": 0.956,
+      "ceiling_source": "A3 vs C, campagne V0.2, 304 paires"
+    },
+    "alert_present.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.8,
+      "critical": true,
+      "ceiling_observed": 0.906,
+      "ceiling_source": "A3 vs C, detection binaire",
+      "note": "Y a-t-il une alerte, oui ou non. Champ fiable : 98,7 pourcent d'accord."
+    },
+    "alerts_type.micro_f1": {
+      "operator": ">=",
+      "threshold": 0.68,
+      "critical": true,
+      "ceiling_observed": 0.783,
+      "ceiling_source": "A3 vs C, type seul"
+    },
+    "alerts_type_severity.micro_f1": {
+      "operator": ">=",
+      "threshold": 0.3,
+      "critical": false,
+      "ceiling_observed": 0.304,
+      "ceiling_source": "A3 vs C, type et severite",
+      "note": "NON CRITIQUE tant que l'echelle de severite n'est pas ancree. Les annotateurs detectent les memes alertes mais divergent sur critique contre elevee."
+    },
+    "actionability.priority.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.6,
+      "critical": false,
+      "ceiling_observed": 0.706,
+      "ceiling_source": "A3 vs C, champ derive",
+      "note": "Derive : herite du desaccord sur la severite d'alerte, pas un defaut de la derivation."
+    },
+    "requires_parent_context.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.45,
+      "critical": false,
+      "ceiling_observed": 0.53,
+      "ceiling_source": "A3 vs C",
+      "note": "Champ neuf, definition encore floue. A resserrer en V0.3."
+    },
+    "author_role.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.85,
+      "critical": false,
+      "ceiling_observed": 1.0,
+      "ceiling_source": "A3 vs C, accord parfait"
     }
   },
   "blocking_conditions": [
-    "Les portes d'alerte ne sont pas evaluables tant que le gold ne contient pas au moins 30 alertes positives.",
-    "Toutes les valeurs ceiling_observed viennent d'un accord machine-machine (A et B sont deux LLM). Une mesure humaine reste requise avant mise en production.",
-    "Recalculer l'integralite de ce fichier apres la campagne d'annotation V0.2."
+    "Plafonds mesures sur un accord machine-machine (A3 et C sont deux LLM). Une validation humaine reste requise avant production.",
+    "L'echelle de severite d'alerte n'est pas ancree : 11 des 18 desaccords portent sur critique contre elevee sur un contenu identique.",
+    "22 a 24 alertes positives seulement. La cible de 30 n'est pas atteinte.",
+    "Le scope secteur n'est pas teste : le corpus ne contient aucune veille sectorielle reelle."
   ]
 }
