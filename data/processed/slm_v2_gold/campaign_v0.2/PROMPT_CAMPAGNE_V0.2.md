@@ -18,6 +18,8 @@ data/processed/slm_v2_gold/business_comments_gold_dev_v0.1.jsonl
 data/processed/slm_v2_gold/business_comments_gold_test_v0.1.jsonl
 data/processed/slm_v2_gold/blind_pass_b/**
 data/processed/slm_v2_gold/campaign_v0.2/sample_full.jsonl
+data/processed/slm_v2_gold/campaign_v0.2/output*/**   <- TOUT dossier de sortie
+
 data/processed/slm_v2_corpora/v0.1/normalized/**
 data/processed/slm_v2_pilot/**
 docs/slm_v2/gold_v0.1/**
@@ -60,8 +62,12 @@ de la rubrique.
 
 ## 4. Sortie
 
+Le dossier de sortie t'est indiqué au lancement (`output` ou `output_c`). Il est
+désigné ci-dessous par `<SORTIE>`. **N'ouvre jamais un autre dossier de sortie** :
+une seconde passe qui lit la première ne mesure plus rien.
+
 Pour chaque `input/batch_XX.jsonl`, écris
-`data/processed/slm_v2_gold/campaign_v0.2/output/batch_XX.out.jsonl` :
+`data/processed/slm_v2_gold/campaign_v0.2/<SORTIE>/batch_XX.out.jsonl` :
 une ligne JSON par commentaire, même ordre, mêmes `record_id`, UTF-8 sans BOM.
 
 ```json
@@ -141,7 +147,7 @@ Ne fusionne pas les lots : la qualité d'annotation chute sur les séries longue
 
 ## 8. Rapport final
 
-Écris `output/RAPPORT_ANNOTATEUR.md` :
+Écris `<SORTIE>/RAPPORT_ANNOTATEUR.md` :
 
 - volumétrie et répartitions (sentiment, familles, alertes, langues, `author_role`) ;
 - nombre d'items marqués `requires_parent_context` ;
