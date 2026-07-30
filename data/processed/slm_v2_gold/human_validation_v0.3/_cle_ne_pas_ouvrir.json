@@ -1,0 +1,362 @@
+[
+ {
+  "n": 1,
+  "record_id": "v02_0252",
+  "groupe": "accord",
+  "annotation_montree": "A3"
+ },
+ {
+  "n": 2,
+  "record_id": "v02_0125",
+  "groupe": "accord",
+  "annotation_montree": "A3"
+ },
+ {
+  "n": 3,
+  "record_id": "v02_0277",
+  "groupe": "desaccord",
+  "annotation_montree": "A3"
+ },
+ {
+  "n": 4,
+  "record_id": "v02_0162",
+  "groupe": "desaccord",
+  "annotation_montree": "A3"
+ },
+ {
+  "n": 5,
+  "record_id": "v02_0161",
+  "groupe": "desaccord",
+  "annotation_montree": "C"
+ },
+ {
+  "n": 6,
+  "record_id": "v02_0299",
+  "groupe": "accord",
+  "annotation_montree": "A3"
+ },
+ {
+  "n": 7,
+  "record_id": "v02_0254",
+  "groupe": "accord",
+  "annotation_montree": "C"
+ },
+ {
+  "n": 8,
+  "record_id": "v02_0168",
+  "groupe": "desaccord",
+  "annotation_montree": "C"
+ },
+ {
+  "n": 9,
+  "record_id": "v02_0195",
+  "groupe": "accord",
+  "annotation_montree": "A3"
+ },
+ {
+  "n": 10,
+  "record_id": "v02_0092",
+  "groupe": "desaccord",
+  "annotation_montree": "C"
+ },
+ {
+  "n": 11,
+  "record_id": "v02_0023",
+  "groupe": "desaccord",
+  "annotation_montree": "A3"
+ },
+ {
+  "n": 12,
+  "record_id": "v02_0169",
+  "groupe": "accord",
+  "annotation_montree": "C"
+ },
+ {
+  "n": 13,
+  "record_id": "v02_0147",
+  "groupe": "desaccord",
+  "annotation_montree": "C"
+ },
+ {
+  "n": 14,
+  "record_id": "v02_0107",
+  "groupe": "accord",
+  "annotation_montree": "A3"
+ },
+ {
+  "n": 15,
+  "record_id": "v02_0190",
+  "groupe": "desaccord",
+  "annotation_montree": "C"
+ },
+ {
+  "n": 16,
+  "record_id": "v02_0302",
+  "groupe": "accord",
+  "annotation_montree": "A3"
+ },
+ {
+  "n": 17,
+  "record_id": "v02_0228",
+  "groupe": "accord",
+  "annotation_montree": "C"
+ },
+ {
+  "n": 18,
+  "record_id": "v02_0284",
+  "groupe": "accord",
+  "annotation_montree": "C"
+ },
+ {
+  "n": 19,
+  "record_id": "v02_0137",
+  "groupe": "desaccord",
+  "annotation_montree": "C"
+ },
+ {
+  "n": 20,
+  "record_id": "v02_0120",
+  "groupe": "accord",
+  "annotation_montree": "A3"
+ },
+ {
+  "n": 21,
+  "record_id": "v02_0157",
+  "groupe": "desaccord",
+  "annotation_montree": "C"
+ },
+ {
+  "n": 22,
+  "record_id": "v02_0231",
+  "groupe": "desaccord",
+  "annotation_montree": "A3"
+ },
+ {
+  "n": 23,
+  "record_id": "v02_0259",
+  "groupe": "desaccord",
+  "annotation_montree": "A3"
+ },
+ {
+  "n": 24,
+  "record_id": "v02_0037",
+  "groupe": "accord",
+  "annotation_montree": "A3"
+ },
+ {
+  "n": 25,
+  "record_id": "v02_0276",
+  "groupe": "desaccord",
+  "annotation_montree": "C"
+ },
+ {
+  "n": 26,
+  "record_id": "v02_0003",
+  "groupe": "accord",
+  "annotation_montree": "A3"
+ },
+ {
+  "n": 27,
+  "record_id": "v02_0019",
+  "groupe": "accord",
+  "annotation_montree": "A3"
+ },
+ {
+  "n": 28,
+  "record_id": "v02_0248",
+  "groupe": "desaccord",
+  "annotation_montree": "A3"
+ },
+ {
+  "n": 29,
+  "record_id": "v02_0128",
+  "groupe": "accord",
+  "annotation_montree": "C"
+ },
+ {
+  "n": 30,
+  "record_id": "v02_0081",
+  "groupe": "accord",
+  "annotation_montree": "C"
+ },
+ {
+  "n": 31,
+  "record_id": "v02_0126",
+  "groupe": "accord",
+  "annotation_montree": "C"
+ },
+ {
+  "n": 32,
+  "record_id": "v02_0030",
+  "groupe": "desaccord",
+  "annotation_montree": "A3"
+ },
+ {
+  "n": 33,
+  "record_id": "v02_0097",
+  "groupe": "desaccord",
+  "annotation_montree": "A3"
+ },
+ {
+  "n": 34,
+  "record_id": "v02_0065",
+  "groupe": "desaccord",
+  "annotation_montree": "A3"
+ },
+ {
+  "n": 35,
+  "record_id": "v02_0199",
+  "groupe": "accord",
+  "annotation_montree": "A3"
+ },
+ {
+  "n": 36,
+  "record_id": "v02_0112",
+  "groupe": "accord",
+  "annotation_montree": "A3"
+ },
+ {
+  "n": 37,
+  "record_id": "v02_0212",
+  "groupe": "accord",
+  "annotation_montree": "C"
+ },
+ {
+  "n": 38,
+  "record_id": "v02_0179",
+  "groupe": "desaccord",
+  "annotation_montree": "C"
+ },
+ {
+  "n": 39,
+  "record_id": "v02_0208",
+  "groupe": "accord",
+  "annotation_montree": "C"
+ },
+ {
+  "n": 40,
+  "record_id": "v02_0113",
+  "groupe": "desaccord",
+  "annotation_montree": "C"
+ },
+ {
+  "n": 41,
+  "record_id": "v02_0111",
+  "groupe": "accord",
+  "annotation_montree": "C"
+ },
+ {
+  "n": 42,
+  "record_id": "v02_0210",
+  "groupe": "accord",
+  "annotation_montree": "C"
+ },
+ {
+  "n": 43,
+  "record_id": "v02_0264",
+  "groupe": "desaccord",
+  "annotation_montree": "C"
+ },
+ {
+  "n": 44,
+  "record_id": "v02_0175",
+  "groupe": "desaccord",
+  "annotation_montree": "A3"
+ },
+ {
+  "n": 45,
+  "record_id": "v02_0202",
+  "groupe": "desaccord",
+  "annotation_montree": "A3"
+ },
+ {
+  "n": 46,
+  "record_id": "v02_0287",
+  "groupe": "accord",
+  "annotation_montree": "A3"
+ },
+ {
+  "n": 47,
+  "record_id": "v02_0285",
+  "groupe": "accord",
+  "annotation_montree": "A3"
+ },
+ {
+  "n": 48,
+  "record_id": "v02_0007",
+  "groupe": "accord",
+  "annotation_montree": "C"
+ },
+ {
+  "n": 49,
+  "record_id": "v02_0197",
+  "groupe": "desaccord",
+  "annotation_montree": "C"
+ },
+ {
+  "n": 50,
+  "record_id": "v02_0073",
+  "groupe": "desaccord",
+  "annotation_montree": "A3"
+ },
+ {
+  "n": 51,
+  "record_id": "v02_0220",
+  "groupe": "desaccord",
+  "annotation_montree": "A3"
+ },
+ {
+  "n": 52,
+  "record_id": "v02_0215",
+  "groupe": "accord",
+  "annotation_montree": "C"
+ },
+ {
+  "n": 53,
+  "record_id": "v02_0188",
+  "groupe": "accord",
+  "annotation_montree": "C"
+ },
+ {
+  "n": 54,
+  "record_id": "v02_0031",
+  "groupe": "desaccord",
+  "annotation_montree": "A3"
+ },
+ {
+  "n": 55,
+  "record_id": "v02_0180",
+  "groupe": "desaccord",
+  "annotation_montree": "A3"
+ },
+ {
+  "n": 56,
+  "record_id": "v02_0292",
+  "groupe": "accord",
+  "annotation_montree": "A3"
+ },
+ {
+  "n": 57,
+  "record_id": "v02_0260",
+  "groupe": "desaccord",
+  "annotation_montree": "C"
+ },
+ {
+  "n": 58,
+  "record_id": "v02_0085",
+  "groupe": "accord",
+  "annotation_montree": "A3"
+ },
+ {
+  "n": 59,
+  "record_id": "v02_0101",
+  "groupe": "desaccord",
+  "annotation_montree": "A3"
+ },
+ {
+  "n": 60,
+  "record_id": "v02_0258",
+  "groupe": "desaccord",
+  "annotation_montree": "C"
+ }
+]
