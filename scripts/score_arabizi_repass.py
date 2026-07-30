@@ -4,11 +4,19 @@
 Trois verdicts indépendants, tous nécessaires :
   1. l'étape de lecture a-t-elle été faite (lecture_fr rempli) ;
   2. le repli sur `neutre` a-t-il reculé sur l'arabizi ;
-  3. la passe a-t-elle SURCORRIGÉ — les témoins non arabizi, déjà validés par
-     l'humain, ont-ils basculé sans raison.
+  3. la passe a-t-elle SURCORRIGÉ — les témoins non arabizi ont-ils basculé.
 
-Le point 3 est le plus important : un prompt qui dit « ne dis pas neutre »
-produit facilement un gain apparent en cassant tout le reste.
+Sur le point 3, une correction de conception du 2026-07-30. La première version
+refusait automatiquement la passe au-delà de 2 bascules. C'était faux : les
+témoins viennent d'items que l'humain a jugés « corrects » en relisant une
+annotation ENTIÈRE d'un coup d'œil. Cela ne vaut pas validation champ par champ.
+Trois bascules examinées se sont révélées être des corrections, pas des erreurs.
+
+Une bascule est donc désormais un SIGNAL À ARBITRER, pas un verdict. Le script
+les extrait avec leur traduction pour relecture humaine, et ne conclut que sur
+ce qui est réellement mesurable sans ambiguïté : bascules vers le négatif depuis
+un positif, et perte d'items négatifs — deux signes de dérive qui, eux, ne
+s'expliquent pas par une correction légitime.
 """
 import json, sys
 from collections import Counter
@@ -45,14 +53,21 @@ def main() -> int:
     print(f'   sans aspect       : 56% -> {noasp:.0%}')
     print(f'   repartition       : {dict(Counter(new[i]["sentiment"]["label"] for i in a))}')
 
+
     t = [i for i in tem if i in new]
     flip = [(i, ref[i]['sentiment'], new[i]['sentiment']['label'])
             for i in t if new[i]['sentiment']['label'] != ref[i]['sentiment']]
     nflip = [x for x in flip if x[1] == 'neutre']
-    print(f'\n3. SURCORRECTION     : {len(flip)}/{len(t)} temoins ont change')
-    print(f'   dont neutres bascules : {len(nflip)}/{sum(1 for i in t if ref[i]["sentiment"] == "neutre")}')
-    for x in flip[:8]:
-        print(f'     {x[0]} : {x[1]} -> {x[2]}')
+    # Derives non explicables par une correction legitime.
+    pos_perdus = [x for x in flip if x[1] == 'positif' and x[2] == 'negatif']
+    neg_perdus = [x for x in flip if x[1] == 'negatif']
+    print(f'\n3. TEMOINS           : {len(t) - len(flip)}/{len(t)} inchanges')
+    print(f'   bascules a arbitrer     : {len(flip)}  (dont {len(nflip)} depuis neutre)')
+    print(f'   DERIVE positif->negatif : {len(pos_perdus)}   <- signe de surcorrection')
+    print(f'   DERIVE negatifs perdus  : {len(neg_perdus)}   <- signe de surcorrection')
+    for x in flip:
+        print(f'     A ARBITRER  {x[0]} : {x[1]} -> {x[2]}')
+        print(f'        lecture : {str(new[x[0]].get("lecture_fr", ""))[:100]}')
 
     print('\n4. CONTROLE DUR (verite humaine)')
     hard = 0
@@ -73,13 +88,16 @@ def main() -> int:
     print('\n=== VERDICT ===')
     ok_read = not miss
     ok_gain = nz <= before - 0.10
-    ok_stable = len(nflip) <= 2
+    ok_stable = not pos_perdus and not neg_perdus
     ok_hard = hard >= 2
     for label, v in [('etape de lecture faite', ok_read), ('repli reduit d au moins 10 pts', ok_gain),
-                     ('pas de surcorrection des temoins', ok_stable), ('controle dur passe', ok_hard)]:
+                     ('aucune derive positif->negatif ni negatif perdu', ok_stable), ('controle dur passe', ok_hard)]:
         print(f'  [{"OK " if v else "NON"}] {label}')
     if all((ok_read, ok_gain, ok_stable, ok_hard)):
-        print('\nRepasse ACCEPTEE : les 41 items arabizi peuvent remplacer les anciens.')
+        print('\nRepasse ACCEPTABLE sur les criteres mesurables.')
+        if flip:
+            print(f'ARBITRAGE HUMAIN REQUIS sur les {len(flip)} bascules listees en 3')
+            print('avant integration : le script ne peut pas trancher a ta place.')
         return 0
     print('\nRepasse REFUSEE : ne pas integrer, corriger la consigne et relancer.')
     return 2
