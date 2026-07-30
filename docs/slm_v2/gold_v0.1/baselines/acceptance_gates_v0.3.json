@@ -1,0 +1,142 @@
+{
+  "version": "0.3.0",
+  "measurement_scope": "end_to_end",
+  "purpose": "Autoriser ou refuser la generation du pilote d'entrainement SLM V2.",
+  "calibration_principle": "Aucune porte ne depasse l accord inter-annotateurs MESURE sur le meme contrat. Plafonds A3 vs C apres migration V0.3. Marge ~10 a 15 pourcent sous le plafond.",
+  "status": "MESURE — plafonds A3 vs C, 305 paires, contrat V0.3 (2026-07-30)",
+  "evaluation_policy": {
+    "missing_or_invalid_output": "scored_as_wrong",
+    "maximum_controlled_retry": 1,
+    "test_split_policy": "locked_after_baseline; no prompt or ontology tuning from test errors",
+    "gold_training_policy": "gold_dev and gold_test are excluded from training",
+    "derived_fields_not_scored": [
+      "actionability.queue",
+      "actionability.priority"
+    ],
+    "aspect_scoring_level": "family+sentiment; l'attribut est un detail non evalue",
+    "neutral_aspects": "interdits par le schema V0.2, donc hors scoring"
+  },
+  "gates": {
+    "valid_output_rate": {
+      "operator": ">=",
+      "threshold": 1.0,
+      "critical": true,
+      "ceiling_observed": 1.0
+    },
+    "evidence_grounding_rate": {
+      "operator": ">=",
+      "threshold": 1.0,
+      "critical": true,
+      "ceiling_observed": 1.0
+    },
+    "is_exploitable.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.78,
+      "critical": true,
+      "ceiling_observed": 0.879,
+      "ceiling_source": "A3 vs C, contrat V0.3, 305 paires"
+    },
+    "business_relevance.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.85,
+      "critical": true,
+      "ceiling_observed": 0.945,
+      "ceiling_source": "A3 vs C, contrat V0.3, 305 paires"
+    },
+    "sentiment.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.75,
+      "critical": true,
+      "ceiling_observed": 0.851,
+      "ceiling_source": "A3 vs C, contrat V0.3, 305 paires"
+    },
+    "language.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.78,
+      "critical": false,
+      "ceiling_observed": 0.881,
+      "ceiling_source": "A3 vs C, contrat V0.3, 305 paires"
+    },
+    "intents.micro_f1": {
+      "operator": ">=",
+      "threshold": 0.68,
+      "critical": true,
+      "ceiling_observed": 0.776,
+      "ceiling_source": "A3 vs C, contrat V0.3, 305 paires"
+    },
+    "aspects_family_sentiment.micro_f1": {
+      "operator": ">=",
+      "threshold": 0.62,
+      "critical": true,
+      "ceiling_observed": 0.71,
+      "ceiling_source": "A3 vs C, contrat V0.3, 305 paires"
+    },
+    "entities_type_name.micro_f1": {
+      "operator": ">=",
+      "threshold": 0.55,
+      "critical": false,
+      "ceiling_observed": 0.627,
+      "ceiling_source": "A3 vs C, campagne V0.2, 304 paires"
+    },
+    "actionability.actionable.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.85,
+      "critical": false,
+      "ceiling_observed": 0.956,
+      "ceiling_source": "A3 vs C, contrat V0.3, 305 paires"
+    },
+    "alert_present.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.8,
+      "critical": true,
+      "ceiling_observed": 0.906,
+      "ceiling_source": "A3 vs C, contrat V0.3, 305 paires",
+      "note": "Y a-t-il une alerte, oui ou non. Champ fiable : 98,7 pourcent d'accord."
+    },
+    "alerts_type.micro_f1": {
+      "operator": ">=",
+      "threshold": 0.68,
+      "critical": true,
+      "ceiling_observed": 0.783,
+      "ceiling_source": "A3 vs C, contrat V0.3, 305 paires"
+    },
+    "alerts_type_severity.micro_f1": {
+      "operator": ">=",
+      "threshold": 0.68,
+      "critical": true,
+      "ceiling_observed": 0.783,
+      "ceiling_source": "A3 vs C, contrat V0.3",
+      "note": "Redevenue CRITIQUE en V0.3 : l echelle a 3 niveaux atteint le meme accord que le type seul, la severite ne coute plus rien."
+    },
+    "actionability.priority.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.8,
+      "critical": false,
+      "ceiling_observed": 0.907,
+      "ceiling_source": "A3 vs C, contrat V0.3, champ derive",
+      "note": "Derive. Gain de +0,201 apporte par l echelle de severite a 3 niveaux."
+    },
+    "requires_parent_context.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.45,
+      "critical": false,
+      "ceiling_observed": 0.53,
+      "ceiling_source": "A3 vs C, contrat V0.3, 305 paires",
+      "note": "Champ neuf, definition encore floue. A resserrer en V0.3."
+    },
+    "author_role.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.85,
+      "critical": false,
+      "ceiling_observed": 1.0,
+      "ceiling_source": "A3 vs C, contrat V0.3, 305 paires"
+    }
+  },
+  "blocking_conditions": [
+    "Plafonds issus d un accord machine-machine (A3 et C sont deux LLM). Validation humaine requise avant production.",
+    "22 a 24 alertes positives seulement, sous la cible de 30. La porte alerte reste fragile statistiquement.",
+    "requires_parent_context plafonne a 0,530 et n est pas derivable. Correctif reel : capturer le texte du post parent a la collecte.",
+    "Le scope secteur n est toujours pas teste.",
+    "La distinction incident rapporte / accusation circulante n est pas encore dans le contrat."
+  ]
+}

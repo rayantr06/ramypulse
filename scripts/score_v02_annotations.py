@@ -23,7 +23,7 @@ from jsonschema import Draft202012Validator
 
 ROOT = Path(__file__).resolve().parents[1]
 CAMPAIGN = ROOT / 'data/processed/slm_v2_gold/campaign_v0.2'
-SCHEMA_PATH = ROOT / 'docs/slm_v2/business_comment_annotation_v0.2.schema.json'
+SCHEMA_PATH = ROOT / 'docs/slm_v2/business_comment_annotation_v0.3.schema.json'
 
 QUEUE_BY_FAMILY = {
     'produit_service': 'produit', 'prix_valeur': 'pricing',
@@ -36,8 +36,9 @@ QUEUE_BY_FAMILY = {
     'infrastructure_service_public': 'service_public',
 }
 FAMILY_ATTRS: dict[str, set] = {}   # rempli au chargement du schéma
+SCHEMA_VERSION = ''                 # lu depuis le schéma, jamais codé en dur
 
-SEV = {'faible': 1, 'moyenne': 2, 'elevee': 3, 'critique': 4}
+SEV = {'faible': 1, 'moyenne': 2, 'elevee': 3}   # V0.3 : `critique` n'est plus annote
 SEV_INV = {v: k for k, v in SEV.items()}
 NEG_ORDER = {'negatif': 0, 'mixte': 1, 'positif': 2}
 INT_ORDER = {'forte': 0, 'moyenne': 1, 'faible': 2}
@@ -93,7 +94,7 @@ def normalise(row: dict, text: str, errors: list, repairs: list) -> dict:
     notes sont des métadonnées de campagne et doivent être retirés avant validation."""
     rid = row.get('record_id', '?')
     out = {k: v for k, v in row.items() if k not in ('annotator', 'notes', 'record_id')}
-    out['schema_version'] = '0.2.0'
+    out['schema_version'] = SCHEMA_VERSION
     sent = dict(out.get('sentiment') or {})
     sent['evidence'] = resolve_offsets(sent.get('evidence') or [], text, errors, rid, 'sentiment')
     out['sentiment'] = sent
@@ -102,6 +103,10 @@ def normalise(row: dict, text: str, errors: list, repairs: list) -> dict:
         for it in out.get(key) or []:
             it = dict(it)
             it['evidence'] = resolve_offsets(it.get('evidence') or [], text, errors, rid, key)
+            # V0.3 : `critique` retire de l'echelle annotee, migre vers `elevee`.
+            if key == 'alerts' and it.get('severity') == 'critique':
+                repairs.append((rid, 'severity', 'critique -> elevee (V0.3)'))
+                it['severity'] = 'elevee'
             # `attribute` est optionnel et non évalué en V0.2 : un attribut hors de sa
             # famille est retiré plutôt que de faire échouer la ligne entière. La
             # réparation est journalisée, jamais silencieuse.
@@ -171,8 +176,9 @@ def micro_f1(pairs):
     return (2 * p * r / (p + r) if p + r else 1.0), p, r
 
 
-SIMULATED = {'business_relevance': 0.942, 'actionable': 0.917, 'priority': 1.000,
-             'queue': 0.675, 'aspects': 0.640, 'alerts': 0.667, 'sentiment': 0.788}
+# Plafonds mesures A3 vs C en V0.2, pour comparer la V0.3 a la mesure precedente.
+SIMULATED = {'business_relevance': 0.950, 'actionable': 0.956, 'priority': 0.706,
+             'queue': 0.840, 'aspects': 0.711, 'alerts': 0.304, 'sentiment': 0.855}
 
 
 def main() -> int:
@@ -181,7 +187,10 @@ def main() -> int:
                     help='dossier sous campaign_v0.2 (repetable)')
     args = ap.parse_args()
 
+    global SCHEMA_VERSION
     schema = json.loads(SCHEMA_PATH.read_text(encoding='utf-8'))
+    SCHEMA_VERSION = schema['properties']['schema_version']['const']
+    print(f'contrat : {SCHEMA_PATH.name} (schema_version {SCHEMA_VERSION})')
     for rule in schema['$defs']['aspect'].get('allOf', []):
         fam = rule.get('if', {}).get('properties', {}).get('family', {}).get('const')
         att = rule.get('then', {}).get('properties', {}).get('attribute', {}).get('enum')
