@@ -1,0 +1,137 @@
+{
+  "notation_version": "ramypulse_reasoning_notation_v0.1",
+  "status": "pilot",
+  "design_basis": {
+    "model_card": "https://huggingface.co/PleIAs/Baguettotron",
+    "tokenizer_config": "https://huggingface.co/PleIAs/Baguettotron/blob/main/tokenizer_config.json",
+    "dataset": "https://huggingface.co/datasets/PleIAs/SYNTH",
+    "adaptation_rule": "independent_minimal_adaptation"
+  },
+  "strategy": {
+    "description": "Reuse tokens already present in the base tokenizer. Do not resize the vocabulary during the first SFT pilots.",
+    "canonical_trace_schema": "business_decision_trace_v0.1.schema.json",
+    "student_trace_style": "dense_short_non_verbal",
+    "confidence_policy": "Confidence and verification are computed by validators and critics, not self-reported by the student.",
+    "entropy_policy": "Simulated entropy markers are forbidden for deterministic business annotation."
+  },
+  "wrappers": {
+    "open": "<think>",
+    "close": "</think>"
+  },
+  "active_markers": [
+    {
+      "symbol": "→",
+      "name": "supports_decision",
+      "meaning": "The evidence or prior decision on the left supports the decision on the right.",
+      "allowed_uses": [
+        "scan_to_status",
+        "evidence_to_entity",
+        "evidence_to_sentiment",
+        "evidence_to_intent",
+        "evidence_to_aspect",
+        "evidence_to_alert",
+        "decision_to_actionability"
+      ],
+      "maximum_per_trace": 12
+    },
+    {
+      "symbol": "∴",
+      "name": "stable_summary",
+      "meaning": "Introduces the final stable decision summary immediately before the final JSON.",
+      "allowed_uses": [
+        "final_decision_summary"
+      ],
+      "maximum_per_trace": 1
+    }
+  ],
+  "deferred_markers": [
+    {
+      "symbol": "↺",
+      "reason": "Backtracking is rare in the target task and would require dedicated trajectories."
+    },
+    {
+      "symbol": "※",
+      "reason": "Insight emphasis has no measurable business annotation function."
+    },
+    {
+      "symbol": "?maybe?",
+      "reason": "Free speculation is replaced by a structured uncertainty object."
+    },
+    {
+      "symbol": "●",
+      "reason": "Confidence is produced by external calibration and agreement signals."
+    },
+    {
+      "symbol": "◐",
+      "reason": "Confidence is produced by external calibration and agreement signals."
+    },
+    {
+      "symbol": "○",
+      "reason": "Confidence is produced by external calibration and agreement signals."
+    },
+    {
+      "symbol": "⚠",
+      "reason": "Alerts already use explicit typed fields and severities."
+    },
+    {
+      "symbol": "☐",
+      "reason": "The student must not self-certify validation state."
+    },
+    {
+      "symbol": "☑",
+      "reason": "The student must not self-certify validation state."
+    },
+    {
+      "symbol": "✓",
+      "reason": "Validation is added by deterministic checks after generation."
+    },
+    {
+      "symbol": "≈",
+      "reason": "Approximation is not appropriate for exact labels and evidence offsets."
+    },
+    {
+      "symbol": "⟨H≈X.X⟩",
+      "reason": "Simulated entropy is unnecessary and costly for deterministic extraction."
+    }
+  ],
+  "tokenizer_measurements": {
+    "Qwen3.5-0.8B": {
+      "<think>": 1,
+      "</think>": 1,
+      "→": 1,
+      "∴": 2
+    },
+    "Qwen3-0.6B": {
+      "<think>": 1,
+      "</think>": 1,
+      "→": 1,
+      "∴": 1
+    }
+  },
+  "activation_gates_for_any_new_marker": [
+    "The marker has one unambiguous semantic function.",
+    "The marker costs at most two tokens in every finalist tokenizer.",
+    "The training corpus contains enough clean and diverse occurrences to evaluate it separately.",
+    "A held-out marker-specific slice exists.",
+    "The marker improves quality, compactness, or calibration over a word-based baseline.",
+    "No existing active marker or explicit field provides the same function."
+  ],
+  "compiler_order": [
+    "scan",
+    "evidence_map",
+    "entity_decisions",
+    "sentiment_decision",
+    "intent_decisions",
+    "aspect_decisions",
+    "alert_decisions",
+    "stable_summary"
+  ],
+  "forbidden_in_student_trace": [
+    "unsupported_external_knowledge",
+    "self_reported_validation",
+    "free_form_confidence",
+    "simulated_entropy",
+    "facts_absent_from_text_context_or_annotation",
+    "markdown_explanation_after_final_json"
+  ]
+}

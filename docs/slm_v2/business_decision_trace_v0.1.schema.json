@@ -1,0 +1,889 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ramypulse.ai/schemas/business_decision_trace_v0.1.schema.json",
+  "title": "RamyPulse Business Decision Trace V0.1",
+  "description": "Canonical, auditable decision trace associated with a RamyPulse business annotation. The compact student trace is compiled from this object.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "trace_version",
+    "complexity",
+    "scan",
+    "evidence_map",
+    "decisions",
+    "uncertainties",
+    "provenance",
+    "validation"
+  ],
+  "properties": {
+    "trace_version": {
+      "const": "business_decision_trace_v0.1"
+    },
+    "complexity": {
+      "$ref": "#/$defs/complexity"
+    },
+    "scan": {
+      "$ref": "#/$defs/scan"
+    },
+    "evidence_map": {
+      "type": "array",
+      "maxItems": 12,
+      "items": {
+        "$ref": "#/$defs/evidence"
+      }
+    },
+    "decisions": {
+      "$ref": "#/$defs/decisions"
+    },
+    "uncertainties": {
+      "type": "array",
+      "maxItems": 5,
+      "items": {
+        "$ref": "#/$defs/uncertainty"
+      }
+    },
+    "provenance": {
+      "$ref": "#/$defs/provenance"
+    },
+    "validation": {
+      "$ref": "#/$defs/validation"
+    }
+  },
+  "$defs": {
+    "complexity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "level",
+        "score",
+        "factors",
+        "max_trace_tokens",
+        "observed_trace_tokens"
+      ],
+      "properties": {
+        "level": {
+          "type": "string",
+          "enum": [
+            "simple",
+            "medium",
+            "complex"
+          ]
+        },
+        "score": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 12
+        },
+        "factors": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "non_exploitable",
+              "code_switching",
+              "multi_script",
+              "multiple_entities",
+              "multiple_targets",
+              "multiple_aspects",
+              "mixed_sentiment",
+              "implicit_aspect",
+              "negation_scope",
+              "sarcasm",
+              "comparison",
+              "alert",
+              "high_severity_alert",
+              "unresolved_ambiguity"
+            ]
+          }
+        },
+        "max_trace_tokens": {
+          "type": "integer",
+          "enum": [
+            64,
+            128,
+            192
+          ]
+        },
+        "observed_trace_tokens": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 512
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "level": {
+                "const": "simple"
+              }
+            },
+            "required": [
+              "level"
+            ]
+          },
+          "then": {
+            "properties": {
+              "max_trace_tokens": {
+                "const": 64
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "level": {
+                "const": "medium"
+              }
+            },
+            "required": [
+              "level"
+            ]
+          },
+          "then": {
+            "properties": {
+              "max_trace_tokens": {
+                "const": 128
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "level": {
+                "const": "complex"
+              }
+            },
+            "required": [
+              "level"
+            ]
+          },
+          "then": {
+            "properties": {
+              "max_trace_tokens": {
+                "const": 192
+              }
+            }
+          }
+        }
+      ]
+    },
+    "scan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "is_exploitable",
+        "non_exploitable_reason",
+        "business_relevance",
+        "language_dominant",
+        "code_switching",
+        "scripts",
+        "quality_flags"
+      ],
+      "properties": {
+        "is_exploitable": {
+          "type": "boolean"
+        },
+        "non_exploitable_reason": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            null,
+            "hors_sujet",
+            "spam",
+            "texte_insuffisant",
+            "incomprehensible",
+            "langue_non_supportee",
+            "bruit_technique",
+            "ambiguite_majeure"
+          ]
+        },
+        "business_relevance": {
+          "type": "string",
+          "enum": [
+            "directe",
+            "indirecte",
+            "aucune"
+          ]
+        },
+        "language_dominant": {
+          "type": "string",
+          "enum": [
+            "darija_arabe",
+            "darija_arabizi",
+            "arabe_msa",
+            "francais",
+            "anglais",
+            "tamazight_latin",
+            "tamazight_tifinagh",
+            "mixte",
+            "autre"
+          ]
+        },
+        "code_switching": {
+          "type": "boolean"
+        },
+        "scripts": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "arabe",
+              "latin",
+              "tifinagh",
+              "chiffres",
+              "autre"
+            ]
+          }
+        },
+        "quality_flags": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "texte_tres_court",
+              "bruit",
+              "orthographe_non_standard",
+              "ocr",
+              "troncature",
+              "negation",
+              "sarcasme",
+              "ambiguite"
+            ]
+          }
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "text",
+        "start",
+        "end",
+        "roles"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^ev_[0-9]+$"
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1
+        },
+        "start": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "end": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "roles": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "relevance",
+              "language",
+              "entity",
+              "sentiment",
+              "intent",
+              "aspect",
+              "alert",
+              "actionability"
+            ]
+          }
+        }
+      }
+    },
+    "evidence_ids": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^ev_[0-9]+$"
+      }
+    },
+    "decisions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "entities",
+        "overall_sentiment",
+        "intents",
+        "aspects",
+        "alerts",
+        "actionability"
+      ],
+      "properties": {
+        "entities": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/entity_decision"
+          }
+        },
+        "overall_sentiment": {
+          "$ref": "#/$defs/sentiment_decision"
+        },
+        "intents": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/intent_decision"
+          }
+        },
+        "aspects": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/aspect_decision"
+          }
+        },
+        "alerts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/alert_decision"
+          }
+        },
+        "actionability": {
+          "$ref": "#/$defs/actionability_decision"
+        }
+      }
+    },
+    "entity_decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "entity_id",
+        "type",
+        "source",
+        "evidence_ids",
+        "rule"
+      ],
+      "properties": {
+        "entity_id": {
+          "type": "string",
+          "pattern": "^ent_[0-9]+$"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "marque",
+            "organisation",
+            "produit",
+            "service",
+            "personne",
+            "lieu",
+            "concurrent",
+            "campagne",
+            "politique_publique",
+            "autre"
+          ]
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "texte",
+            "contexte"
+          ]
+        },
+        "evidence_ids": {
+          "$ref": "#/$defs/evidence_ids"
+        },
+        "rule": {
+          "type": "string",
+          "enum": [
+            "mention_explicite",
+            "normalisation",
+            "resolution_alias",
+            "contexte_fourni"
+          ]
+        }
+      }
+    },
+    "sentiment_decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "label",
+        "intensity",
+        "emotion",
+        "sarcasm",
+        "evidence_ids",
+        "rule"
+      ],
+      "properties": {
+        "label": {
+          "$ref": "#/$defs/sentiment_label"
+        },
+        "intensity": {
+          "$ref": "#/$defs/intensity"
+        },
+        "emotion": {
+          "$ref": "#/$defs/emotion"
+        },
+        "sarcasm": {
+          "type": "boolean"
+        },
+        "evidence_ids": {
+          "$ref": "#/$defs/evidence_ids"
+        },
+        "rule": {
+          "type": "string",
+          "enum": [
+            "polarite_explicite",
+            "polarites_mixtes",
+            "neutre_sans_opinion",
+            "negation",
+            "sarcasme_inverse",
+            "inference_contextuelle"
+          ]
+        }
+      }
+    },
+    "intent_decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "label",
+        "mode",
+        "evidence_ids"
+      ],
+      "properties": {
+        "label": {
+          "$ref": "#/$defs/intent"
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "explicite",
+            "implicite"
+          ]
+        },
+        "evidence_ids": {
+          "$ref": "#/$defs/evidence_ids"
+        }
+      }
+    },
+    "aspect_decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "family",
+        "attribute",
+        "target_entity_id",
+        "sentiment",
+        "intensity",
+        "implicit",
+        "evidence_ids",
+        "rule"
+      ],
+      "properties": {
+        "family": {
+          "$ref": "#/$defs/aspect_family"
+        },
+        "attribute": {
+          "type": "string",
+          "minLength": 1
+        },
+        "target_entity_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^ent_[0-9]+$"
+        },
+        "sentiment": {
+          "$ref": "#/$defs/sentiment_label"
+        },
+        "intensity": {
+          "$ref": "#/$defs/intensity"
+        },
+        "implicit": {
+          "type": "boolean"
+        },
+        "evidence_ids": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/evidence_ids"
+            },
+            {
+              "minItems": 1
+            }
+          ]
+        },
+        "rule": {
+          "type": "string",
+          "enum": [
+            "mention_directe",
+            "negation",
+            "comparaison",
+            "sarcasme_inverse",
+            "relation_cause_effet",
+            "inference_contextuelle",
+            "polarite_mixte"
+          ]
+        }
+      }
+    },
+    "alert_decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "severity",
+        "target_entity_id",
+        "evidence_ids",
+        "trigger"
+      ],
+      "properties": {
+        "type": {
+          "$ref": "#/$defs/alert_type"
+        },
+        "severity": {
+          "$ref": "#/$defs/priority"
+        },
+        "target_entity_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^ent_[0-9]+$"
+        },
+        "evidence_ids": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/evidence_ids"
+            },
+            {
+              "minItems": 1
+            }
+          ]
+        },
+        "trigger": {
+          "type": "string",
+          "enum": [
+            "incident_explicite",
+            "accusation_explicite",
+            "risque_signale",
+            "repetition_virale",
+            "inference_prudente"
+          ]
+        }
+      }
+    },
+    "actionability_decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "actionable",
+        "queue",
+        "priority",
+        "evidence_ids",
+        "rule"
+      ],
+      "properties": {
+        "actionable": {
+          "type": "boolean"
+        },
+        "queue": {
+          "$ref": "#/$defs/action_queue"
+        },
+        "priority": {
+          "$ref": "#/$defs/priority"
+        },
+        "evidence_ids": {
+          "$ref": "#/$defs/evidence_ids"
+        },
+        "rule": {
+          "type": "string",
+          "enum": [
+            "aucune_action",
+            "aspect_prioritaire",
+            "intention_explicite",
+            "alerte_prioritaire",
+            "impact_business"
+          ]
+        }
+      }
+    },
+    "uncertainty": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "field",
+        "issue",
+        "alternatives",
+        "resolved_as",
+        "confidence",
+        "status"
+      ],
+      "properties": {
+        "field": {
+          "type": "string",
+          "enum": [
+            "language",
+            "entity",
+            "sentiment",
+            "intent",
+            "aspect",
+            "alert",
+            "actionability"
+          ]
+        },
+        "issue": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 240
+        },
+        "alternatives": {
+          "type": "array",
+          "maxItems": 3,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "resolved_as": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "confidence": {
+          "type": "string",
+          "enum": [
+            "faible",
+            "moyenne",
+            "forte"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "resolved",
+            "unresolved"
+          ]
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "method",
+        "teacher_model",
+        "critic_model",
+        "prompt_version",
+        "text_sha256",
+        "annotation_sha256",
+        "generated_at"
+      ],
+      "properties": {
+        "method": {
+          "type": "string",
+          "enum": [
+            "deterministic_projection",
+            "teacher_backreasoned",
+            "hybrid"
+          ]
+        },
+        "teacher_model": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "critic_model": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "prompt_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "text_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "annotation_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "generated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_valid",
+        "all_evidence_exact",
+        "trace_annotation_consistent",
+        "no_new_labels",
+        "no_unsupported_facts",
+        "within_token_budget",
+        "critic_passed"
+      ],
+      "properties": {
+        "schema_valid": {
+          "type": "boolean"
+        },
+        "all_evidence_exact": {
+          "type": "boolean"
+        },
+        "trace_annotation_consistent": {
+          "type": "boolean"
+        },
+        "no_new_labels": {
+          "type": "boolean"
+        },
+        "no_unsupported_facts": {
+          "type": "boolean"
+        },
+        "within_token_budget": {
+          "type": "boolean"
+        },
+        "critic_passed": {
+          "type": "boolean"
+        }
+      }
+    },
+    "sentiment_label": {
+      "type": "string",
+      "enum": [
+        "negatif",
+        "neutre",
+        "positif",
+        "mixte"
+      ]
+    },
+    "intensity": {
+      "type": "string",
+      "enum": [
+        "faible",
+        "moyenne",
+        "forte"
+      ]
+    },
+    "emotion": {
+      "type": "string",
+      "enum": [
+        "satisfaction",
+        "admiration",
+        "joie",
+        "confiance",
+        "deception",
+        "frustration",
+        "colere",
+        "inquietude",
+        "peur",
+        "tristesse",
+        "degout",
+        "surprise",
+        "aucune",
+        "autre"
+      ]
+    },
+    "intent": {
+      "type": "string",
+      "enum": [
+        "avis",
+        "plainte",
+        "eloge",
+        "question",
+        "demande_information",
+        "demande_aide",
+        "suggestion",
+        "recommandation",
+        "comparaison",
+        "intention_achat",
+        "partage_experience",
+        "signalement_incident",
+        "appel_action",
+        "promotion_spam",
+        "tag_mention",
+        "autre"
+      ]
+    },
+    "aspect_family": {
+      "type": "string",
+      "enum": [
+        "produit_service",
+        "prix_valeur",
+        "disponibilite_acces",
+        "experience_client",
+        "service_client_sav",
+        "livraison_logistique",
+        "digital_technologie",
+        "communication_information",
+        "confiance_reputation",
+        "operations_processus",
+        "emploi_management",
+        "securite_conformite",
+        "ethique_impact",
+        "marche_innovation",
+        "infrastructure_service_public"
+      ]
+    },
+    "alert_type": {
+      "type": "string",
+      "enum": [
+        "qualite_produit",
+        "securite_sante",
+        "fraude_arnaque",
+        "juridique_conformite",
+        "rupture_service",
+        "rupture_stock",
+        "reputation_virale",
+        "donnees_confidentialite",
+        "harcelement_discrimination"
+      ]
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "faible",
+        "moyenne",
+        "elevee",
+        "critique"
+      ]
+    },
+    "action_queue": {
+      "type": "string",
+      "enum": [
+        "produit",
+        "pricing",
+        "service_client",
+        "ventes",
+        "operations",
+        "logistique",
+        "digital",
+        "communication",
+        "rh",
+        "juridique_conformite",
+        "securite_qualite",
+        "direction",
+        "aucune"
+      ]
+    }
+  }
+}

@@ -1,0 +1,99 @@
+{
+  "version": "0.2.0",
+  "measurement_scope": "end_to_end",
+  "purpose": "Autoriser ou refuser la generation du pilote d'entrainement SLM V2.",
+  "calibration_principle": "Aucune porte ne depasse l'accord inter-annotateurs mesure sur le meme contrat. Un modele ne peut pas depasser durablement la coherence de sa propre reference. Plafond mesure A/B le 2026-07-30, marge de securite ~10 a 15 pourcent sous le plafond.",
+  "status": "PROVISOIRE — a recalculer sur les annotations V0.2 avant tout gel",
+  "evaluation_policy": {
+    "missing_or_invalid_output": "scored_as_wrong",
+    "maximum_controlled_retry": 1,
+    "test_split_policy": "locked_after_baseline; no prompt or ontology tuning from test errors",
+    "gold_training_policy": "gold_dev and gold_test are excluded from training",
+    "derived_fields_not_scored": [
+      "actionability.queue",
+      "actionability.priority"
+    ],
+    "aspect_scoring_level": "family+sentiment; l'attribut est un detail non evalue",
+    "neutral_aspects": "interdits par le schema V0.2, donc hors scoring"
+  },
+  "gates": {
+    "valid_output_rate": {
+      "operator": ">=",
+      "threshold": 1.0,
+      "critical": true,
+      "ceiling_observed": 1.0
+    },
+    "evidence_grounding_rate": {
+      "operator": ">=",
+      "threshold": 1.0,
+      "critical": true,
+      "ceiling_observed": 1.0
+    },
+    "is_exploitable.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.85,
+      "critical": true,
+      "ceiling_observed": 0.98
+    },
+    "business_relevance.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.8,
+      "critical": true,
+      "ceiling_observed": 0.97
+    },
+    "sentiment.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.7,
+      "critical": true,
+      "ceiling_observed": 0.788
+    },
+    "language.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.6,
+      "critical": false,
+      "ceiling_observed": 0.66
+    },
+    "intents.micro_f1": {
+      "operator": ">=",
+      "threshold": 0.65,
+      "critical": true,
+      "ceiling_observed": 0.741
+    },
+    "aspects_family_sentiment.micro_f1": {
+      "operator": ">=",
+      "threshold": 0.55,
+      "critical": true,
+      "ceiling_observed": 0.64
+    },
+    "alerts_type_severity.precision": {
+      "operator": ">=",
+      "threshold": 0.75,
+      "critical": true,
+      "ceiling_observed": 0.6,
+      "note": "Plafond sous le seuil : 5 alertes seulement apres R1. Porte non evaluable en l'etat."
+    },
+    "alerts_type_severity.recall": {
+      "operator": ">=",
+      "threshold": 0.55,
+      "critical": true,
+      "ceiling_observed": 0.75
+    },
+    "entities_type_name.micro_f1": {
+      "operator": ">=",
+      "threshold": 0.55,
+      "critical": false,
+      "ceiling_observed": 0.627
+    },
+    "actionability.actionable.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.8,
+      "critical": false,
+      "ceiling_observed": 0.97
+    }
+  },
+  "blocking_conditions": [
+    "Les portes d'alerte ne sont pas evaluables tant que le gold ne contient pas au moins 30 alertes positives.",
+    "Toutes les valeurs ceiling_observed viennent d'un accord machine-machine (A et B sont deux LLM). Une mesure humaine reste requise avant mise en production.",
+    "Recalculer l'integralite de ce fichier apres la campagne d'annotation V0.2."
+  ]
+}

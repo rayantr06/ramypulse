@@ -1,0 +1,103 @@
+{
+  "dataset_version": "gold_candidate_v0.1",
+  "record_count": 100,
+  "sha256": "fae878f5ec1f36db412f1bd5bf7837d63ff650e14cfd049ade7f96d5a6d8fed9",
+  "review_status": "single_reviewer_gold_candidate",
+  "review_decisions": {
+    "modify": 63,
+    "accept": 37
+  },
+  "sources": {
+    "ramypulse_v1_facebook": 36,
+    "tenant_demo_expo": 5,
+    "massinissa_algerian_corpus": 59
+  },
+  "topics": {
+    "fmcg_beverages": 41,
+    "business": 11,
+    "economy": 10,
+    "health": 10,
+    "education": 8,
+    "media": 1,
+    "social": 9,
+    "technologie": 3,
+    "tourism": 7
+  },
+  "is_exploitable": {
+    "true": 95,
+    "false": 5
+  },
+  "business_relevance": {
+    "directe": 68,
+    "aucune": 5,
+    "indirecte": 27
+  },
+  "sentiment": {
+    "negatif": 46,
+    "neutre": 31,
+    "positif": 21,
+    "mixte": 2
+  },
+  "language_dominant": {
+    "darija_arabe": 47,
+    "arabe_msa": 35,
+    "darija_arabizi": 2,
+    "francais": 11,
+    "mixte": 4,
+    "anglais": 1
+  },
+  "intents": {
+    "signalement_incident": 9,
+    "plainte": 28,
+    "avis": 48,
+    "partage_experience": 14,
+    "question": 19,
+    "demande_aide": 7,
+    "demande_information": 8,
+    "eloge": 19,
+    "autre": 2,
+    "suggestion": 14,
+    "recommandation": 3,
+    "appel_action": 3,
+    "comparaison": 3
+  },
+  "aspect_families": {
+    "securite_conformite": 5,
+    "produit_service": 14,
+    "disponibilite_acces": 5,
+    "communication_information": 8,
+    "operations_processus": 7,
+    "digital_technologie": 7,
+    "confiance_reputation": 5,
+    "experience_client": 4,
+    "ethique_impact": 5,
+    "prix_valeur": 10,
+    "marche_innovation": 3,
+    "service_client_sav": 3,
+    "emploi_management": 8,
+    "infrastructure_service_public": 16,
+    "livraison_logistique": 1
+  },
+  "alerts": {
+    "securite_sante": 4,
+    "rupture_stock": 3,
+    "rupture_service": 1,
+    "reputation_virale": 1,
+    "juridique_conformite": 1
+  },
+  "text_length": {
+    "min": 7,
+    "median": 52.5,
+    "max": 2101
+  },
+  "evidence": {
+    "total": 215,
+    "records_without_evidence": 5
+  },
+  "validation": {
+    "json_schema_pass": 100,
+    "semantic_span_pass": 100,
+    "target_reference_pass": 100
+  },
+  "generated_at": "2026-07-29T20:50:42.794207+00:00"
+}
