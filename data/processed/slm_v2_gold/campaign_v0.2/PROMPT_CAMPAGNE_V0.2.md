@@ -122,7 +122,21 @@ Règles de sortie :
 6. Plus de 3 intentions, 8 aspects, 5 alertes, 10 entités → rejet.
 7. Une valeur absente de `VOCABULAIRES_FERMES_V0.2.md` → rejet.
 
-## 6. Méthode
+## 6. Méthode — lis cette section avant de commencer
+
+**Tu dois lire et juger chaque commentaire toi-même.**
+
+Il est **interdit** d'écrire un script qui décide des étiquettes : pas de règles par
+mots-clés, pas de valeurs par défaut appliquées en masse, pas de génération
+programmatique des annotations. Un tel script produit un remplissage par gabarit,
+pas une annotation, et rend la campagne inutilisable.
+
+Un script est autorisé uniquement pour lire un fichier, écrire un fichier ou vérifier
+un format. Jamais pour choisir un `sentiment`, un `aspect`, une `alerte` ou une langue.
+
+Signes que tu es en train de dériver : la même valeur revient sur des dizaines d'items
+d'affilée, la plupart de tes items n'ont ni aspect ni preuve, ou tu produis un lot
+entier sans avoir lu les textes un par un. Si cela arrive, **arrête-toi et signale-le**.
 
 13 lots de 25. Traite **un lot à la fois**, dans l'ordre. Pour chacun :
 
@@ -144,6 +158,8 @@ Ne fusionne pas les lots : la qualité d'annotation chute sur les séries longue
 - [ ] Chaque preuve est présente telle quelle dans le `text` du même `record_id`
 - [ ] Aucun bloc `actionability`, aucun offset
 - [ ] Aucun fichier interdit ouvert
+- [ ] Aucune étiquette produite par script : chaque commentaire a été lu et jugé
+- [ ] Le lot contient une réelle diversité de sentiments, d'aspects et de preuves
 
 ## 8. Rapport final
 

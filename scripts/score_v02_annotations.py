@@ -35,6 +35,8 @@ QUEUE_BY_FAMILY = {
     'ethique_impact': 'direction', 'marche_innovation': 'direction',
     'infrastructure_service_public': 'service_public',
 }
+FAMILY_ATTRS: dict[str, set] = {}   # rempli au chargement du schéma
+
 SEV = {'faible': 1, 'moyenne': 2, 'elevee': 3, 'critique': 4}
 SEV_INV = {v: k for k, v in SEV.items()}
 NEG_ORDER = {'negatif': 0, 'mixte': 1, 'positif': 2}
@@ -86,7 +88,7 @@ def resolve_offsets(evidence: list, text: str, errors: list, rid: str, where: st
     return out
 
 
-def normalise(row: dict, text: str, errors: list) -> dict:
+def normalise(row: dict, text: str, errors: list, repairs: list) -> dict:
     """Le schéma interdit les propriétés additionnelles : record_id, annotator et
     notes sont des métadonnées de campagne et doivent être retirés avant validation."""
     rid = row.get('record_id', '?')
@@ -100,6 +102,13 @@ def normalise(row: dict, text: str, errors: list) -> dict:
         for it in out.get(key) or []:
             it = dict(it)
             it['evidence'] = resolve_offsets(it.get('evidence') or [], text, errors, rid, key)
+            # `attribute` est optionnel et non évalué en V0.2 : un attribut hors de sa
+            # famille est retiré plutôt que de faire échouer la ligne entière. La
+            # réparation est journalisée, jamais silencieuse.
+            if key == 'aspects' and it.get('attribute') is not None:
+                allowed = FAMILY_ATTRS.get(it.get('family'), set())
+                if it['attribute'] not in allowed:
+                    repairs.append((rid, it.get('family'), it.pop('attribute')))
             items.append(it)
         out[key] = items
     for ent in out.get('entities') or []:
@@ -173,6 +182,11 @@ def main() -> int:
     args = ap.parse_args()
 
     schema = json.loads(SCHEMA_PATH.read_text(encoding='utf-8'))
+    for rule in schema['$defs']['aspect'].get('allOf', []):
+        fam = rule.get('if', {}).get('properties', {}).get('family', {}).get('const')
+        att = rule.get('then', {}).get('properties', {}).get('attribute', {}).get('enum')
+        if fam and att:
+            FAMILY_ATTRS[fam] = set(att)
     validator = Draft202012Validator(schema)
     inputs = load_inputs()
     print(f'entrees : {len(inputs)}')
@@ -182,11 +196,11 @@ def main() -> int:
         raw = load_annotator(folder)
         if not raw:
             print(f'  [{folder}] aucune sortie trouvee'); continue
-        errors, schema_err, ok = [], [], {}
+        errors, schema_err, repairs, ok = [], [], [], {}
         for rid, row in raw.items():
             if rid not in inputs:
                 errors.append((rid, 'input', 'record_id inconnu')); continue
-            norm = normalise(row, inputs[rid]['text'], errors)
+            norm = normalise(row, inputs[rid]['text'], errors, repairs)
             errs = list(validator.iter_errors(norm))
             if errs:
                 schema_err.append((rid, errs[0].message[:110]))
@@ -194,7 +208,10 @@ def main() -> int:
                 ok[rid] = norm
         missing = sorted(set(inputs) - set(raw))
         print(f'\n[{folder}] recues={len(raw)}  valides={len(ok)}  '
-              f'erreurs_schema={len(schema_err)}  preuves_ko={len(errors)}  manquantes={len(missing)}')
+              f'erreurs_schema={len(schema_err)}  preuves_ko={len(errors)}  '
+              f'attributs_repares={len(repairs)}  manquantes={len(missing)}')
+        for x in repairs[:5]:
+            print('   attribut retire (hors famille) :', x)
         for x in errors[:5]:
             print('   preuve :', x)
         for x in schema_err[:5]:
