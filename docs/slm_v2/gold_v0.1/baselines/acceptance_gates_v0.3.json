@@ -48,7 +48,8 @@
       "threshold": 0.75,
       "critical": true,
       "ceiling_observed": 0.851,
-      "ceiling_source": "A3 vs C, contrat V0.3, 305 paires"
+      "ceiling_source": "A3 vs C, contrat V0.3, 305 paires",
+      "note": "Plafond global. OPTIMISTE sur darija_arabizi : voir gates_par_langue. Validation humaine du 2026-07-30."
     },
     "language.macro_f1": {
       "operator": ">=",
@@ -69,7 +70,8 @@
       "threshold": 0.62,
       "critical": true,
       "ceiling_observed": 0.71,
-      "ceiling_source": "A3 vs C, contrat V0.3, 305 paires"
+      "ceiling_source": "A3 vs C, contrat V0.3, 305 paires",
+      "note": "Plafond global. OPTIMISTE sur darija_arabizi : voir gates_par_langue. Validation humaine du 2026-07-30."
     },
     "entities_type_name.micro_f1": {
       "operator": ">=",
@@ -149,13 +151,52 @@
       "critical": false,
       "ceiling_observed": 1.0,
       "ceiling_source": "A3 vs C, contrat V0.3, 305 paires"
+    },
+    "harcelement_discrimination.exercice": {
+      "operator": ">",
+      "threshold": 0,
+      "critical": true,
+      "status": "non_exercee",
+      "ceiling_observed": 0,
+      "note": "0 alerte harcelement_discrimination sur 305 items, 0 detection sur 2 items candidats, tous deux en arabizi. Categorie jamais exercee. Toute campagne doit signaler explicitement si elle n en pose aucune."
     }
   },
   "blocking_conditions": [
+    "Le gold V0.3 n est PAS utilisable tel quel pour l entrainement sur ses 41 items arabizi : biais partage confirme par relecture humaine. Reannotation requise avant usage.",
+    "harcelement_discrimination jamais exercee : 0 alerte sur 305 items, 0 detection sur 2 candidats.",
     "Portes d alerte NON EVALUABLES : 16 evenements distincts, IC 95 pourcent [0,444 ; 0,931]. Le pool est epuise — 1589 items organisation non echantillonnes ne fournissent que la meme rumeur repetee et 6 candidats reels, majoritairement synthetiques. Nouvelle collecte requise.",
     "Plafonds issus d un accord machine-machine. Validation humaine en cours sur echantillon.",
     "requires_parent_context plafonne a 0,530, non derivable. Correctif en amont : capturer le post parent.",
     "Scope secteur non teste. Trois marques seulement, toutes agroalimentaires.",
     "D13 (accusation circulante contre incident rapporte) non validee par la mesure."
-  ]
+  ],
+  "human_validation": {
+    "date": "2026-07-30",
+    "sample": 60,
+    "design": "30 accords tires au hasard + 30 desaccords, melanges, presentation uniforme",
+    "accord_group_acceptable": 0.9,
+    "disagreement_group_acceptable": 0.97,
+    "shared_bias_global": "non detecte au seuil de 0,85",
+    "shared_bias_localise": "OUI sur darija_arabizi : 3 des 4 erreurs franches. Repli partage sur neutre et aucun aspect. Accord le PLUS eleve du corpus (k 0,919) la ou la validite est la plus basse : l accord y mesure une convention, pas une lecture correcte."
+  },
+  "gates_par_langue": {
+    "motif": "L accord global surestime la qualite sur l arabizi. Le modele doit etre evalue separement par langue, et l accord ne peut pas servir de plafond sur l arabizi.",
+    "darija_arabizi": {
+      "sentiment.macro_f1": {
+        "operator": ">=",
+        "threshold": 0.6,
+        "critical": true,
+        "note": "Seuil fixe a la main, PAS derive de l accord (k 0,919 non valide). 41 items."
+      },
+      "neutral_rate_max": {
+        "operator": "<=",
+        "threshold": 0.45,
+        "critical": true,
+        "note": "Garde-fou anti-repli. Les annotateurs sont a 54 pourcent de neutre sur l arabizi contre 41 ailleurs."
+      }
+    },
+    "autres_langues": {
+      "reference": "voir gates principales"
+    }
+  }
 }

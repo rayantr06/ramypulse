@@ -20,10 +20,23 @@ def main() -> int:
     verdicts, missing = {}, []
     for i in range(0, len(blocks), 2):
         n, body = int(blocks[i]), blocks[i + 1]
-        got = [lab for lab, pat in [('correcte', r'- \[x\] correcte'),
-                                     ('nuance', r'- \[x\] acceptable'),
-                                     ('incorrecte', r'- \[x\] INCORRECTE')]
-               if re.search(pat, body, re.I)]
+        # Tolerant : accepte "- [x] label", "- x label", "- [X]  label", "- ✓ label".
+        # Une ligne est cochee si son prefixe avant le libelle contient une marque.
+        got = []
+        for lab, kw in (('correcte', 'correcte'), ('nuance', 'acceptable'),
+                        ('incorrecte', 'incorrecte')):
+            for line in body.splitlines():
+                st = line.strip()
+                if not st.startswith('-'):
+                    continue
+                low = st.lower()
+                idx = low.find(kw)
+                if idx < 0:
+                    continue
+                prefix = low[1:idx]
+                if 'x' in prefix or '✓' in prefix or '✔' in prefix:
+                    got.append(lab)
+                break
         if len(got) != 1:
             missing.append(n); continue
         note = re.search(r'^> ?(.*)$', body, re.M)

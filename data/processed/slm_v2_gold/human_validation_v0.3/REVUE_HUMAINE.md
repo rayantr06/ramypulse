@@ -35,7 +35,7 @@ Reference des valeurs autorisees :
 
 **Verdict** — remplace une seule case par `x` :
 
-- [ ] correcte
+- x correcte
 - [ ] acceptable, nuance discutable
 - [ ] INCORRECTE
 
@@ -64,7 +64,7 @@ Si incorrecte, dis en une ligne ce qui devrait changer :
 
 **Verdict** — remplace une seule case par `x` :
 
-- [ ] correcte
+- x correcte
 - [ ] acceptable, nuance discutable
 - [ ] INCORRECTE
 
@@ -94,7 +94,7 @@ Si incorrecte, dis en une ligne ce qui devrait changer :
 
 **Verdict** — remplace une seule case par `x` :
 
-- [ ] correcte
+- x correcte
 - [ ] acceptable, nuance discutable
 - [ ] INCORRECTE
 
@@ -123,7 +123,7 @@ Si incorrecte, dis en une ligne ce qui devrait changer :
 
 **Verdict** — remplace une seule case par `x` :
 
-- [ ] correcte
+- x correcte
 - [ ] acceptable, nuance discutable
 - [ ] INCORRECTE
 
@@ -153,7 +153,7 @@ Si incorrecte, dis en une ligne ce qui devrait changer :
 
 **Verdict** — remplace une seule case par `x` :
 
-- [ ] correcte
+- x correcte
 - [ ] acceptable, nuance discutable
 - [ ] INCORRECTE
 
@@ -182,8 +182,7 @@ Si incorrecte, dis en une ligne ce qui devrait changer :
 - Alertes : **—**
 
 **Verdict** — remplace une seule case par `x` :
-
-- [ ] correcte
+- x  correcte
 - [ ] acceptable, nuance discutable
 - [ ] INCORRECTE
 
@@ -213,7 +212,7 @@ Si incorrecte, dis en une ligne ce qui devrait changer :
 **Verdict** — remplace une seule case par `x` :
 
 - [ ] correcte
-- [ ] acceptable, nuance discutable
+- x  acceptable, nuance discutable
 - [ ] INCORRECTE
 
 Si incorrecte, dis en une ligne ce qui devrait changer :
@@ -243,7 +242,7 @@ Rupture de stock trop fréquente chez moi (#8604)
 
 **Verdict** — remplace une seule case par `x` :
 
-- [ ] correcte
+- x correcte
 - [ ] acceptable, nuance discutable
 - [ ] INCORRECTE
 
@@ -273,7 +272,7 @@ Si incorrecte, dis en une ligne ce qui devrait changer :
 
 **Verdict** — remplace une seule case par `x` :
 
-- [ ] correcte
+- x correcte
 - [ ] acceptable, nuance discutable
 - [ ] INCORRECTE
 
@@ -302,7 +301,7 @@ Si incorrecte, dis en une ligne ce qui devrait changer :
 
 **Verdict** — remplace une seule case par `x` :
 
-- [ ] correcte
+- x correcte
 - [ ] acceptable, nuance discutable
 - [ ] INCORRECTE
 
@@ -331,7 +330,7 @@ Si incorrecte, dis en une ligne ce qui devrait changer :
 
 **Verdict** — remplace une seule case par `x` :
 
-- [ ] correcte
+- x correcte
 - [ ] acceptable, nuance discutable
 - [ ] INCORRECTE
 
@@ -362,7 +361,7 @@ Si incorrecte, dis en une ligne ce qui devrait changer :
 **Verdict** — remplace une seule case par `x` :
 
 - [ ] correcte
-- [ ] acceptable, nuance discutable
+- x  acceptable, nuance discutable
 - [ ] INCORRECTE
 
 Si incorrecte, dis en une ligne ce qui devrait changer :
@@ -392,7 +391,7 @@ Si incorrecte, dis en une ligne ce qui devrait changer :
 
 **Verdict** — remplace une seule case par `x` :
 
-- [ ] correcte
+- x correcte
 - [ ] acceptable, nuance discutable
 - [ ] INCORRECTE
 
@@ -423,12 +422,12 @@ Si incorrecte, dis en une ligne ce qui devrait changer :
 **Verdict** — remplace une seule case par `x` :
 
 - [ ] correcte
-- [ ] acceptable, nuance discutable
+- x  acceptable, nuance discutable
 - [ ] INCORRECTE
 
 Si incorrecte, dis en une ligne ce qui devrait changer :
 
-> 
+> il ;qnaue lqletr de disponbiliter 
 
 ---
 
@@ -453,7 +452,7 @@ Hamoud Boualem نعم. في السوبيرات الكبيرة موجود. لكن
 
 **Verdict** — remplace une seule case par `x` :
 
-- [ ] correcte
+- x correcte
 - [ ] acceptable, nuance discutable
 - [ ] INCORRECTE
 
@@ -482,7 +481,7 @@ Si incorrecte, dis en une ligne ce qui devrait changer :
 
 **Verdict** — remplace une seule case par `x` :
 
-- [ ] correcte
+- x correcte
 - [ ] acceptable, nuance discutable
 - [ ] INCORRECTE
 
@@ -513,7 +512,7 @@ Bayna ta3 zdjadj
 **Verdict** — remplace une seule case par `x` :
 
 - [ ] correcte
-- [ ] acceptable, nuance discutable
+- x acceptable, nuance discutable
 - [ ] INCORRECTE
 
 Si incorrecte, dis en une ligne ce qui devrait changer :
@@ -542,7 +541,7 @@ Si incorrecte, dis en une ligne ce qui devrait changer :
 
 **Verdict** — remplace une seule case par `x` :
 
-- [ ] correcte
+- x correcte
 - [ ] acceptable, nuance discutable
 - [ ] INCORRECTE
 
@@ -572,7 +571,7 @@ Si incorrecte, dis en une ligne ce qui devrait changer :
 
 **Verdict** — remplace une seule case par `x` :
 
-- [ ] correcte
+- x correcte
 - [ ] acceptable, nuance discutable
 - [ ] INCORRECTE
 
@@ -602,12 +601,12 @@ Chofo hedik terma gedechh yasmine tli9 pornstar 🔥🔥💦💦💦 vraiment je
 **Verdict** — remplace une seule case par `x` :
 
 - [ ] correcte
-- [ ] acceptable, nuance discutable
+- x acceptable, nuance discutable
 - [ ] INCORRECTE
 
 Si incorrecte, dis en une ligne ce qui devrait changer :
 
-> 
+> harcellement contenue sexeul 
 
 ---
 
@@ -632,12 +631,12 @@ ya3jaz lisane 3ib 3IB 3IB 3IB 3IB
 
 - [ ] correcte
 - [ ] acceptable, nuance discutable
-- [ ] INCORRECTE
+- x INCORRECTE
 
 Si incorrecte, dis en une ligne ce qui devrait changer :
 
 > 
-
+sentiement negative tres negative 
 ---
 
 ## 22. `v02_0231`
@@ -661,7 +660,7 @@ Si incorrecte, dis en une ligne ce qui devrait changer :
 
 **Verdict** — remplace une seule case par `x` :
 
-- [ ] correcte
+- x correcte
 - [ ] acceptable, nuance discutable
 - [ ] INCORRECTE
 
@@ -691,7 +690,7 @@ Service client inexistant quand j'ai eu un problème (#3669)
 
 **Verdict** — remplace une seule case par `x` :
 
-- [ ] correcte
+- x correcte
 - [ ] acceptable, nuance discutable
 - [ ] INCORRECTE
 
@@ -720,7 +719,7 @@ Si incorrecte, dis en une ligne ce qui devrait changer :
 
 **Verdict** — remplace une seule case par `x` :
 
-- [ ] correcte
+- x correcte
 - [ ] acceptable, nuance discutable
 - [ ] INCORRECTE
 
@@ -750,7 +749,7 @@ Si incorrecte, dis en une ligne ce qui devrait changer :
 
 **Verdict** — remplace une seule case par `x` :
 
-- [ ] correcte
+- x correcte
 - [ ] acceptable, nuance discutable
 - [ ] INCORRECTE
 
@@ -779,7 +778,7 @@ Si incorrecte, dis en une ligne ce qui devrait changer :
 
 **Verdict** — remplace une seule case par `x` :
 
-- [ ] correcte
+- x correcte
 - [ ] acceptable, nuance discutable
 - [ ] INCORRECTE
 
@@ -809,7 +808,7 @@ Si incorrecte, dis en une ligne ce qui devrait changer :
 
 **Verdict** — remplace une seule case par `x` :
 
-- [ ] correcte
+- x correcte
 - [ ] acceptable, nuance discutable
 - [ ] INCORRECTE
 
@@ -839,7 +838,7 @@ Si incorrecte, dis en une ligne ce qui devrait changer :
 
 **Verdict** — remplace une seule case par `x` :
 
-- [ ] correcte
+- x correcte
 - [ ] acceptable, nuance discutable
 - [ ] INCORRECTE
 
@@ -869,7 +868,7 @@ Si incorrecte, dis en une ligne ce qui devrait changer :
 
 **Verdict** — remplace une seule case par `x` :
 
-- [ ] correcte
+- x correcte
 - [ ] acceptable, nuance discutable
 - [ ] INCORRECTE
 
@@ -900,7 +899,7 @@ Si incorrecte, dis en une ligne ce qui devrait changer :
 **Verdict** — remplace une seule case par `x` :
 
 - [ ] correcte
-- [ ] acceptable, nuance discutable
+- x acceptable, nuance discutable
 - [ ] INCORRECTE
 
 Si incorrecte, dis en une ligne ce qui devrait changer :
@@ -929,7 +928,7 @@ Si incorrecte, dis en une ligne ce qui devrait changer :
 
 **Verdict** — remplace une seule case par `x` :
 
-- [ ] correcte
+- x  correcte
 - [ ] acceptable, nuance discutable
 - [ ] INCORRECTE
 
@@ -960,7 +959,7 @@ Si incorrecte, dis en une ligne ce qui devrait changer :
 
 **Verdict** — remplace une seule case par `x` :
 
-- [ ] correcte
+- x correcte
 - [ ] acceptable, nuance discutable
 - [ ] INCORRECTE
 
@@ -991,7 +990,7 @@ Waouw quelle fraîcheur, je recommande vivement (#6224)
 
 **Verdict** — remplace une seule case par `x` :
 
-- [ ] correcte
+- x correcte
 - [ ] acceptable, nuance discutable
 - [ ] INCORRECTE
 
@@ -1022,7 +1021,7 @@ Rani nebgha had lya9hourt, tay3jebni bzzaf (#7584)
 
 **Verdict** — remplace une seule case par `x` :
 
-- [ ] correcte
+- x correcte
 - [ ] acceptable, nuance discutable
 - [ ] INCORRECTE
 
@@ -1052,7 +1051,7 @@ Si incorrecte, dis en une ligne ce qui devrait changer :
 
 **Verdict** — remplace une seule case par `x` :
 
-- [ ] correcte
+- x correcte
 - [ ] acceptable, nuance discutable
 - [ ] INCORRECTE
 
@@ -1082,7 +1081,7 @@ Si incorrecte, dis en une ligne ce qui devrait changer :
 
 **Verdict** — remplace une seule case par `x` :
 
-- [ ] correcte
+- x correcte
 - [ ] acceptable, nuance discutable
 - [ ] INCORRECTE
 
@@ -1114,11 +1113,11 @@ Si incorrecte, dis en une ligne ce qui devrait changer :
 
 - [ ] correcte
 - [ ] acceptable, nuance discutable
-- [ ] INCORRECTE
+- x INCORRECTE
 
 Si incorrecte, dis en une ligne ce qui devrait changer :
 
-> 
+> neutre 
 
 ---
 
@@ -1142,7 +1141,7 @@ Ya3tikoum saha 👌 L moussi9a Talya ta3 chi3r kissamouh ?
 
 **Verdict** — remplace une seule case par `x` :
 
-- [ ] correcte
+- x correcte
 - [ ] acceptable, nuance discutable
 - [ ] INCORRECTE
 
@@ -1172,13 +1171,13 @@ Hamoud Boualem salam le code qr est bloque jaraive pas a ouvrir merci
 
 **Verdict** — remplace une seule case par `x` :
 
-- [ ] correcte
+- x correcte
 - [ ] acceptable, nuance discutable
 - [ ] INCORRECTE
 
 Si incorrecte, dis en une ligne ce qui devrait changer :
 
-> 
+> jsp si il faut une alerts ici 
 
 ---
 
@@ -1203,7 +1202,7 @@ Si incorrecte, dis en une ligne ce qui devrait changer :
 **Verdict** — remplace une seule case par `x` :
 
 - [ ] correcte
-- [ ] acceptable, nuance discutable
+- x acceptable, nuance discutable
 - [ ] INCORRECTE
 
 Si incorrecte, dis en une ligne ce qui devrait changer :
@@ -1233,11 +1232,11 @@ Machallah 3liykoum y’a allah chehal nhabkoum nhabkoum bzf ❤️❤️❤️�
 
 - [ ] correcte
 - [ ] acceptable, nuance discutable
-- [ ] INCORRECTE
+- x INCORRECTE
 
 Si incorrecte, dis en une ligne ce qui devrait changer :
 
-> 
+> positive 
 
 ---
 
@@ -1261,7 +1260,7 @@ Ramy Food je participe 50 قرعة رامي الجوهرة اللامعة وصہ
 
 **Verdict** — remplace une seule case par `x` :
 
-- [ ] correcte
+- x correcte
 - [ ] acceptable, nuance discutable
 - [ ] INCORRECTE
 
@@ -1291,7 +1290,7 @@ Mohamed Aiouadj ❤️💙
 **Verdict** — remplace une seule case par `x` :
 
 - [ ] correcte
-- [ ] acceptable, nuance discutable
+- x acceptable, nuance discutable
 - [ ] INCORRECTE
 
 Si incorrecte, dis en une ligne ce qui devrait changer :
@@ -1320,7 +1319,7 @@ Si incorrecte, dis en une ligne ce qui devrait changer :
 
 **Verdict** — remplace une seule case par `x` :
 
-- [ ] correcte
+- x correcte
 - [ ] acceptable, nuance discutable
 - [ ] INCORRECTE
 
@@ -1351,7 +1350,7 @@ Si incorrecte, dis en une ligne ce qui devrait changer :
 
 **Verdict** — remplace une seule case par `x` :
 
-- [ ] correcte
+- x correcte
 - [ ] acceptable, nuance discutable
 - [ ] INCORRECTE
 
@@ -1381,7 +1380,7 @@ Si incorrecte, dis en une ligne ce qui devrait changer :
 
 **Verdict** — remplace une seule case par `x` :
 
-- [ ] correcte
+- x correcte
 - [ ] acceptable, nuance discutable
 - [ ] INCORRECTE
 
@@ -1411,7 +1410,7 @@ Pas frais à l'achat, date limite trop proche (#3214)
 
 **Verdict** — remplace une seule case par `x` :
 
-- [ ] correcte
+- x correcte
 - [ ] acceptable, nuance discutable
 - [ ] INCORRECTE
 
@@ -1440,7 +1439,7 @@ Si incorrecte, dis en une ligne ce qui devrait changer :
 
 **Verdict** — remplace une seule case par `x` :
 
-- [ ] correcte
+- x correcte
 - [ ] acceptable, nuance discutable
 - [ ] INCORRECTE
 
@@ -1470,7 +1469,7 @@ Mohamade Serradj 🥰🥰
 **Verdict** — remplace une seule case par `x` :
 
 - [ ] correcte
-- [ ] acceptable, nuance discutable
+- x acceptable, nuance discutable
 - [ ] INCORRECTE
 
 Si incorrecte, dis en une ligne ce qui devrait changer :
@@ -1499,7 +1498,7 @@ Hamoud Boualem cheit 3likom presque 20 bouteille c bon manzich g3 n amankom w nd
 
 **Verdict** — remplace une seule case par `x` :
 
-- [ ] correcte
+- x correcte
 - [ ] acceptable, nuance discutable
 - [ ] INCORRECTE
 
@@ -1530,7 +1529,7 @@ Si incorrecte, dis en une ligne ce qui devrait changer :
 
 **Verdict** — remplace une seule case par `x` :
 
-- [ ] correcte
+- x correcte
 - [ ] acceptable, nuance discutable
 - [ ] INCORRECTE
 
@@ -1561,11 +1560,11 @@ ya zmar rouh 3lina o mtbynch rohk rouhhhh
 
 - [ ] correcte
 - [ ] acceptable, nuance discutable
-- [ ] INCORRECTE
+- x INCORRECTE
 
 Si incorrecte, dis en une ligne ce qui devrait changer :
 
-> 
+> sentiment negative 
 
 ---
 
@@ -1588,7 +1587,7 @@ Si incorrecte, dis en une ligne ce qui devrait changer :
 
 **Verdict** — remplace une seule case par `x` :
 
-- [ ] correcte
+- x correcte
 - [ ] acceptable, nuance discutable
 - [ ] INCORRECTE
 
@@ -1617,7 +1616,7 @@ Si incorrecte, dis en une ligne ce qui devrait changer :
 
 **Verdict** — remplace une seule case par `x` :
 
-- [ ] correcte
+- x correcte
 - [ ] acceptable, nuance discutable
 - [ ] INCORRECTE
 
@@ -1647,7 +1646,7 @@ Si incorrecte, dis en une ligne ce qui devrait changer :
 **Verdict** — remplace une seule case par `x` :
 
 - [ ] correcte
-- [ ] acceptable, nuance discutable
+- x acceptable, nuance discutable
 - [ ] INCORRECTE
 
 Si incorrecte, dis en une ligne ce qui devrait changer :
@@ -1675,7 +1674,7 @@ Si incorrecte, dis en une ligne ce qui devrait changer :
 
 **Verdict** — remplace une seule case par `x` :
 
-- [ ] correcte
+- x correcte
 - [ ] acceptable, nuance discutable
 - [ ] INCORRECTE
 
@@ -1704,7 +1703,7 @@ Re King صحة حفظك
 
 **Verdict** — remplace une seule case par `x` :
 
-- [ ] correcte
+- x correcte
 - [ ] acceptable, nuance discutable
 - [ ] INCORRECTE
 
@@ -1734,7 +1733,7 @@ Si incorrecte, dis en une ligne ce qui devrait changer :
 **Verdict** — remplace une seule case par `x` :
 
 - [ ] correcte
-- [ ] acceptable, nuance discutable
+- x acceptable, nuance discutable
 - [ ] INCORRECTE
 
 Si incorrecte, dis en une ligne ce qui devrait changer :
@@ -1762,7 +1761,7 @@ Wallah mazalhoume 3aichine fi tes3inates
 
 **Verdict** — remplace une seule case par `x` :
 
-- [ ] correcte
+- x correcte
 - [ ] acceptable, nuance discutable
 - [ ] INCORRECTE
 
@@ -1791,7 +1790,7 @@ Si incorrecte, dis en une ligne ce qui devrait changer :
 
 **Verdict** — remplace une seule case par `x` :
 
-- [ ] correcte
+- x correcte
 - [ ] acceptable, nuance discutable
 - [ ] INCORRECTE
 
