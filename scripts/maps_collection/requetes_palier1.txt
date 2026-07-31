@@ -1,0 +1,102 @@
+restaurant Alger
+fast food Alger
+pizzeria Alger
+cafe Alger
+patisserie Alger
+clinique Alger
+cabinet dentaire Alger
+laboratoire analyses medicales Alger
+pharmacie Alger
+opticien Alger
+hotel Alger
+residence hoteliere Alger
+garage automobile Alger
+concessionnaire automobile Alger
+controle technique Alger
+pieces auto Alger
+supermarche Alger
+magasin electromenager Alger
+magasin telephone Alger
+magasin vetements Alger
+librairie Alger
+agence bancaire Alger
+bureau de poste Alger
+bureau de change Alger
+agence Djezzy Alger
+agence Ooredoo Alger
+agence Mobilis Alger
+agence Algerie Telecom Alger
+ecole privee Alger
+auto ecole Alger
+centre de formation Alger
+salle de sport Alger
+salon de coiffure Alger
+agence de voyage Alger
+restaurant Oran
+fast food Oran
+pizzeria Oran
+cafe Oran
+patisserie Oran
+clinique Oran
+cabinet dentaire Oran
+laboratoire analyses medicales Oran
+pharmacie Oran
+opticien Oran
+hotel Oran
+residence hoteliere Oran
+garage automobile Oran
+concessionnaire automobile Oran
+controle technique Oran
+pieces auto Oran
+supermarche Oran
+magasin electromenager Oran
+magasin telephone Oran
+magasin vetements Oran
+librairie Oran
+agence bancaire Oran
+bureau de poste Oran
+bureau de change Oran
+agence Djezzy Oran
+agence Ooredoo Oran
+agence Mobilis Oran
+agence Algerie Telecom Oran
+ecole privee Oran
+auto ecole Oran
+centre de formation Oran
+salle de sport Oran
+salon de coiffure Oran
+agence de voyage Oran
+restaurant Constantine
+fast food Constantine
+pizzeria Constantine
+cafe Constantine
+patisserie Constantine
+clinique Constantine
+cabinet dentaire Constantine
+laboratoire analyses medicales Constantine
+pharmacie Constantine
+opticien Constantine
+hotel Constantine
+residence hoteliere Constantine
+garage automobile Constantine
+concessionnaire automobile Constantine
+controle technique Constantine
+pieces auto Constantine
+supermarche Constantine
+magasin electromenager Constantine
+magasin telephone Constantine
+magasin vetements Constantine
+librairie Constantine
+agence bancaire Constantine
+bureau de poste Constantine
+bureau de change Constantine
+agence Djezzy Constantine
+agence Ooredoo Constantine
+agence Mobilis Constantine
+agence Algerie Telecom Constantine
+ecole privee Constantine
+auto ecole Constantine
+centre de formation Constantine
+salle de sport Constantine
+salon de coiffure Constantine
+agence de voyage Constantine
