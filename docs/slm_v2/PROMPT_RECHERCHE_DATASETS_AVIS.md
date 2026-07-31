@@ -1,4 +1,4 @@
-# Prompt de recherche — datasets d'avis géolocalisés exploitables pour l'Algérie
+# Prompt de recherche — comment récupérer des avis Google Maps à grande échelle
 
 À donner tel quel à un agent de recherche.
 
@@ -6,83 +6,91 @@
 
 ## Mission
 
-Trouver des jeux de données **publics et téléchargeables** d'avis sur des lieux ou des
-commerces, contenant de l'**Algérie** — soit directement, soit dans un jeu mondial
-filtrable par pays.
+Trouver **toutes les façons d'obtenir des avis Google Maps en volume** : jeux de données
+déjà constitués, fournisseurs commerciaux, API, outils open source, ou toute autre voie.
 
-Contexte : je construis un corpus d'entraînement pour un modèle d'analyse de commentaires
-consommateurs en Algérie (français, arabe, darija, arabizi). J'ai besoin d'avis
-**évaluatifs et récents**, avec si possible une note et une catégorie de lieu.
+La question porte sur **la méthode d'extraction**, pas sur un pays. L'application finale
+est l'Algérie, donc à volume et coût comparables je privilégierai ce qui couvre bien
+l'Afrique du Nord et le monde arabe — mais une solution mondiale performante m'intéresse
+même sans garantie sur l'Algérie.
 
-## Ce que j'ai déjà vérifié — ne pas refaire
+Usage prévu : constituer un corpus d'entraînement pour un modèle d'analyse d'avis
+consommateurs. Il me faut donc le **texte** des avis, pas seulement des notes agrégées.
 
-| Piste | Résultat vérifié |
+## Ce que j'ai déjà vérifié — ne pas reproposer
+
+| Piste | Résultat mesuré |
 |---|---|
-| Recherche HuggingFace « reviews », « maps », « arabic », 150 datasets vus | Rien pour l'Algérie. Seulement `opdullah/turkish-google-maps-reviews` et `Musaed1/kudu-google-maps-reviews` (chaîne saoudienne) |
+| **API Google Places officielle** | Fonctionne, mais plafond dur de **5 avis par lieu**, ~0,017 $ par lieu. Le paramètre `language` sélectionne la langue et renvoie le même avis traduit, donc en doublon |
+| **Apify `compass/Google-Maps-Reviews-Scraper`** | Tous les avis d'un lieu, **0,0006 $ par avis**, ~50 000 utilisateurs. Mais c'est du scraping, contraire aux CGU de Google |
 | **Google Local 2021** (UCSD / McAuley), 666 M d'avis | **États-Unis uniquement** |
-| **Google Local 2018** (UCSD / McAuley), 11,4 M d'avis | International, mais **0,056 % d'Algérie** mesuré sur 42 835 lieux, soit ~1 680 lieux. Données de 2010-2018, majoritairement mosquées, écoles, hôpitaux. Fichiers : places 290 Mo, reviews 1,4 Go |
-| **API Google Places officielle** | Fonctionne, mais **5 avis maximum par lieu**, ~0,017 $ par lieu |
-| **Apify `compass/Google-Maps-Reviews-Scraper`** | Tous les avis d'un lieu, 0,0006 $ par avis, mais **scraping contraire aux CGU de Google** |
+| **Google Local 2018** (UCSD / McAuley), 11,4 M d'avis | International, mais données 2010-2018. Fichiers : lieux 290 Mo, avis 1,4 Go |
+| Hugging Face, ~150 datasets d'avis parcourus | Rien de mondial et récent. Seulement du turc et une chaîne saoudienne |
 
-Inutile donc de reproposer Google Local UCSD, l'API Places ou Apify : je les connais.
+## Questions précises auxquelles je veux une réponse
 
-## Ce que je cherche vraiment
+1. **La Places API (New) de Google lève-t-elle la limite des 5 avis ?** Existe-t-il un
+   endpoint, un quota payant, un partenariat ou un programme entreprise donnant accès à
+   davantage d'avis **légalement** ? C'est la question la plus importante.
+2. **Quels fournisseurs commerciaux vendent des avis Google Maps**, et à quel prix réel
+   par millier ? Comparer au minimum Outscraper, SerpApi, DataForSEO, Bright Data,
+   Oxylabs, ScrapingBee, Zenserp, et tout autre acteur pertinent. Certains proposent des
+   **exports en masse** plutôt que du scraping à la demande — c'est ce qui m'intéresse le
+   plus.
+3. **Existe-t-il des dumps récents (2022-2026)**, académiques ou commerciaux, d'avis
+   Google Maps couvrant plusieurs pays ?
+4. **Quels scrapers open source** sont maintenus et fonctionnent encore ? Donner le
+   dépôt, sa dernière activité, et s'il gère la pagination au-delà des premiers avis.
+5. **Quelles sources alternatives** ont des avis en volume et des données plus ouvertes :
+   Foursquare, Overture Maps, OpenStreetMap, TripAdvisor, Booking, Trustpilot, Yelp
+   Fusion, Zomato ? Préciser lesquelles exposent réellement du **texte d'avis**, et non
+   seulement des points d'intérêt.
 
-Par ordre de priorité :
+## Sur la légalité — traiter sérieusement, pas en note de bas de page
 
-1. **Un dump récent (2022-2026) d'avis Google Maps** couvrant plusieurs pays, filtrable
-   par pays — l'équivalent du Google Local UCSD mais à jour et international.
-2. **Un dataset MENA, Afrique du Nord, monde arabe ou africain** d'avis de lieux.
-3. **Un dataset spécifiquement algérien** d'avis : restaurants, cliniques, hôtels,
-   commerces, services.
-4. **Des plateformes autres que Google** ayant des avis sur l'Algérie et dont les données
-   sont partagées : TripAdvisor, Booking, Foursquare, Yelp, Zomato, Trustpilot, Jumia,
-   Ouedkniss, ou tout équivalent local algérien.
-5. **Des articles de recherche** sur l'analyse d'avis en dialecte arabe ou maghrébin
-   ayant publié leurs données.
+Le produit final est **commercial**. Pour chaque piste, indiquer :
 
-## Où chercher
+- ce que disent les CGU de la source sur l'extraction et la réutilisation ;
+- si le fournisseur assume contractuellement le risque juridique ou le reporte sur son
+  client ;
+- si les avis peuvent servir à **entraîner un modèle**, ce qui est plus engageant qu'un
+  simple affichage ;
+- l'existence de jurisprudence ou de litiges connus.
 
-- Hugging Face Datasets, Kaggle, Zenodo, Mendeley Data, Figshare, Dataverse
-- GitHub — dépôts de scraping partageant leurs résultats, pas seulement le code
-- Google Dataset Search
-- ACL Anthology, arXiv, ResearchGate — chercher les liens de données dans les articles
-  sur l'ABSA arabe, le sentiment dialectal, les avis multilingues
-- Common Crawl et jeux dérivés — un sous-ensemble d'avis en aurait-il été extrait
-- Awesome-lists sur les datasets NLP arabes
-- Places API alternatives publiant des échantillons gratuits : Outscraper, SerpApi,
-  Bright Data, Foursquare Places
+Une piste illégale mais performante m'intéresse quand même : je veux la connaître **et
+savoir qu'elle est illégale**. Ne pas la cacher, ne pas la maquiller.
 
 ## Pour chaque piste, réponds impérativement
 
-1. **Nom et URL exacte de téléchargement.** Pas la page projet : le lien du fichier.
-2. **A-t-il vraiment de l'Algérie ?** Un chiffre, pas une supposition. Si tu ne peux pas
-   le vérifier, dis « non vérifié » — ne devine pas.
-3. **Volume** : nombre d'avis, taille du fichier.
-4. **Période couverte.** Un dataset antérieur à 2020 m'intéresse peu.
-5. **Licence exacte**, et si l'usage **commercial** est permis. « Public sur GitHub » ne
-   veut pas dire « autorisé ».
-6. **Champs disponibles** : texte, note, catégorie du lieu, date, langue, pays.
-7. **Langues présentes**, en particulier arabe et arabizi (arabe en caractères latins
-   avec chiffres : `3` pour ع, `7` pour ح, `9` pour ق).
-8. **Données personnelles** : le jeu contient-il des noms d'auteurs ou des identifiants ?
+1. Nom et **URL exacte** : lien de téléchargement ou page tarifaire, pas une page d'accueil.
+2. **Volume accessible** et limite par lieu, s'il y en a une.
+3. **Coût réel** pour 10 000 avis, et pour 1 million.
+4. **Couverture géographique**, avec un chiffre si disponible.
+5. **Champs fournis** : texte, note, catégorie, date, langue, réponse du gérant.
+6. **Statut juridique**, selon la section ci-dessus.
+7. **Données personnelles** : noms d'auteurs, photos, identifiants sont-ils inclus ?
+8. **Fraîcheur** : à quand remontent les données les plus récentes ?
 
-## Pièges à éviter — je suis tombé dedans
+## Pièges rencontrés, à ne pas répéter
 
-- **Faux positifs de recherche textuelle.** Chercher « Oran » ramène « Rist**oran**te » et
-  « Rest**oran** ». Chercher `رامي` ramène « ح**رامي**ة » (voleurs). Vérifie sur un champ
-  pays structuré, pas par sous-chaîne dans du texte libre.
-- **Doublons par traduction.** L'API Google renvoie le même avis en plusieurs langues.
-  Vérifie si un dataset contient des traductions présentées comme des avis distincts.
-- **Licence déclarée contre licence réelle.** Un dataset scrapé et republié en CC-BY ne
-  purge pas les droits de la source. Signale le doute plutôt que de le taire.
-- **Ne présente pas une extrapolation comme une mesure.** Si tu estimes, dis-le.
+- **Doublons par traduction.** Google renvoie le même avis dans plusieurs langues. Une
+  déduplication par texte ne les voit pas. Vérifier si un fournisseur livre des
+  traductions présentées comme des avis distincts.
+- **Faux positifs de recherche textuelle.** Chercher un mot-clé dans du texte libre donne
+  des taux d'erreur énormes — 87 % dans mon cas. S'appuyer sur des champs structurés.
+- **Licence déclarée contre licence réelle.** Un dataset scrapé puis republié en CC-BY ne
+  purge pas les droits de la source.
+- **Ne pas confondre estimation et mesure.** Si un chiffre est extrapolé, le dire.
 
-## Livrable attendu
+## Livrable
 
-Un tableau classé par utilité réelle pour l'Algérie, suivi d'une recommandation courte :
-**quelle piste vaut la peine d'être téléchargée en premier, et pourquoi**.
+Un tableau comparatif classé par **rapport volume / coût / risque juridique**, suivi de
+trois recommandations distinctes :
 
-Si aucune piste sérieuse n'existe, dis-le clairement. Une réponse « il n'y a rien de
-mieux que ce que tu as déjà » est un résultat utile — inventer une piste faible pour
-avoir l'air productif ne l'est pas.
+- la meilleure option **strictement légale** ;
+- la meilleure option **au meilleur rapport coût-volume**, risque assumé et nommé ;
+- la meilleure option **gratuite**, s'il en existe une.
+
+Si la réponse est « rien ne bat l'API officielle légalement, et Apify sinon », dis-le
+franchement. Une conclusion négative documentée vaut mieux qu'une liste de pistes faibles
+présentée pour paraître productif.
