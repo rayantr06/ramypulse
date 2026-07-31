@@ -1,0 +1,2007 @@
+{
+ "seed": 20260731,
+ "items": [
+  {
+   "record_id": "azi_0001",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "test",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0002",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0003",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "test",
+   "etiquette_faible": "tres_negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0004",
+   "corpus": "narabizi_ud",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0005",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0006",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0007",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "dev",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0008",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "dev",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0009",
+   "corpus": "narabizi_ud",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0010",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "dev",
+   "etiquette_faible": "neutre",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0011",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "test",
+   "etiquette_faible": "tres_negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0012",
+   "corpus": "narabizi_ud",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0013",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "dev",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0014",
+   "corpus": "narabizi_ud",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0015",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "dev",
+   "etiquette_faible": "neutre",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0016",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "test",
+   "etiquette_faible": "neutre",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0017",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "dev",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0018",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "test",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0019",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "dev",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0020",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "dev",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0021",
+   "corpus": "narabizi_ud",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0022",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0023",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "test",
+   "etiquette_faible": "neutre",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0024",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "dev",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0025",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "dev",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0026",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "dev",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0027",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "dev",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0028",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "test",
+   "etiquette_faible": "tres_negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0029",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "dev",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0030",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0031",
+   "corpus": "narabizi_ud",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0032",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0033",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "test",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0034",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "test",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0035",
+   "corpus": "narabizi_ud",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0036",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0037",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "test",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0038",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "dev",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0039",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0040",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "dev",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0041",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "dev",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0042",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "dev",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0043",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "test",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0044",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "test",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0045",
+   "corpus": "narabizi_ud",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0046",
+   "corpus": "narabizi_ud",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0047",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "dev",
+   "etiquette_faible": "tres_positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0048",
+   "corpus": "narabizi_ud",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0049",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "dev",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0050",
+   "corpus": "narabizi_ud",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0051",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0052",
+   "corpus": "narabizi_ud",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0053",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0054",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "test",
+   "etiquette_faible": "neutre",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0055",
+   "corpus": "narabizi_ud",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0056",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "test",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0057",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "dev",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0058",
+   "corpus": "narabizi_ud",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0059",
+   "corpus": "narabizi_ud",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0060",
+   "corpus": "narabizi_ud",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0061",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "test",
+   "etiquette_faible": "tres_positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0062",
+   "corpus": "narabizi_ud",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0063",
+   "corpus": "narabizi_ud",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0064",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0065",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "dev",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0066",
+   "corpus": "narabizi_ud",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0067",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "dev",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0068",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "test",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0069",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0070",
+   "corpus": "narabizi_ud",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0071",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "test",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0072",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "dev",
+   "etiquette_faible": "neutre",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0073",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "test",
+   "etiquette_faible": "tres_negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0074",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "test",
+   "etiquette_faible": "tres_negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0075",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "test",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0076",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "test",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0077",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "test",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0078",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "dev",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0079",
+   "corpus": "narabizi_ud",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0080",
+   "corpus": "narabizi_ud",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0081",
+   "corpus": "narabizi_ud",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0082",
+   "corpus": "narabizi_ud",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0083",
+   "corpus": "narabizi_ud",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0084",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0085",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "test",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0086",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "test",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0087",
+   "corpus": "narabizi_ud",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0088",
+   "corpus": "narabizi_ud",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0089",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "test",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0090",
+   "corpus": "narabizi_ud",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0091",
+   "corpus": "narabizi_ud",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0092",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0093",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "dev",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0094",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "test",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0095",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "dev",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0096",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "test",
+   "etiquette_faible": "tres_positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0097",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "test",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0098",
+   "corpus": "narabizi_ud",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0099",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0100",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0101",
+   "corpus": "narabizi_ud",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0102",
+   "corpus": "narabizi_ud",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0103",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "dev",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0104",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "test",
+   "etiquette_faible": "tres_positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0105",
+   "corpus": "narabizi_ud",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0106",
+   "corpus": "narabizi_ud",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0107",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0108",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0109",
+   "corpus": "narabizi_ud",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0110",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "test",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0111",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "dev",
+   "etiquette_faible": "tres_positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0112",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "test",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0113",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "dev",
+   "etiquette_faible": "neutre",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0114",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "dev",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0115",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "dev",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0116",
+   "corpus": "narabizi_ud",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0117",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "test",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0118",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0119",
+   "corpus": "narabizi_ud",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0120",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "dev",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0121",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "dev",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0122",
+   "corpus": "narabizi_ud",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0123",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0124",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "dev",
+   "etiquette_faible": "neutre",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0125",
+   "corpus": "narabizi_ud",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0126",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "dev",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0127",
+   "corpus": "narabizi_ud",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0128",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "dev",
+   "etiquette_faible": "tres_negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0129",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "dev",
+   "etiquette_faible": "neutre",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0130",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0131",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "dev",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0132",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "dev",
+   "etiquette_faible": "tres_negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0133",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "dev",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0134",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0135",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "dev",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0136",
+   "corpus": "narabizi_ud",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0137",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "dev",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0138",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "dev",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0139",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "dev",
+   "etiquette_faible": "tres_negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0140",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "dev",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0141",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0142",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0143",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0144",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0145",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0146",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "test",
+   "etiquette_faible": "tres_negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0147",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0148",
+   "corpus": "narabizi_ud",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0149",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "test",
+   "etiquette_faible": "neutre",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0150",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "dev",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0151",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "dev",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0152",
+   "corpus": "narabizi_ud",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0153",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0154",
+   "corpus": "narabizi_ud",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0155",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "dev",
+   "etiquette_faible": "neutre",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0156",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "dev",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0157",
+   "corpus": "narabizi_ud",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0158",
+   "corpus": "narabizi_ud",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0159",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "test",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0160",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "dev",
+   "etiquette_faible": "tres_negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0161",
+   "corpus": "narabizi_ud",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0162",
+   "corpus": "narabizi_ud",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0163",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0164",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "dev",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0165",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "test",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0166",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "dev",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0167",
+   "corpus": "narabizi_ud",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0168",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "dev",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0169",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "test",
+   "etiquette_faible": "neutre",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0170",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "dev",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0171",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "dev",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0172",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "test",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0173",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "test",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0174",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0175",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "test",
+   "etiquette_faible": "tres_positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0176",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "test",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0177",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "dev",
+   "etiquette_faible": "tres_positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0178",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0179",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "dev",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0180",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0181",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "test",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0182",
+   "corpus": "narabizi_ud",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0183",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "test",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0184",
+   "corpus": "narabizi_ud",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0185",
+   "corpus": "narabizi_ud",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0186",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0187",
+   "corpus": "narabizi_ud",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0188",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "test",
+   "etiquette_faible": "tres_positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0189",
+   "corpus": "narabizi_ud",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0190",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0191",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "test",
+   "etiquette_faible": "tres_positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0192",
+   "corpus": "narabizi_ud",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0193",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "test",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0194",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "test",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0195",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0196",
+   "corpus": "narabizi_ud",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0197",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "dev",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0198",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0199",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "dev",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0200",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "test",
+   "etiquette_faible": "tres_negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0201",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "test",
+   "etiquette_faible": "tres_positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0202",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "dev",
+   "etiquette_faible": "tres_positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0203",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "test",
+   "etiquette_faible": "tres_negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0204",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "test",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0205",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "dev",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0206",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "dev",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0207",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "dev",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0208",
+   "corpus": "narabizi_ud",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0209",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0210",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "dev",
+   "etiquette_faible": "neutre",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0211",
+   "corpus": "narabizi_ud",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0212",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0213",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "test",
+   "etiquette_faible": "tres_negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0214",
+   "corpus": "narabizi_ud",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0215",
+   "corpus": "narabizi_ud",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0216",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "test",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0217",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "dev",
+   "etiquette_faible": "neutre",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0218",
+   "corpus": "narabizi_ud",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0219",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "dev",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0220",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "dev",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0221",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0222",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "dev",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0223",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0224",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0225",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0226",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "dev",
+   "etiquette_faible": "tres_negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0227",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0228",
+   "corpus": "narabizi_ud",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0229",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "dev",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0230",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0231",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "test",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0232",
+   "corpus": "narabizi_ud",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0233",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0234",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "test",
+   "etiquette_faible": "tres_positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0235",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "dev",
+   "etiquette_faible": "tres_positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0236",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "dev",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0237",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0238",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0239",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0240",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "test",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0241",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "dev",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0242",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "test",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0243",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "test",
+   "etiquette_faible": "tres_negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0244",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "test",
+   "etiquette_faible": "tres_positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0245",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0246",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0247",
+   "corpus": "narabizi_ud",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0248",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "dev",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0249",
+   "corpus": "narabizi_ud",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0250",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0251",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0252",
+   "corpus": "narabizi_ud",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0253",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "dev",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0254",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "test",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0255",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "test",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0256",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0257",
+   "corpus": "narabizi_ud",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0258",
+   "corpus": "narabizi_ud",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0259",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "dev",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0260",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0261",
+   "corpus": "narabizi_ud",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0262",
+   "corpus": "narabizi_ud",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0263",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "test",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0264",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "test",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0265",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "test",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0266",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0267",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "test",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0268",
+   "corpus": "narabizi_ud",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0269",
+   "corpus": "narabizi_ud",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0270",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "dev",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0271",
+   "corpus": "narabizi_ud",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0272",
+   "corpus": "narabizi_ud",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  },
+  {
+   "record_id": "azi_0273",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "test",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0274",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0275",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "dev",
+   "etiquette_faible": "neutre",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0276",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0277",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "dev",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0278",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "dev",
+   "etiquette_faible": "tres_positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0279",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "dev",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0280",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "test",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0281",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0282",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "test",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0283",
+   "corpus": "algd_toxicity_speech",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0284",
+   "corpus": "dz_sentiment_mendeley_45k",
+   "split_origine": "test",
+   "etiquette_faible": "negatif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0285",
+   "corpus": "dz_sentiment_hirak_11760",
+   "split_origine": "test",
+   "etiquette_faible": "positif",
+   "licence": "CC-BY-4.0"
+  },
+  {
+   "record_id": "azi_0286",
+   "corpus": "narabizi_ud",
+   "split_origine": "test",
+   "etiquette_faible": null,
+   "licence": "CC-BY-SA-4.0"
+  }
+ ]
+}
