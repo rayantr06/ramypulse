@@ -391,3 +391,118 @@ def test_facebook_and_instagram_registered_as_channels() -> None:
 
     assert "facebook" in DEFAULT_COLLECTORS
     assert "instagram" in DEFAULT_COLLECTORS
+
+
+def test_collect_facebook_comments_apify_captures_parent_post_text(monkeypatch) -> None:
+    """Le texte du post parent doit remonter dans les metadonnees.
+
+    Sans lui, un commentaire de fil « demande d'avis » est incomprehensible : le
+    post parent EST la question a laquelle le commentaire repond.
+    """
+    collector = _import_module("core.watch_runs.collectors.facebook_apify")
+
+    class _FakeActor:
+        def __init__(self, dataset_id: str):
+            self.dataset_id = dataset_id
+
+        def call(self, **kwargs):
+            return {"defaultDatasetId": self.dataset_id}
+
+    class _FakeDataset:
+        def __init__(self, items):
+            self._items = items
+
+        def iterate_items(self):
+            return iter(self._items)
+
+    class _FakeClient:
+        def actor(self, actor_id: str):
+            return _FakeActor("fb-posts" if "posts" in actor_id else "fb-comments")
+
+        def dataset(self, dataset_id: str):
+            if dataset_id == "fb-posts":
+                return _FakeDataset(
+                    [
+                        {
+                            "postUrl": "https://www.facebook.com/post-1",
+                            "text": "Cherche une machine a laver a moins de 50000 DA, wach tanseho ?",
+                        }
+                    ]
+                )
+            return _FakeDataset(
+                [
+                    {
+                        "text": "Condor, bessah le SAV bati",
+                        "profileName": "Ahmed",
+                        "commentUrl": "https://www.facebook.com/comment-1",
+                        "comments": [],
+                    }
+                ]
+            )
+
+    monkeypatch.setattr(collector.config, "APIFY_API_KEY", "apify-key", raising=False)
+    monkeypatch.setattr(collector, "ApifyClient", lambda token: _FakeClient())
+
+    documents = collector.collect_facebook_comments_apify(
+        client_id="tenant-alpha",
+        seed_urls=["https://www.facebook.com/groupe-electromenager"],
+        max_posts=1,
+        max_comments_per_post=10,
+    )
+
+    assert len(documents) == 1
+    metadata = documents[0]["raw_metadata"]
+    assert metadata["post_text"] == (
+        "Cherche une machine a laver a moins de 50000 DA, wach tanseho ?"
+    )
+    assert metadata["post_url"] == "https://www.facebook.com/post-1"
+
+
+def test_collect_facebook_comments_apify_tolerates_missing_post_text(monkeypatch) -> None:
+    """Un post sans texte exploitable ne doit pas faire echouer la collecte."""
+    collector = _import_module("core.watch_runs.collectors.facebook_apify")
+
+    class _FakeActor:
+        def __init__(self, dataset_id: str):
+            self.dataset_id = dataset_id
+
+        def call(self, **kwargs):
+            return {"defaultDatasetId": self.dataset_id}
+
+    class _FakeDataset:
+        def __init__(self, items):
+            self._items = items
+
+        def iterate_items(self):
+            return iter(self._items)
+
+    class _FakeClient:
+        def actor(self, actor_id: str):
+            return _FakeActor("fb-posts" if "posts" in actor_id else "fb-comments")
+
+        def dataset(self, dataset_id: str):
+            if dataset_id == "fb-posts":
+                return _FakeDataset([{"postUrl": "https://www.facebook.com/post-2"}])
+            return _FakeDataset(
+                [
+                    {
+                        "text": "Merci",
+                        "profileName": "Sara",
+                        "commentUrl": "https://www.facebook.com/comment-2",
+                        "comments": [],
+                    }
+                ]
+            )
+
+    monkeypatch.setattr(collector.config, "APIFY_API_KEY", "apify-key", raising=False)
+    monkeypatch.setattr(collector, "ApifyClient", lambda token: _FakeClient())
+
+    documents = collector.collect_facebook_comments_apify(
+        client_id="tenant-alpha",
+        seed_urls=["https://www.facebook.com/page"],
+        max_posts=1,
+        max_comments_per_post=10,
+    )
+
+    assert len(documents) == 1
+    assert documents[0]["raw_metadata"]["post_text"] == ""

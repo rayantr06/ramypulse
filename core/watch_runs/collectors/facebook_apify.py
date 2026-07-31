@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import hashlib
 import logging
-import os
 import re
 import time
 from datetime import datetime, timezone
@@ -26,11 +25,7 @@ APIFY_FB_COMMENTS = "apify/facebook-comments-scraper"
 
 
 def _resolve_apify_token() -> str | None:
-    return (
-        str(getattr(config, "APIFY_API_KEY", "") or "").strip()
-        or str(os.getenv("APIFY_API_KEY") or "").strip()
-        or None
-    )
+    return str(getattr(config, "APIFY_API_KEY", "") or "").strip() or None
 
 
 def _normalize_seed_urls(seed_urls: Iterable[str] | None) -> list[str]:
@@ -83,7 +78,28 @@ def _document_id(*, author: str, text: str) -> str:
     return hashlib.md5(stable_value.encode("utf-8")).hexdigest()
 
 
-def _discover_post_urls(apify_client, page_url: str, max_posts: int) -> list[str]:
+#: Champs sous lesquels l'acteur Apify peut exposer le texte d'un post.
+_POST_TEXT_FIELDS = ("text", "message", "postText", "content", "caption")
+#: Un post peut etre tres long ; seul son debut sert a comprendre les reponses.
+_POST_TEXT_MAX_CHARS = 1000
+
+
+def _extract_post_text(item: dict) -> str:
+    """Recupere le texte du post parent, quel que soit le champ utilise.
+
+    Ce texte est indispensable aux fils de type « demande d'avis », ou le post
+    est la question et les commentaires sont les reponses. Il alimente aussi le
+    champ `requires_parent_context` du contrat d'annotation.
+    """
+    for field in _POST_TEXT_FIELDS:
+        value = item.get(field)
+        if isinstance(value, str) and value.strip():
+            normalized = re.sub(r"\s+", " ", value).strip()
+            return normalized[:_POST_TEXT_MAX_CHARS]
+    return ""
+
+
+def _discover_post_urls(apify_client, page_url: str, max_posts: int) -> list[dict[str, str]]:
     try:
         run = apify_client.actor(APIFY_FB_POSTS).call(
             run_input={
@@ -96,12 +112,12 @@ def _discover_post_urls(apify_client, page_url: str, max_posts: int) -> list[str
         logger.warning("Facebook post discovery failed for %s: %s", page_url, exc)
         return []
 
-    post_urls: list[str] = []
+    posts: list[dict[str, str]] = []
     for item in apify_client.dataset(run["defaultDatasetId"]).iterate_items():
         post_url = str(item.get("postUrl") or item.get("url") or "").strip()
         if post_url:
-            post_urls.append(post_url)
-    return post_urls
+            posts.append({"url": post_url, "text": _extract_post_text(item)})
+    return posts
 
 
 def _collect_post_items(
@@ -142,7 +158,9 @@ def _collect_post_items(
     return collected_items
 
 
-def _item_to_document(item: dict, *, post_url: str) -> dict[str, object] | None:
+def _item_to_document(
+    item: dict, *, post_url: str, post_text: str = ""
+) -> dict[str, object] | None:
     raw_text = _clean_text(item.get("text") or "")
     if not raw_text:
         return None
@@ -162,6 +180,7 @@ def _item_to_document(item: dict, *, post_url: str) -> dict[str, object] | None:
         "raw_metadata": {
             "channel": "facebook",
             "post_url": post_url,
+            "post_text": post_text,
             "author": author,
             "date": str(item.get("date") or ""),
             "likes": int(item.get("likesCount") or 0),
@@ -202,8 +221,9 @@ def collect_facebook_comments_apify(
     documents: list[dict[str, object]] = []
     seen_ids: set[str] = set()
     for page_url in resolved_seed_urls:
-        post_urls = _discover_post_urls(apify_client, page_url, max_posts)
-        for post_index, post_url in enumerate(post_urls):
+        posts = _discover_post_urls(apify_client, page_url, max_posts)
+        for post_index, post in enumerate(posts):
+            post_url = post["url"]
             raw_items = _collect_post_items(
                 apify_client,
                 post_url=post_url,
@@ -212,7 +232,9 @@ def collect_facebook_comments_apify(
                 delay_between_calls=delay_between_calls,
             )
             for item in raw_items:
-                document = _item_to_document(item, post_url=post_url)
+                document = _item_to_document(
+                    item, post_url=post_url, post_text=post.get("text", "")
+                )
                 if not document:
                     continue
                 external_document_id = str(document["external_document_id"])
@@ -220,6 +242,6 @@ def collect_facebook_comments_apify(
                     continue
                 seen_ids.add(external_document_id)
                 documents.append(document)
-            if post_index < len(post_urls) - 1 and delay_between_calls > 0:
+            if post_index < len(posts) - 1 and delay_between_calls > 0:
                 time.sleep(delay_between_calls)
     return documents
