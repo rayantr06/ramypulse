@@ -8,15 +8,28 @@ Deux chantiers actifs : le produit lui-même, et le SLM V2 qui analysera les com
 Le projet tourne sous **Windows**. Les commandes POSIX échouent ou se comportent
 autrement ; utiliser PowerShell, ou Git Bash pour les scripts shell.
 
+**Le `.venv` du dépôt est vide.** Ni `pytest` ni `fastapi` n'y sont installés. Tout
+s'exécute avec le **Python système** (`C:\Users\AZ\AppData\Local\Programs\Python\Python311`),
+qui porte les dépendances. Ne pas activer le venv : les commandes échoueraient.
+
 ```powershell
-.venv\Scripts\activate
 uvicorn api.main:app --reload --port 8000
 python -m pytest tests/ -q
 python -m pytest tests/test_fb_ig_collectors.py -q      # un seul fichier
+python -m pip install --user <paquet>                   # site-packages système non inscriptible
 ```
 
 `ruff` et `flake8` ne sont pas installés. Ne pas proposer de commande de lint sans avoir
 vérifié sa présence.
+
+### État de la suite de tests
+
+**19 tests échouent, 871 passent.** Ces échecs sont antérieurs et sans rapport avec la
+collecte : `core.analysis.absa_engine` n'expose plus `classify_sentiment`, attendu par
+`test_classify_sentiment.py`, `test_rag/test_generator.py` et `test_source_platform_admin.py`.
+
+La règle n'est donc pas « la suite doit passer » mais **« ne pas ajouter d'échec »**.
+Comparer avant/après sur les fichiers touchés.
 
 ## Carte du dépôt
 
