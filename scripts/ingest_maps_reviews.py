@@ -34,6 +34,27 @@ PERSONAL_FIELDS = ('Name', 'ProfilePicture', 'author_url', 'Images')
 URL_RE = re.compile(r'http\S+|www\.\S+')
 MIN_CHARS = 10
 
+#: Certains hôtels agrègent des notes sur 10 : hors échelle Google, donc écartées.
+VALID_STARS = (1, 2, 3, 4, 5)
+
+#: Les deux passes de langue renvoient la catégorie traduite. Sans cette table,
+#: `Hôtel` et `فندق` comptent comme deux secteurs distincts.
+SECTOR_ALIASES = {
+    'فندق': 'Hôtel', 'مطعم': 'Restaurant', 'مصرف': 'Banque', 'بنك': 'Banque',
+    'مكتب بريد': 'Poste', 'صيدلية': 'Pharmacie', 'مطعم بيتزا': 'Pizzeria',
+    'مقهى': 'Café', 'وكالة سفريات': 'Agence de voyages', 'عيادة': 'Clinique',
+    'مستشفى': 'Hôpital', 'طبيب أسنان': 'Dentiste', 'صالة رياضية': 'Salle de gym',
+    'مخبزة': 'Boulangerie', 'حلويات': 'Pâtisserie', 'سوبر ماركت': 'Supermarché',
+    'فندق سياحي': 'Hôtel', 'مدرسة': 'École', 'جامعة': 'Université',
+    'ورشة إصلاح سيارات': 'Garage automobile', 'صالون حلاقة': 'Salon de coiffure',
+}
+
+
+def normalise_sector(name: object) -> str | None:
+    """Ramène les catégories arabes vers leur équivalent français."""
+    label = str(name or '').strip()
+    return SECTOR_ALIASES.get(label, label) or None
+
 
 def clean(text: object) -> str:
     normalized = re.sub(r'\s+', ' ', str(text or '')).strip()
@@ -52,6 +73,10 @@ def convert(place: dict, review: dict) -> dict | None:
     if str(review.get('text_translated') or '').strip():
         return None
 
+    stars = review.get('Rating') or review.get('rating_float')
+    if stars not in VALID_STARS:
+        return None
+
     raw_id = str(review.get('review_id') or '')
     place_id = str(place.get('cid') or place.get('place_id') or place.get('title') or '')
     addr = place.get('complete_address') or {}
@@ -65,7 +90,7 @@ def convert(place: dict, review: dict) -> dict | None:
         },
         'context': {
             'source': 'google_maps',
-            'topic': place.get('category'),
+            'topic': normalise_sector(place.get('category')),
             'brand': place.get('title'),
             'categories': place.get('categories') or [],
             'city': addr.get('borough') or addr.get('city'),
@@ -74,7 +99,7 @@ def convert(place: dict, review: dict) -> dict | None:
         'weak_labels': {
             # La note est une etiquette faible gratuite : un 1 etoile annote
             # `positif` est une erreur detectable automatiquement.
-            'stars': review.get('Rating') or review.get('rating_float'),
+            'stars': stars,
             'place_rating': place.get('review_rating'),
         },
         'declared_language': review.get('language'),
@@ -113,6 +138,7 @@ def main() -> int:
                 if not doc:
                     stats['ecartes'] += 1
                     continue
+                stats['langue_' + ('ar' if any('؀' <= c <= 'ۿ' for c in doc['text'][:80]) else 'lat')] += 1
                 if args.since and str(doc.get('published_at') or '') < args.since:
                     stats['trop_anciens'] += 1
                     continue
