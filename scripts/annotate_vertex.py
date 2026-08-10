@@ -35,6 +35,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
+from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -57,6 +58,7 @@ class Compteur:
 
     def __init__(self) -> None:
         self.entree = self.sortie = self.reflexion = self.appels = 0
+        self.interdits: Counter[str] = Counter()
         self._verrou = __import__('threading').Lock()
 
     def ajouter(self, entree: int, sortie: int, reflexion: int) -> None:
@@ -66,14 +68,21 @@ class Compteur:
             self.reflexion += reflexion
             self.appels += 1
 
+    def champ_interdit(self, champ: str) -> None:
+        with self._verrou:
+            self.interdits[champ] += 1
+
     def resume(self, items: int) -> str:
         if not self.appels:
             return 'aucun appel comptabilise'
         total_sortie = self.sortie + self.reflexion
-        return (f'appels {self.appels} · entree {self.entree:,} jetons · '
-                f'sortie {total_sortie:,} (dont reflexion {self.reflexion:,})\n'
-                f'  par item : {self.entree / max(items, 1):.0f} entree, '
-                f'{total_sortie / max(items, 1):.0f} sortie')
+        texte = (f'appels {self.appels} · entree {self.entree:,} jetons · '
+                 f'sortie {total_sortie:,} (dont reflexion {self.reflexion:,})\n'
+                 f'  par item : {self.entree / max(items, 1):.0f} entree, '
+                 f'{total_sortie / max(items, 1):.0f} sortie')
+        if self.interdits:
+            texte += f'\n  champs derives retires : {dict(self.interdits)}'
+        return texte
 
 
 COMPTEUR = Compteur()
@@ -184,10 +193,28 @@ Le champ `monitoring_target` t'est donne. Il conditionne deux choses :
 ## Contraintes
 
 - Un aspect n'est jamais `neutre` : s'il n'y a pas de polarite, il n'y a pas d'aspect.
-- Les preuves (`evidence`) sont des extraits EXACTS du texte original, jamais de ta
-  traduction. Ne calcule aucun offset : le pipeline s'en charge.
-- Ne produis ni `actionability` ni `schema_version` : ils sont derives en aval.
-- `entities` ne contient que des entites reellement nommees ou clairement designees.
+- `alert.type = reputation_virale` exige un signe de PROPAGATION : appel au boycott,
+  menace de rendre public, mention de partages, de presse ou de reseaux sociaux. Un
+  avis simplement tres negatif n'est pas viral — sa severite se dit dans `severity`,
+  pas en changeant le type d'alerte.
+
+### Les preuves
+
+- `evidence` est TOUJOURS un tableau, meme pour un seul extrait.
+- Chaque extrait est une portion EXACTE et CONTINUE du texte original, jamais de ta
+  traduction. Ne recolle pas deux morceaux avec des points de suspension : prends
+  deux extraits separes, ou le passage entier qui les relie.
+- Un extrait localise le passage qui justifie l'etiquette. Recopier tout le
+  commentaire ne prouve rien : cite la portion decisive.
+- Ne calcule aucun offset : le pipeline s'en charge.
+
+## Champs a ne PAS produire
+
+`actionability` et `schema_version` sont derives en aval. Ne les ecris pas, meme
+partiellement : la file d'affectation et la priorite se calculent depuis les champs
+que tu annotes, et une valeur ecrite ici serait ecrasee.
+
+`entities` ne contient que des entites reellement nommees ou clairement designees.
 
 ## Sortie
 
@@ -257,24 +284,53 @@ def appeler(prompt: str, item: dict, modele: str, cle: str, temperature: float =
     raise RuntimeError(derniere)
 
 
+def normaliser_preuves(bloc: dict) -> list[str]:
+    """Ramene `evidence` a une liste de chaines.
+
+    Le modele produit tantot une chaine nue, tantot une liste : 617 contre 680
+    sur le pilote Maps. Une chaine nue traversait le controle sans etre vue,
+    parce que `liste += "abc"` ajoute des caracteres isoles, tous presents dans
+    le texte. Le defaut se corrige ici, une seule fois, pour tous les blocs.
+    """
+    evidence = bloc.get('evidence')
+    if isinstance(evidence, str):
+        evidence = [evidence] if evidence.strip() else []
+        bloc['evidence'] = evidence
+    return [e for e in (evidence or []) if isinstance(e, str) and e.strip()]
+
+
 def verifier(sortie: dict, item: dict) -> str | None:
     """Controles bon marche appliques avant d'ecrire. Ce qui echoue est redemande."""
     if sortie.get('record_id') != item['record_id']:
         return 'record_id different'
     if not str(sortie.get('lecture_fr') or '').strip():
         return 'lecture_fr vide'
+    # Ces champs sont derives en aval, qui les ecrase de toute facon. Jeter une
+    # annotation par ailleurs correcte parce qu'elle en porte un serait
+    # disproportionne : on les retire, en comptant combien de fois cela arrive.
     for champ in INTERDITS:
-        if champ in sortie:
-            return f'{champ} ne doit pas etre produit'
+        if sortie.pop(champ, None) is not None:
+            COMPTEUR.champ_interdit(champ)
     if any(a.get('sentiment') == 'neutre' for a in sortie.get('aspects') or []):
         return 'aspect neutre interdit'
+
     texte = item['text']
-    preuves = [e for e in (sortie.get('sentiment') or {}).get('evidence') or []]
-    for aspect in sortie.get('aspects') or []:
-        preuves += aspect.get('evidence') or []
-    manquantes = [p for p in preuves if isinstance(p, str) and p and p not in texte]
-    if manquantes:
-        return f'preuve absente du texte : {manquantes[0][:60]!r}'
+    blocs = ([sortie.get('sentiment') or {}] + (sortie.get('aspects') or [])
+             + (sortie.get('alerts') or []))
+    for bloc in blocs:
+        for preuve in normaliser_preuves(bloc):
+            if preuve not in texte:
+                # Le modele recolle parfois deux fragments avec des points de
+                # suspension. Ce n'est pas un extrait : le pipeline ne pourra
+                # pas en resoudre les offsets.
+                if '...' in preuve or '…' in preuve:
+                    return f'preuve recollee avec des points de suspension : {preuve[:60]!r}'
+                return f'preuve absente du texte : {preuve[:60]!r}'
+            # Une preuve qui recouvre tout un long commentaire ne localise rien.
+            # En dessous de ce seuil l'avis tient en une pensee : le texte entier
+            # est alors legitimement le passage decisif.
+            if len(texte) > 200 and len(preuve) >= 0.9 * len(texte):
+                return f'preuve couvrant tout le texte : {preuve[:60]!r}'
     if (item.get('monitoring_target') or {}).get('scope') == 'espace_public':
         if sortie.get('alerts'):
             return 'alerte interdite en espace_public'
