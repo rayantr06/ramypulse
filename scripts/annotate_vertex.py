@@ -127,6 +127,115 @@ def vocabulaires(schema: dict) -> str:
     return '\n'.join(lignes)
 
 
+def attributs_par_famille(schema: dict) -> str:
+    """Extrait les enums d'`attribute`, conditionnees a `family` par `allOf/if/then`.
+
+    Le premier extracteur ne traversait ni `allOf` ni `if/then` : il ne voyait donc
+    aucune de ces listes, et le prompt presentait `attribute` comme un texte libre.
+    706 valeurs inventees sur 498 items en ont decoule.
+    """
+    lignes = []
+    for regle in schema['$defs']['aspect'].get('allOf', []):
+        condition = ((regle.get('if') or {}).get('properties') or {}).get('family') or {}
+        famille = condition.get('const')
+        valeurs = (((regle.get('then') or {}).get('properties') or {})
+                   .get('attribute') or {}).get('enum')
+        if famille and valeurs:
+            lignes.append(f'- `{famille}` : {", ".join(valeurs)}')
+    if not lignes:
+        return ''
+    return ('`attribute` est facultatif, mais s il est present sa valeur depend de\n'
+            '`family` et doit venir de la liste correspondante :\n\n' + '\n'.join(lignes)
+            + '\n\nDans le doute, omets `attribute` : il n est evalue par aucune porte.')
+
+
+def regles_conditionnelles(schema: dict) -> str:
+    """Traduit les regles `allOf/if/then` de la racine en consignes lisibles.
+
+    Ces regles ne se devinent pas : le schema impose par exemple que
+    `sentiment.label` vaille `neutre` des lors que `requires_parent_context` est
+    vrai. Le prompt ne le disait nulle part, et 18 annotations sur 122 y ont
+    echoue. Les enoncer a la main serait une quatrieme occasion de deriver.
+    """
+    def decrire_condition(bloc: dict) -> str:
+        for champ, contrainte in (bloc.get('properties') or {}).items():
+            if 'const' in contrainte:
+                return f'`{champ}` vaut `{json.dumps(contrainte["const"])}`'
+            sous = (contrainte.get('properties') or {})
+            for souschamp, souscontrainte in sous.items():
+                if 'const' in souscontrainte:
+                    return f'`{champ}.{souschamp}` vaut `{souscontrainte["const"]}`'
+        return ''
+
+    def decrire_effet(bloc: dict, prefixe: str = '') -> list[str]:
+        effets = []
+        for champ, contrainte in (bloc.get('properties') or {}).items():
+            nom = f'{prefixe}{champ}'
+            if contrainte.get('maxItems') == 0:
+                effets.append(f'`{nom}` reste vide')
+            if contrainte.get('type') == 'null':
+                effets.append(f'`{nom}` vaut `null`')
+            elif contrainte.get('type') == 'string':
+                effets.append(f'`{nom}` doit etre renseigne')
+            if 'const' in contrainte:
+                effets.append(f'`{nom}` vaut obligatoirement `{contrainte["const"]}`')
+            if 'enum' in contrainte:
+                effets.append(f'`{nom}` est limite a {", ".join(contrainte["enum"])}')
+            if 'properties' in contrainte:
+                effets += decrire_effet(contrainte, f'{nom}.')
+        return effets
+
+    lignes = []
+    for regle in schema.get('allOf', []):
+        condition = decrire_condition(regle.get('if') or {})
+        effets = decrire_effet(regle.get('then') or {})
+        if condition and effets:
+            lignes.append(f'- Si {condition} : ' + ', et '.join(effets) + '.')
+    return '\n'.join(lignes)
+
+
+def structures(schema: dict) -> str:
+    """Decrit la forme exacte des objets imbriques, lue dans le schema.
+
+    Le premier prompt ne montrait que des tableaux vides pour `aspects`,
+    `alerts` et `entities`. Faute d'avoir vu un objet rempli, le modele a
+    invente sa propre forme : `aspect.label` et `aspect.description`, qui
+    n'existent pas, et l'omission d'`intensity`, `implicit` et
+    `target_entity_id` sur 33 231 aspects. Decrire la structure a la main
+    reproduirait le risque ; elle est donc derivee du contrat.
+    """
+    lignes = []
+    for nom, titre in (('entity', 'entities[]'), ('overallSentiment', 'sentiment'),
+                       ('aspect', 'aspects[]'), ('alert', 'alerts[]')):
+        bloc = schema['$defs'][nom]
+        requis = set(bloc.get('required', []))
+        champs = []
+        for cle, val in bloc['properties'].items():
+            if cle == 'evidence':
+                champs.append('evidence*: tableau d extraits exacts, 1 a 3')
+                continue
+            types = val.get('type')
+            if '$ref' in val:
+                cible = schema['$defs'][val['$ref'].split('/')[-1]]
+                types = '|'.join(cible['enum']) if 'enum' in cible else cible.get('type')
+            elif 'enum' in val:
+                types = '|'.join(str(x) for x in val['enum'])
+            elif isinstance(types, list):
+                types = ' ou '.join(types)
+            elif types == 'array':
+                types = 'tableau'
+            champs.append(f'{cle}{"*" if cle in requis else ""}: {types}')
+        lignes.append(f'- `{titre}` — ' + ' · '.join(champs))
+
+    tailles = ' · '.join(
+        f'`{k}` max {schema["properties"][k]["maxItems"]}'
+        for k in ('entities', 'aspects', 'alerts', 'intents')
+        if 'maxItems' in schema['properties'][k])
+    return ('\n'.join(lignes)
+            + f'\n\nLes champs marques `*` sont OBLIGATOIRES, sans exception.'
+              f' Aucun autre champ n est accepte.\nTailles maximales : {tailles}.')
+
+
 REGLES_ARABIZI = """
 ### Dechiffrage de l'arabizi
 
@@ -190,6 +299,24 @@ Le champ `monitoring_target` t'est donne. Il conditionne deux choses :
 
 {vocabulaires(schema)}
 
+## Forme exacte des objets imbriques
+
+{structures(schema)}
+
+Les identifiants d'entite s'ecrivent **`ent_1`, `ent_2`, ...** — motif impose
+`^ent_[0-9]+$`. `target_entity_id` reprend l'`id` d'une entite de `entities`, ou vaut
+`null` si l'aspect ou l'alerte ne vise aucune entite nommee. `implicit` dit si
+l'aspect est sous-entendu plutot qu'enonce. Pour `entities`, `start` et `end` valent
+toujours `null` : le pipeline les resout depuis `mention`. Une entite citee dans le
+texte a `source: texte` et sa `mention` recopiee exactement ; une entite deduite du
+contexte a `source: contexte` et `mention: null`.
+
+## Regles de coherence imposees par le contrat
+
+{regles_conditionnelles(schema)}
+
+{attributs_par_famille(schema)}
+
 ## Contraintes
 
 - Un aspect n'est jamais `neutre` : s'il n'y a pas de polarite, il n'y a pas d'aspect.
@@ -218,15 +345,28 @@ que tu annotes, et une valeur ecrite ici serait ecrasee.
 
 ## Sortie
 
-Un unique objet JSON, sans texte autour, sans bloc de code :
+Un unique objet JSON, sans texte autour, sans bloc de code. Cet exemple montre les
+objets imbriques REMPLIS — c'est leur forme qu'il faut reproduire :
 
-{{"record_id":"...","lecture_fr":"...","monitoring_target":{{...}},"author_role":"consommateur",
-"requires_parent_context":false,"is_exploitable":true,"non_exploitable_reason":null,
-"business_relevance":"aucune","language":{{"dominant":"darija_arabizi","detected":["darija"],
-"code_switching":false,"scripts":["latin","chiffres"]}},"entities":[],
-"sentiment":{{"label":"positif","intensity":"forte","emotion":"joie","sarcasm":false,
-"target_entity_ids":[],"evidence":["nhabkoum bzf"]}},"intents":["avis"],"aspects":[],
-"alerts":[],"notes":""}}"""
+{{"record_id":"...","lecture_fr":"traduction francaise du commentaire",
+"monitoring_target":{{"scope":"organisation","entity_name":"Poste Didouche","entity_type":"organisation"}},
+"author_role":"consommateur","requires_parent_context":false,"is_exploitable":true,
+"non_exploitable_reason":null,"business_relevance":"directe",
+"language":{{"dominant":"francais","detected":["francais"],"code_switching":false,"scripts":["latin"]}},
+"entities":[{{"id":"ent_1","type":"organisation","name":"Poste Didouche","mention":"la poste",
+"start":null,"end":null,"source":"texte"}}],
+"sentiment":{{"label":"negatif","intensity":"forte","emotion":"frustration","sarcasm":false,
+"target_entity_ids":["ent_1"],"evidence":["deux heures d attente"]}},
+"intents":["plainte"],
+"aspects":[{{"family":"experience_client","attribute":"attente","target_entity_id":"ent_1",
+"sentiment":"negatif","intensity":"forte","implicit":false,
+"evidence":["deux heures d attente"]}}],
+"alerts":[{{"type":"rupture_service","severity":"moyenne","target_entity_id":"ent_1",
+"evidence":["guichet ferme sans preavis"]}}],
+"notes":""}}
+
+Si un commentaire n'a ni aspect, ni alerte, ni entite, ces tableaux restent vides.
+Mais des qu'ils contiennent un objet, cet objet porte TOUS ses champs obligatoires."""
 
 
 def appeler(prompt: str, item: dict, modele: str, cle: str, temperature: float = 0.0,
@@ -301,6 +441,10 @@ def normaliser_preuves(bloc: dict) -> list[str]:
 
 def verifier(sortie: dict, item: dict) -> str | None:
     """Controles bon marche appliques avant d'ecrire. Ce qui echoue est redemande."""
+    # Le modele renvoie parfois un tableau au lieu d'un objet. Sans ce garde-fou
+    # l'exception traversait `traiter` et emportait toute la passe.
+    if not isinstance(sortie, dict):
+        return f'reponse de type {type(sortie).__name__}, objet attendu'
     if sortie.get('record_id') != item['record_id']:
         return 'record_id different'
     if not str(sortie.get('lecture_fr') or '').strip():
@@ -381,12 +525,16 @@ def main() -> int:
             for essai in range(3):
                 # A temperature 0 un reessai reproduit la meme reponse, donc le
                 # meme defaut. On desserre juste assez pour changer de trajectoire.
+                # Aucune exception ne doit sortir d'ici : un seul item malformé
+                # emportait sinon la passe entiere via `pool.map`.
                 try:
                     res = appeler(prompt, item, args.model, cle,
                                   temperature=0.0 + 0.2 * essai, reflexion=args.thinking)
+                    probleme = verifier(res, item)
                 except RuntimeError as err:
                     return None, str(err)
-                probleme = verifier(res, item)
+                except Exception as err:                    # noqa: BLE001 — filet
+                    return None, f'{type(err).__name__}: {err}'
                 if probleme is None:
                     res['annotator'] = args.annotator
                     return res, None
