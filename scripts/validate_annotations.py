@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Valide un lot d'annotations contre le contrat V0.3.
+"""Valide un lot d'annotations contre le contrat courant (V0.4).
 
 Les controles integres a `annotate_vertex.py` sont bon marche et locaux : ils
 verifient qu'une preuve figure dans le texte, qu'un aspect n'est pas neutre. Ils
@@ -23,7 +23,7 @@ from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SCHEMA_PATH = ROOT / 'docs/slm_v2/business_comment_annotation_v0.3.schema.json'
+SCHEMA_PATH = ROOT / 'docs/slm_v2/business_comment_annotation_v0.4.schema.json'
 #: Champs de travail, absents du contrat : le schema refuse tout ajout.
 HORS_CONTRAT = ('record_id', 'annotator', 'notes', 'lecture_fr')
 SEV = {'faible': 1, 'moyenne': 2, 'elevee': 3}

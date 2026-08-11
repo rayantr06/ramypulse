@@ -150,6 +150,14 @@ def evaluer(ref: dict, pred: dict, textes: dict | None = None) -> dict:
         vide = set() if metrique is micro_f1 else ABSENT
         paires = [(lire(ref[i]), lire(pred[i]) if i in pred else vide) for i in ids]
         resultats[nom] = metrique(paires)
+        if metrique is macro_f1:
+            # Une macro-F1 moyenne les classes sans les ponderer : une classe a
+            # un seul item y pese autant qu'une classe a cent. Sur `is_exploitable`,
+            # 121 accords sur 122 donnaient 0,498 parce que la classe minoritaire
+            # comptait un item. Sans ces deux chiffres, l'artefact se lit comme un
+            # echec de qualite.
+            resultats[nom + ' :accord'] = sum(a == b for a, b in paires) / max(len(paires), 1)
+            resultats[nom + ' :support_min'] = min(Counter(a for a, _ in paires).values())
     return resultats
 
 
@@ -195,8 +203,14 @@ def main() -> int:
             critiques += bool(porte.get('critical'))
         # Depasser le plafond mesure n'est pas un exploit mais un signal : la
         # reference elle-meme n'est pas plus coherente que cela.
-        alerte = '  (au-dessus du plafond mesure)' if plafond and valeur > plafond else ''
-        print(f'{nom:36s} {valeur:8.3f} {seuil:7.2f} {str(plafond):>8s}  {marque}{alerte}')
+        note = '  (au-dessus du plafond mesure)' if plafond and valeur > plafond else ''
+        accord = resultats.get(nom + ' :accord')
+        support = resultats.get(nom + ' :support_min')
+        if accord is not None:
+            note += f'  accord brut {accord:.1%}'
+            if support is not None and support < 5:
+                note += f' — classe la plus rare : {support} item(s), macro non interpretable'
+        print(f'{nom:36s} {valeur:8.3f} {seuil:7.2f} {str(plafond):>8s}  {marque}{note}')
 
     non_couvertes = [n for n in gates['gates'] if n not in resultats]
     if non_couvertes:

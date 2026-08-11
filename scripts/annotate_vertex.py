@@ -40,7 +40,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SCHEMA_PATH = ROOT / 'docs/slm_v2/business_comment_annotation_v0.3.schema.json'
+SCHEMA_PATH = ROOT / 'docs/slm_v2/business_comment_annotation_v0.4.schema.json'
 ENDPOINT = ('https://aiplatform.googleapis.com/v1/publishers/google/models/'
             '{model}:generateContent?key={key}')
 #: Champs produits par le pipeline, jamais par l'annotateur (regle D2/D3).
