@@ -269,6 +269,26 @@ deception, enthousiasme — meme brefs, meme en argot, meme avec des emojis pour
 
 Ne surcorrige pas. N'invente pas un sentiment pour eviter `neutre` : cela creerait le
 defaut inverse, et il sera detecte.
+
+### Le langage rituel est neutre
+
+Une formule de politesse ou une invocation religieuse qui **n'evalue rien** est
+`neutre`, quelle que soit sa chaleur apparente :
+
+`Aid Moubarak` · `Macha Allah` · `barak Allah oufik` · `que Dieu te recompense` ·
+`Amine, Seigneur des mondes` · `bonne journee a vous` · `que Dieu te soulage` ·
+`nchallah` · `bonne chance`
+
+Ces enonces maintiennent le lien social ; ils ne portent aucun jugement sur une
+personne, un produit ni un service. Les coder `positif` fait monter l'indice d'une
+marque a chaque fete religieuse, pour une raison etrangere a la marque.
+
+En revanche, une **evaluation** est une polarite, meme brieve et meme religieuse
+dans sa forme : `un gardien magnifique`, `toujours excellent professeur`,
+`Allah ybarek 3la had la9hwa` — ici quelque chose est juge.
+
+La question a se poser : *ce commentaire evalue-t-il quelque chose, ou souhaite-t-il
+simplement du bien ?* Un souhait est neutre. Un jugement est une polarite.
 """
 
 
