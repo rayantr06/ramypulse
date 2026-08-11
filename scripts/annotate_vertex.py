@@ -270,25 +270,42 @@ deception, enthousiasme — meme brefs, meme en argot, meme avec des emojis pour
 Ne surcorrige pas. N'invente pas un sentiment pour eviter `neutre` : cela creerait le
 defaut inverse, et il sera detecte.
 
-### Le langage rituel est neutre
+### Formules religieuses et de politesse — le test
 
-Une formule de politesse ou une invocation religieuse qui **n'evalue rien** est
-`neutre`, quelle que soit sa chaleur apparente :
+Ces formules sont tres frequentes et toutes ne se valent pas. Le test qui les separe :
 
-`Aid Moubarak` · `Macha Allah` · `barak Allah oufik` · `que Dieu te recompense` ·
-`Amine, Seigneur des mondes` · `bonne journee a vous` · `que Dieu te soulage` ·
-`nchallah` · `bonne chance`
+> **Dirait-on cette formule devant quelque chose de MAUVAIS ?**
+> Si oui, elle se dit quelles que soient les circonstances : `neutre`.
+> Si non, c'est qu'elle est conditionnee au bien : elle porte une polarite.
 
-Ces enonces maintiennent le lien social ; ils ne portent aucun jugement sur une
-personne, un produit ni un service. Les coder `positif` fait monter l'indice d'une
-marque a chaque fete religieuse, pour une raison etrangere a la marque.
+**Neutres — dites a tous, quelles que soient les circonstances :**
 
-En revanche, une **evaluation** est une polarite, meme brieve et meme religieuse
-dans sa forme : `un gardien magnifique`, `toujours excellent professeur`,
+- Voeux de calendrier : `Aid Moubarak`, `Aid el-Fitr moubarak`, `koul 3am w antoum bikhir`
+- Salutations : `sbah el khir`, `nharkoum mabrouk`, `bonne journee`
+- Marqueurs de futur : `nchallah`, `inch Allah`, `si Dieu le veut`
+- `amine` en reponse a une invocation
+- Formules de compassion : `Allah ychafik`, `que Dieu te soulage`, `Allah yerhmou` —
+  elles repondent a un malheur, elles n'evaluent personne
+
+**Positives — on ne les dit QUE devant quelque chose de bien :**
+
+- Admiration : `machallah`, `ma cha Allah`, `tbarkallah`, `Allah ybarek` — on ne dit
+  jamais `machallah` devant un desastre ; la formule reconnait le bien tout en
+  l'attribuant a Dieu, et ecarte le mauvais oeil
+- Remerciement : `barak Allah oufik`, `jazak Allah khayran`, `que Dieu te recompense`,
+  `saha`, `chokran` — emotion `gratitude`, et si elles s'adressent a l'entite
+  surveillee, elles evaluent son service
+- Felicitation : `mabrouk 3lik`, `alf mabrouk` adresse a quelqu'un pour une reussite
+
+**Negatives** : `Allah yn3al`, `hchouma`, `Allah la yberek` — malediction ou reproche.
+
+Toute **evaluation explicite** garde sa polarite, quelle que soit sa forme religieuse :
+`un gardien magnifique`, `toujours excellent professeur`,
 `Allah ybarek 3la had la9hwa` — ici quelque chose est juge.
 
-La question a se poser : *ce commentaire evalue-t-il quelque chose, ou souhaite-t-il
-simplement du bien ?* Un souhait est neutre. Un jugement est une polarite.
+Pourquoi ce soin : coder les voeux de calendrier `positif` ferait monter l'indice
+d'une marque a chaque fete religieuse, pour une raison etrangere a elle. Coder
+`machallah` `neutre` effacerait au contraire de l'admiration reelle.
 """
 
 
