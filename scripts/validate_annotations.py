@@ -85,6 +85,37 @@ def resoudre_entite(entite: dict, texte: str) -> None:
     entite['start'], entite['end'] = debut, debut + len(mention)
 
 
+def nettoyer_attribut(aspect: dict, attendus: dict) -> bool:
+    """Retire un `attribute` hors de la liste autorisee pour sa famille.
+
+    Le schema le decrit lui-meme comme un « detail optionnel non evalue par les
+    portes de qualite », et sa liste change avec `family` — quinze enums
+    conditionnelles. Jeter une annotation entiere pour un detail facultatif et
+    non score serait disproportionne : 25 des 32 rejets du holdout venaient de la.
+    Le retrait est compte, pas silencieux.
+    """
+    valeur = aspect.get('attribute')
+    if valeur is None:
+        return False
+    autorises = attendus.get(aspect.get('family'))
+    if autorises is None or valeur in autorises:
+        return False
+    aspect.pop('attribute')
+    return True
+
+
+def attributs_autorises(schema: dict) -> dict:
+    table = {}
+    for regle in schema['$defs']['aspect'].get('allOf', []):
+        famille = (((regle.get('if') or {}).get('properties') or {})
+                   .get('family') or {}).get('const')
+        valeurs = (((regle.get('then') or {}).get('properties') or {})
+                   .get('attribute') or {}).get('enum')
+        if famille and valeurs:
+            table[famille] = set(valeurs)
+    return table
+
+
 def deriver_actionability(ligne: dict) -> dict:
     """`priority` est derivee, jamais annotee : c'est ce qui l'a fait passer de
     kappa 0,306 a 0,907. Deux annotateurs ne s'accordaient pas dessus, mais
@@ -118,6 +149,8 @@ def main() -> int:
     schema = json.loads(SCHEMA_PATH.read_text(encoding='utf-8'))
     version = schema['properties']['schema_version']['const']
     valideur = jsonschema.Draft202012Validator(schema)
+    attendus = attributs_autorises(schema)
+    attributs_retires = 0
 
     textes = {}
     for dossier in args.texts:
@@ -148,6 +181,8 @@ def main() -> int:
                     bloc['evidence'] = resoudre_offsets(bloc['evidence'], texte)
             for entite in normalise.get('entities') or []:
                 resoudre_entite(entite, texte)
+            for aspect in normalise.get('aspects') or []:
+                attributs_retires += nettoyer_attribut(aspect, attendus)
             normalise['actionability'] = deriver_actionability(normalise)
 
             erreurs = sorted(valideur.iter_errors(normalise), key=lambda e: list(e.path))
@@ -163,6 +198,8 @@ def main() -> int:
     print(f'annotations   : {total}')
     print(f'valides       : {valides} = {valides / max(total, 1):.1%}')
     print(f'invalides     : {total - valides}')
+    if attributs_retires:
+        print(f'attributs facultatifs retires (hors liste de leur famille) : {attributs_retires}')
     for motif, n in motifs.most_common(15):
         print(f'  {n:5d}  {motif}')
     if invalides[:3]:
