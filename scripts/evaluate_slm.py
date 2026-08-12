@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Confronte des predictions a une reference, porte par porte.
 
-Ce banc n'existait pas : les seuils de `acceptance_gates_v0.3.json` avaient ete
+Ce banc n'existait pas : les seuils de `acceptance_gates_v0.4.json` avaient ete
 calibres mais jamais appliques, faute d'un modele a mesurer. Il sert aux deux
 usages, et c'est deliberé — le professeur passe par le meme banc que l'eleve.
 Un professeur qui echoue a une porte ne peut pas produire un jeu d'entrainement
@@ -34,7 +34,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-GATES_PATH = ROOT / 'docs/slm_v2/gold_v0.1/baselines/acceptance_gates_v0.3.json'
+GATES_PATH = ROOT / 'docs/slm_v2/gold_v0.1/baselines/acceptance_gates_v0.4.json'
 
 
 def charger(chemin: str) -> dict:
