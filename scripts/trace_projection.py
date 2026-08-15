@@ -270,12 +270,17 @@ def compiler_compacte(trace: dict) -> str:
     for entite in dec['entities']:
         lignes.append(f"{entite['entity_id']}:{entite['type']} → source:{entite['source']}")
 
+    masques = set(trace.get('_compact_aspects_masques') or [])
     for aspect in dec['aspects']:
+        if id(aspect) in masques:
+            continue
         ids = '+'.join(aspect.get('evidence_ids') or []) or 'ctx'
-        detail = f".{aspect['attribute']}" if aspect.get('attribute') else ''
+        detail = ('' if trace.get('_compact_sans_attribut')
+                  else (f".{aspect['attribute']}" if aspect.get('attribute') else ''))
         cible = f"@{aspect['target_entity_id']}" if aspect.get('target_entity_id') else ''
+        intensite = '' if trace.get('_compact_sans_intensite') else f":{aspect['intensity']}"
         lignes.append(f"{ids} → {aspect['family']}{detail}{cible}"
-                      f":{SIGNE[aspect['sentiment']]}:{aspect['intensity']}")
+                      f":{SIGNE[aspect['sentiment']]}{intensite}")
 
     sentiment = dec['overall_sentiment']
     origine = '+'.join(sentiment.get('evidence_ids') or []) or 'scan'
@@ -304,6 +309,59 @@ def compiler_compacte(trace: dict) -> str:
     lignes.append(f"∴ intents:{intents}; alerts:{alertes}; "
                   f"action:{action['queue']}/{action['priority']}")
     return '<think>\n' + '\n'.join(lignes) + '\n</think>'
+
+
+def comprimer(trace: dict, plafond: int, tokenizer=None) -> tuple[str, list[str]]:
+    """Ramene la trace compacte sous son plafond, par retraits ordonnes.
+
+    L'audit ne rejette une trace pour depassement qu'« apres une tentative de
+    compression ». Les retraits vont du moins couteux au plus couteux :
+
+    1. l'attribut d'aspect — le schema le dit lui-meme « detail optionnel non
+       evalue par les portes de qualite » ;
+    2. l'intensite d'aspect, qui reste dans le JSON final que l'eleve produit ;
+    3. les aspects les plus faibles, retires un a un de la trace compacte. Ils
+       demeurent dans la trace canonique : rien n'est perdu, seule la vue
+       d'entrainement est allegee.
+
+    Ce qui est retire est enregistre. Une compression silencieuse laisserait
+    croire que la trace couvre tout ce que le JSON contient.
+    """
+    retires: list[str] = []
+    compacte = compiler_compacte(trace)
+    if compter_tokens(compacte, tokenizer)[0] <= plafond:
+        return compacte, retires
+
+    # La compression ne touche jamais l'objet canonique : elle pose des drapeaux
+    # que le compilateur honore. La trace canonique est l'enregistrement d'audit,
+    # elle doit rester complete — et `attribute` y est d'ailleurs obligatoire,
+    # alors qu'il est facultatif dans le contrat d'annotation.
+    trace['_compact_sans_attribut'] = True
+    compacte = compiler_compacte(trace)
+    retires.append('attribute')
+    if compter_tokens(compacte, tokenizer)[0] <= plafond:
+        return compacte, retires
+
+    trace['_compact_sans_intensite'] = True
+    compacte = compiler_compacte(trace)
+    retires.append('intensite_aspect')
+    if compter_tokens(compacte, tokenizer)[0] <= plafond:
+        return compacte, retires
+
+    # En dernier recours, les aspects les plus faibles sortent de la VUE, pas de
+    # la trace. Rien n'est perdu ; seule la vue d'entrainement est allegee.
+    ordre = {'faible': 0, 'moyenne': 1, 'forte': 2}
+    candidats = sorted(trace['decisions']['aspects'],
+                       key=lambda a: ordre.get(a.get('intensity'), 1))
+    masques: list[int] = []
+    for aspect in candidats[:-1]:
+        masques.append(id(aspect))
+        trace['_compact_aspects_masques'] = masques
+        retires.append(f"aspect:{aspect['family']}")
+        compacte = compiler_compacte(trace)
+        if compter_tokens(compacte, tokenizer)[0] <= plafond:
+            break
+    return compacte, retires
 
 
 def compter_tokens(texte: str, tokenizer=None) -> tuple[int, bool]:
@@ -347,6 +405,7 @@ def main() -> int:
     sortie = Path(args.output)
     sortie.mkdir(parents=True, exist_ok=True)
     niveaux, depassements, invalides, total = Counter(), Counter(), 0, 0
+    comprimees, motifs_compression = Counter(), Counter()
     mesure_reelle = True
     exemples = []
 
@@ -365,11 +424,18 @@ def main() -> int:
             propre = {k: v for k, v in annotation.items()
                       if k not in ('record_id', 'annotator', 'notes', 'lecture_fr')}
             trace = projeter(propre, texte)
-            compacte = compiler_compacte(trace)
+            plafond = trace['complexity']['max_trace_tokens']
+            compacte, retires = comprimer(trace, plafond, tokenizer)
+            for drapeau in ('_compact_sans_attribut', '_compact_sans_intensite',
+                            '_compact_aspects_masques'):
+                trace.pop(drapeau, None)
+            if retires:
+                comprimees[trace['complexity']['level']] += 1
+                for r in retires:
+                    motifs_compression[r.split(':')[0]] += 1
             n, reelle = compter_tokens(compacte, tokenizer)
             mesure_reelle &= reelle
             trace['complexity']['observed_trace_tokens'] = n
-            plafond = trace['complexity']['max_trace_tokens']
             trace['validation']['within_token_budget'] = n <= plafond
             trace['validation']['all_evidence_exact'] = all(
                 e['text'] == texte[e['start']:e['end']] for e in trace['evidence_map'])
@@ -396,6 +462,9 @@ def main() -> int:
     for rid, msg in exemples:
         print(f'  [{rid}] {msg}')
     print(f"\ncomptage de tokens : {'reel' if mesure_reelle else 'ESTIME (pas de tokenizer)'}")
+    if sum(comprimees.values()):
+        print(f'comprimees : {sum(comprimees.values())} '
+              f'({dict(comprimees)}), retraits {dict(motifs_compression)}')
     print(f"{'niveau':10s} {'n':>6s} {'plafond':>8s} {'depassements':>13s}")
     for niveau in ('simple', 'medium', 'complex'):
         n = niveaux[niveau]

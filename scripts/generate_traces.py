@@ -45,7 +45,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
 from annotate_vertex import appeler, charger_cle  # noqa: E402
-from trace_projection import compiler_compacte    # noqa: E402
+from trace_projection import comprimer, compter_tokens  # noqa: E402
 
 TRACE_SCHEMA = ROOT / 'docs/slm_v2/business_decision_trace_v0.2.schema.json'
 
@@ -173,9 +173,15 @@ def main() -> int:
     ap.add_argument('--model', default='gemini-3-flash-preview')
     ap.add_argument('--workers', type=int, default=8)
     ap.add_argument('--limit', type=int, default=None)
+    ap.add_argument('--tokenizer', default='Qwen/Qwen3-0.6B',
+                    help='tokenizer pour recompter apres enrichissement')
     args = ap.parse_args()
 
     import jsonschema
+    tokenizer = None
+    if args.tokenizer:
+        from transformers import AutoTokenizer
+        tokenizer = AutoTokenizer.from_pretrained(args.tokenizer)
     schema = json.loads(TRACE_SCHEMA.read_text(encoding='utf-8'))
     valideur = jsonschema.Draft202012Validator(schema)
     prompt = construire_prompt(schema)
@@ -219,8 +225,19 @@ def main() -> int:
             ligne['justifiable'] = bool(r.get('justifiable', True))
             ligne['probleme'] = r.get('probleme')
             # La trace compacte est recompilee : les regles completees peuvent
-            # changer ce qui s'y ecrit.
-            ligne['compact_trace'] = compiler_compacte(ligne['decision_trace'])
+            # changer ce qui s'y ecrit. Elle repasse par la compression, sans quoi
+            # l'enrichissement ferait ressortir du budget les traces qui y etaient
+            # rentrees.
+            tr = ligne['decision_trace']
+            plafond = tr['complexity']['max_trace_tokens']
+            ligne['compact_trace'], _ = comprimer(tr, plafond, tokenizer)
+            for drapeau in ('_compact_sans_attribut', '_compact_sans_intensite',
+                            '_compact_aspects_masques'):
+                tr.pop(drapeau, None)
+            tr['complexity']['observed_trace_tokens'] = compter_tokens(
+                ligne['compact_trace'], tokenizer)[0]
+            tr['validation']['within_token_budget'] = (
+                tr['complexity']['observed_trace_tokens'] <= plafond)
             return ligne, None
 
         with ThreadPoolExecutor(max_workers=args.workers) as pool:
