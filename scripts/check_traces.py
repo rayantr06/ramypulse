@@ -71,8 +71,13 @@ def controler(trace: dict, annotation: dict, texte: str) -> list[str]:
         defauts.append('alertes_divergentes')
 
     # 3. Ce que le JSON porte d'important doit se lire dans la trace compacte.
+    #    « Important » exclut ce que la compression a volontairement retire pour
+    #    tenir le budget : un retrait consigne n'est pas un oubli. Il reste dans
+    #    la trace canonique, seule la vue d'entrainement l'omet.
+    comprimes = {r.split(':', 1)[1] for r in (trace.get('compression') or [])
+                 if r.startswith('aspect:')}
     for famille, sentiment in json_aspects:
-        if famille not in compacte:
+        if famille not in compacte and famille not in comprimes:
             defauts.append('aspect_absent_de_la_trace')
             break
     for type_alerte, _ in json_alertes:

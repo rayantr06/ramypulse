@@ -449,7 +449,10 @@ def main() -> int:
             depassements[trace['complexity']['level']] += n > plafond
             total += 1
             lignes.append({'record_id': rid, 'decision_trace': trace,
-                           'compact_trace': compacte})
+                           'compact_trace': compacte,
+                           # Ce qui sort de la vue est consigne : sans cela, un
+                           # retrait volontaire se lirait comme un oubli.
+                           'compression': retires})
         if lignes:
             (sortie / lot.name.replace('.out.jsonl', '.trace.jsonl')).write_text(
                 ''.join(json.dumps(x, ensure_ascii=False) + '\n' for x in lignes),

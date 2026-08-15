@@ -230,7 +230,8 @@ def main() -> int:
             # rentrees.
             tr = ligne['decision_trace']
             plafond = tr['complexity']['max_trace_tokens']
-            ligne['compact_trace'], _ = comprimer(tr, plafond, tokenizer)
+            ligne['compact_trace'], retires = comprimer(tr, plafond, tokenizer)
+            ligne['compression'] = retires
             for drapeau in ('_compact_sans_attribut', '_compact_sans_intensite',
                             '_compact_aspects_masques'):
                 tr.pop(drapeau, None)
