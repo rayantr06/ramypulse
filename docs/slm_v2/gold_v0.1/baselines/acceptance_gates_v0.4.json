@@ -163,7 +163,6 @@
   },
   "blocking_conditions": [
     "Scope `secteur` toujours non teste. Le corpus Maps est integralement en scope `organisation` par construction ; aucune porte ne couvre `secteur`.",
-    "donnees_confidentialite jamais exercee : 0 evenement sur 594 items.",
     "requires_parent_context plafonne a 0,530, non derivable. Correctif en amont : capturer le post parent.",
     "Le professeur n est pas deterministe : 88 % d identite sur le sentiment entre deux passes des memes 122 items, temperature 0. Les seuils ne chiffrent pas cette incertitude ; une porte mesuree sur une seule passe ne prouve rien de serre.",
     "La macro-F1 n est pas interpretable quand une classe compte moins de 5 items : 121 accords sur 122 donnaient 0,498 sur `is_exploitable`. Lire l accord brut et le support a cote du score.",
@@ -222,12 +221,37 @@
     "jamais_exerce": [
       "donnees_confidentialite"
     ],
-    "verdict": "EVALUABLES. La condition bloquante de juillet est levee."
+    "verdict": "EVALUABLES. La condition bloquante de juillet est levee.",
+    "corpus_complet": {
+      "date": "2026-08-12",
+      "items": 14133,
+      "evenements_distincts": 1431,
+      "secteurs": 187,
+      "types_exerces": 9,
+      "jamais_exerce": [],
+      "note": "Les neuf types d alerte du contrat sont desormais exerces."
+    }
   },
   "lifted_conditions": [
     "Portes d alerte non evaluables — levee : 112 evenements, IC 95 % de largeur 0,143.",
     "harcelement_discrimination jamais exercee — levee : 5 evenements distincts.",
     "Gold arabizi inutilisable pour cause de biais partage — levee : socle de 286 items annotes avec etape de lecture obligatoire, taux de neutre 5 %, accord 82,9 % avec les etiquettes de corpus tenues cachees.",
-    "Diversite des marques — levee : 98 entites sur 99 secteurs d activite, contre trois marques agroalimentaires."
-  ]
+    "Diversite des marques — levee : 98 entites sur 99 secteurs d activite, contre trois marques agroalimentaires.",
+    "donnees_confidentialite jamais exercee — levee : 8 evenements sur le corpus complet. Les neuf types du contrat sont exerces."
+  ],
+  "controle_par_les_etoiles": {
+    "date": "2026-08-12",
+    "comparables": 12478,
+    "accord": 0.952,
+    "inversions_polarite": 0.0151,
+    "note": "La note vient de l auteur du commentaire, pas d un annotateur : c est le seul signal du corpus qui ne partage aucun biais avec le professeur.",
+    "test_des_trois_etoiles": {
+      "principe": "Un avis a 3 etoiles n est ni positif ni negatif POUR SON AUTEUR. Si l annotateur forcait la polarite, la part d ambivalence y serait la meme qu ailleurs.",
+      "mixte_a_3_etoiles": 0.42,
+      "mixte_a_1_ou_5_etoiles": 0.03,
+      "neutre_a_3_etoiles": 0.09,
+      "neutre_a_1_ou_5_etoiles": 0.03,
+      "verdict": "L ambivalence est quatorze fois plus frequente la ou l auteur lui-meme etait ambivalent. L annotateur ne force pas la polarite."
+    }
+  }
 }
