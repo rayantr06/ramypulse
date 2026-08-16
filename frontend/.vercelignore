@@ -3,5 +3,7 @@ dist
 output
 test-results
 .playwright-cli
+.vercel
+.env*
 tests
 *.log
