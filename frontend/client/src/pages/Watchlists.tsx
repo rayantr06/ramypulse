@@ -1,14 +1,38 @@
 import { useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "@/hooks/use-toast";
+import {
+  Activity,
+  ArrowRight,
+  CircleOff,
+  Gauge,
+  Plus,
+  Radar,
+  SearchX,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
+
 import { AppShell } from "@/components/AppShell";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { apiRequest } from "@/lib/queryClient";
-import { buildWatchlistCreatePayload, type WatchlistFormInput } from "@/lib/apiMappings";
+import { PageHeader } from "@/components/PageHeader";
+import {
+  WatchScopeForm,
+  type WatchScopeSubmitValue,
+} from "@/components/watch/WatchScopeForm";
+import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { toast } from "@/hooks/use-toast";
 import { mapWatchlist, mapWatchlistMetrics } from "@/lib/apiMappings";
 import { filterWatchlistViews } from "@/lib/pageSearchFilters";
-import { STITCH_AVATARS } from "@/lib/stitchAssets";
+import { apiRequest } from "@/lib/queryClient";
+import { useTenantId } from "@/lib/tenantContext";
+import { buildWatchWizardPayload } from "@/lib/watchWizard";
 
 type TabFilter = "Toutes" | "Actives" | "Inactives";
 
@@ -18,7 +42,6 @@ interface WatchlistView {
   description: string;
   scope: string;
   is_active: boolean;
-  owners: string[];
 }
 
 interface AspectView {
@@ -45,7 +68,6 @@ function mapWatchlistView(value: unknown): WatchlistView {
     description: watchlist.description || "Aucune description disponible.",
     scope: (watchlist.scope_type || "global").replaceAll("_", " ").toUpperCase(),
     is_active: Boolean(watchlist.is_active),
-    owners: [],
   };
 }
 
@@ -64,64 +86,61 @@ function mapWatchlistMetricsView(value: unknown): WatchlistMetricsView {
     aspects,
     quick_insight:
       metrics.quick_insight ||
-      "Aucun quick insight n'est encore disponible pour cette watchlist.",
+      "Aucun enseignement automatique n’est encore disponible pour cette surveillance.",
     last_updated: metrics.computed_at || "Non calculé",
   };
 }
 
 function buildInsightsTitle(name: string): string {
   const parenthetical = name.match(/\(([^)]+)\)/)?.[1]?.trim();
-  if (!parenthetical) {
-    return "Quick Insights";
-  }
-  return `Quick Insights - ${parenthetical.replace(/^Tout\s+/i, "")}`;
+  if (!parenthetical) return "Lecture rapide";
+  return `Lecture rapide · ${parenthetical.replace(/^Tout\s+/i, "")}`;
 }
 
-function ScopeBadge({ scope }: { scope: string }) {
-  return (
-    <span className="text-[10px] font-bold text-on-surface-variant tracking-wider uppercase mb-2 block">
-      {scope}
-    </span>
-  );
+function formatCompactNumber(value: number): string {
+  return new Intl.NumberFormat("fr-FR", {
+    notation: value >= 1_000 ? "compact" : "standard",
+    maximumFractionDigits: 1,
+  }).format(value);
+}
+
+function formatTimestamp(value: string): string {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(parsed);
 }
 
 export default function Watchlists() {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
+  const clientId = useTenantId();
   const [tab, setTab] = useState<TabFilter>("Toutes");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [showCreateForm, setShowCreateForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [createForm, setCreateForm] = useState<WatchlistFormInput>({
-    name: "",
-    description: "",
-    scope_type: "product",
-    product: "",
-    wilaya: "",
-    channel: "",
-    aspect: "",
-    sentiment: "",
-    period_days: 7,
-    min_volume: 10,
-  });
-
   const queryClient = useQueryClient();
+  const showCreateForm = location === "/watchlists/new";
 
   const watchlistsQuery = useQuery({
-    queryKey: ["/api/watchlists"],
+    queryKey: ["/api/watchlists", { clientId }],
     queryFn: async () => {
       const activeRes = await apiRequest("GET", "/api/watchlists?is_active=true");
       const inactiveRes = await apiRequest("GET", "/api/watchlists?is_active=false");
       const active = ((await activeRes.json()) as unknown[]).map(mapWatchlistView);
-      const all = ((await inactiveRes.json()) as unknown[]).map(mapWatchlistView);
+      const inactive = ((await inactiveRes.json()) as unknown[]).map(mapWatchlistView);
       const merged = new Map<string, WatchlistView>();
-      [...all, ...active].forEach((item) => {
-        merged.set(item.id, item);
-      });
+      [...inactive, ...active].forEach((item) => merged.set(item.id, item));
       return Array.from(merged.values());
     },
+    enabled: Boolean(clientId),
   });
 
   const allWatchlists = watchlistsQuery.data ?? [];
+  const activeCount = allWatchlists.filter((watchlist) => watchlist.is_active).length;
+  const scopeCount = new Set(allWatchlists.map((watchlist) => watchlist.scope)).size;
 
   const filtered = useMemo(() => {
     const tabFiltered = allWatchlists.filter((watchlist) => {
@@ -133,10 +152,10 @@ export default function Watchlists() {
   }, [allWatchlists, searchQuery, tab]);
 
   const selectedWatchlist =
-    filtered.find((watchlist) => watchlist.id === selectedId) || filtered[0] || null;
+    allWatchlists.find((watchlist) => watchlist.id === selectedId) || filtered[0] || null;
 
   const metricsQuery = useQuery({
-    queryKey: ["/api/watchlists", selectedWatchlist?.id, "metrics"],
+    queryKey: ["/api/watchlists/metrics", { clientId, watchlistId: selectedWatchlist?.id }],
     queryFn: async () => {
       const res = await apiRequest(
         "GET",
@@ -144,41 +163,70 @@ export default function Watchlists() {
       );
       return mapWatchlistMetricsView(await res.json());
     },
-    enabled: !!selectedWatchlist?.id,
+    enabled: Boolean(selectedWatchlist?.id),
   });
 
   const metricsData = metricsQuery.data;
 
+  function setCreateOpen(open: boolean) {
+    setLocation(open ? "/watchlists/new" : "/watchlists");
+  }
+
   const createMutation = useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest(
+    mutationFn: async (input: WatchScopeSubmitValue) => {
+      const watchlistResponse = await apiRequest(
         "POST",
         "/api/watchlists",
-        buildWatchlistCreatePayload(createForm),
+        buildWatchWizardPayload(input.payload),
       );
-      return res.json();
+      const watchlist = (await watchlistResponse.json()) as { watchlist_id: string };
+      const watchlistId = String(watchlist.watchlist_id);
+
+      try {
+        const runResponse = await apiRequest("POST", "/api/watch-runs", {
+          watchlist_id: watchlistId,
+          requested_channels: input.requestedChannels,
+        });
+        const run = (await runResponse.json()) as { run_id?: string };
+        return {
+          watchlist_id: watchlistId,
+          run_id: run.run_id ? String(run.run_id) : null,
+          run_error: null,
+        };
+      } catch (error) {
+        return {
+          watchlist_id: watchlistId,
+          run_id: null,
+          run_error:
+            error instanceof Error ? error.message : "La première collecte n’a pas pu démarrer.",
+        };
+      }
     },
-    onSuccess: (data: { watchlist_id: string }) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/watchlists"] });
-      setShowCreateForm(false);
-      setCreateForm({
-        name: "",
-        description: "",
-        scope_type: "product",
-        product: "",
-        wilaya: "",
-        channel: "",
-        aspect: "",
-        sentiment: "",
-        period_days: 7,
-        min_volume: 10,
-      });
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/watchlists", { clientId }] });
+      setCreateOpen(false);
       setSelectedId(data.watchlist_id);
+
+      if (data.run_error) {
+        toast({
+          title: "Surveillance créée, collecte non lancée",
+          description: data.run_error,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Surveillance active",
+        description: data.run_id
+          ? `La collecte ${data.run_id} vient de démarrer.`
+          : "La première collecte vient de démarrer.",
+      });
     },
     onError: (error: Error) => {
       toast({
-        title: "Erreur",
-        description: error.message || "Une erreur est survenue",
+        title: "Création impossible",
+        description: error.message || "Vérifiez le périmètre puis réessayez.",
         variant: "destructive",
       });
     },
@@ -189,13 +237,14 @@ export default function Watchlists() {
       await apiRequest("DELETE", `/api/watchlists/${watchlistId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/watchlists"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/watchlists", { clientId }] });
       setSelectedId(null);
+      toast({ title: "Surveillance désactivée" });
     },
     onError: (error: Error) => {
       toast({
-        title: "Erreur",
-        description: error.message || "Une erreur est survenue",
+        title: "Désactivation impossible",
+        description: error.message || "Réessayez dans quelques instants.",
         variant: "destructive",
       });
     },
@@ -203,372 +252,277 @@ export default function Watchlists() {
 
   return (
     <AppShell
-      headerSearchPlaceholder="Rechercher une watchlist..."
+      headerSearchPlaceholder="Rechercher une surveillance…"
       onSearch={setSearchQuery}
-      avatarSrc={STITCH_AVATARS.watchlists.src}
-      avatarAlt={STITCH_AVATARS.watchlists.alt}
     >
-      <div className="p-8 flex gap-8">
-        <div className="flex-1 min-w-0">
-          <div className="flex justify-between items-end mb-8">
-            <div>
-              <span className="text-[10px] font-bold text-primary tracking-[0.2em] uppercase mb-1 block">
-                SURVEILLANCE
-              </span>
-              <h1 className="font-headline text-3xl font-black tracking-tight">Watchlists</h1>
+      <div className="page-enter mx-auto w-full max-w-[1580px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+        <PageHeader
+          eyebrow="Surveiller"
+          tone="monitor"
+          title="Sujets surveillés"
+          description="Retrouvez les marques, produits et sujets écoutés. Sélectionnez une ligne pour consulter son état et ses premiers résultats."
+          actions={
+            <Button
+              onClick={() => setCreateOpen(true)}
+              className="gap-2"
+              data-testid="btn-create-watchlist"
+            >
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              Créer une surveillance
+            </Button>
+          }
+        />
+
+        <section className="mt-6 grid gap-3 sm:grid-cols-3" aria-label="Résumé des surveillances">
+          <div className="rounded-2xl border border-action/15 bg-action-container/55 p-4">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-bold text-on-surface-variant">Surveillances actives</p>
+              <Activity className="h-4 w-4 text-action" aria-hidden="true" />
             </div>
-            <div className="bg-surface-container-high p-1 rounded-lg flex gap-1">
-              {(["Toutes", "Actives", "Inactives"] as TabFilter[]).map((filterValue) => (
-                <button
-                  key={filterValue}
-                  onClick={() => setTab(filterValue)}
-                  className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-colors ${
-                    tab === filterValue
-                      ? "bg-surface-bright text-white shadow-sm"
-                      : "text-on-surface-variant hover:text-white"
-                  }`}
-                >
-                  {filterValue}
-                </button>
-              ))}
-            </div>
+            <p className="metric-number mt-3 text-3xl font-extrabold text-on-surface">{activeCount}</p>
+            <p className="mt-1 text-xs text-on-surface-variant">sur {allWatchlists.length} périmètres</p>
           </div>
-
-          {watchlistsQuery.isLoading ? (
-            <div className="grid grid-cols-2 gap-4">
-              {[1, 2, 3].map((item) => (
-                <div key={item} className="h-48 bg-surface-container rounded-xl animate-pulse"></div>
-              ))}
+          <div className="rounded-2xl border border-insight/15 bg-insight-container/55 p-4">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-bold text-on-surface-variant">Types de sujets</p>
+              <Radar className="h-4 w-4 text-insight" aria-hidden="true" />
             </div>
-          ) : watchlistsQuery.isError ? (
-            <div className="bg-surface-container rounded-xl p-6 text-sm text-on-surface-variant">
-              Impossible de charger les watchlists.
+            <p className="metric-number mt-3 text-3xl font-extrabold text-on-surface">{scopeCount}</p>
+            <p className="mt-1 text-xs text-on-surface-variant">marques, produits ou sujets</p>
+          </div>
+          <div className="rounded-2xl border border-monitor/15 bg-monitor-container/55 p-4">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-bold text-on-surface-variant">État de la collecte</p>
+              <Gauge className="h-4 w-4 text-monitor" aria-hidden="true" />
             </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-4">
-              {filtered.map((watchlist) => (
-                <div
-                  key={watchlist.id}
-                  onClick={() => setSelectedId(watchlist.id === selectedId ? null : watchlist.id)}
-                  className={`group bg-surface-container hover:bg-surface-container-high transition-all duration-300 p-5 rounded-xl cursor-pointer relative overflow-hidden border ${
-                    selectedWatchlist?.id === watchlist.id
-                      ? "border-primary/20 bg-surface-container-high"
-                      : "border-transparent hover:border-white/5"
-                  }`}
-                >
-                  <div className="absolute top-0 right-0 p-4">
-                    <div className="flex items-center gap-2">
-                      {watchlist.is_active ? (
-                        <>
-                          <span className="w-1.5 h-1.5 rounded-full bg-tertiary shadow-[0_0_8px_#4cd6ff]"></span>
-                          <span className="text-[10px] font-medium text-tertiary">ACTIF</span>
-                        </>
-                      ) : (
-                        <>
-                          <span className="w-1.5 h-1.5 rounded-full bg-on-surface-variant/30"></span>
-                          <span className="text-[10px] font-medium text-on-surface-variant">INACTIF</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
+            <p className="mt-3 font-headline text-lg font-bold text-on-surface">
+              {activeCount > 0 ? "En écoute" : "À lancer"}
+            </p>
+            <p className="mt-1 text-xs text-on-surface-variant">mise à jour par canal configuré</p>
+          </div>
+        </section>
 
-                  <ScopeBadge scope={watchlist.scope} />
-                  <h3 className="font-headline font-semibold text-lg text-on-surface mb-2">
-                    {watchlist.name}
-                  </h3>
-                  <p className="text-xs text-on-surface-variant leading-relaxed mb-6 line-clamp-2">
-                    {watchlist.description}
-                  </p>
-                  <div className="flex items-center justify-between">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center border border-outline-variant/20">
-                            <span className="material-symbols-outlined text-on-surface-variant text-sm">group</span>
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Owners non disponibles</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    <span className="material-symbols-outlined text-on-surface-variant/30 group-hover:text-primary transition-colors text-lg">
-                      chevron_right
-                    </span>
-                  </div>
-                </div>
-              ))}
-
-              {showCreateForm ? (
-                <div className="border-2 border-primary/20 bg-primary/5 p-5 rounded-xl flex flex-col gap-4">
-                  <p className="text-xs font-bold text-primary uppercase tracking-widest">Nouvelle watchlist</p>
-                  <input
-                    className="w-full bg-surface-container-highest border-none rounded-sm text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
-                    placeholder="Nom de la watchlist"
-                    value={createForm.name}
-                    onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
-                    data-testid="input-watchlist-name"
-                  />
-                  <input
-                    className="w-full bg-surface-container-highest border-none rounded-sm text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
-                    placeholder="Description (optionnel)"
-                    value={createForm.description}
-                    onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
-                  />
-                  <select
-                    className="w-full bg-surface-container-highest border-none rounded-sm text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
-                    value={createForm.scope_type}
-                    onChange={(e) =>
-                      setCreateForm({
-                        ...createForm,
-                        scope_type: e.target.value as WatchlistFormInput["scope_type"],
-                      })
-                    }
-                  >
-                    <option value="product">Produit</option>
-                    <option value="region">Région</option>
-                    <option value="channel">Canal</option>
-                    <option value="cross_dimension">Multi-dimension</option>
-                  </select>
-                  <div className="grid grid-cols-2 gap-2">
-                    <input
-                      className="w-full bg-surface-container-highest border-none rounded-sm text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
-                      placeholder="Produit"
-                      value={createForm.product}
-                      onChange={(e) =>
-                        setCreateForm({ ...createForm, product: e.target.value })
-                      }
-                    />
-                    <input
-                      className="w-full bg-surface-container-highest border-none rounded-sm text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
-                      placeholder="Wilaya"
-                      value={createForm.wilaya}
-                      onChange={(e) =>
-                        setCreateForm({ ...createForm, wilaya: e.target.value })
-                      }
-                    />
-                    <input
-                      className="w-full bg-surface-container-highest border-none rounded-sm text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
-                      placeholder="Canal"
-                      value={createForm.channel}
-                      onChange={(e) =>
-                        setCreateForm({ ...createForm, channel: e.target.value })
-                      }
-                    />
-                    <input
-                      className="w-full bg-surface-container-highest border-none rounded-sm text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
-                      placeholder="Aspect"
-                      value={createForm.aspect}
-                      onChange={(e) =>
-                        setCreateForm({ ...createForm, aspect: e.target.value })
-                      }
-                    />
-                    <input
-                      className="w-full bg-surface-container-highest border-none rounded-sm text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
-                      placeholder="Sentiment"
-                      value={createForm.sentiment}
-                      onChange={(e) =>
-                        setCreateForm({ ...createForm, sentiment: e.target.value })
-                      }
-                    />
-                    <input
-                      className="w-full bg-surface-container-highest border-none rounded-sm text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
-                      type="number"
-                      min={1}
-                      placeholder="Jours"
-                      value={createForm.period_days}
-                      onChange={(e) =>
-                        setCreateForm({
-                          ...createForm,
-                          period_days: Number(e.target.value),
-                        })
-                      }
-                    />
-                    <input
-                      className="w-full bg-surface-container-highest border-none rounded-sm text-sm py-2 px-3 focus:ring-1 focus:ring-primary/40 focus:outline-none"
-                      type="number"
-                      min={0}
-                      placeholder="Volume min."
-                      value={createForm.min_volume}
-                      onChange={(e) =>
-                        setCreateForm({
-                          ...createForm,
-                          min_volume: Number(e.target.value),
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      disabled={!createForm.name.trim() || createMutation.isPending}
-                      onClick={() => createMutation.mutate()}
-                      className="flex-1 py-2 bg-primary text-on-primary-fixed text-xs font-bold uppercase rounded-sm disabled:opacity-50"
-                      data-testid="btn-submit-watchlist"
-                    >
-                      {createMutation.isPending ? "Création..." : "Créer"}
-                    </button>
-                    <button
-                      onClick={() => setShowCreateForm(false)}
-                      className="px-4 py-2 bg-surface-container-high text-on-surface-variant text-xs font-bold uppercase rounded-sm"
-                    >
-                      Annuler
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div
-                  onClick={() => setShowCreateForm(true)}
-                  className="group border-2 border-dashed border-white/5 hover:border-primary/20 hover:bg-primary/5 transition-all duration-300 p-5 rounded-xl flex flex-col items-center justify-center gap-3 cursor-pointer"
-                  data-testid="btn-create-watchlist"
-                >
-                  <div className="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <span className="material-symbols-outlined text-primary">add</span>
-                  </div>
-                  <span className="text-xs font-semibold text-on-surface-variant group-hover:text-primary transition-colors">
-                    Créer une watchlist
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {selectedWatchlist && (
-          <aside className="w-[380px] flex flex-col gap-4 shrink-0">
-            <div className="glass-panel rounded-xl p-6 border border-white/5 shadow-2xl">
-              <div className="flex justify-between items-start mb-6">
-                <div>
-                  <span className="text-[10px] font-bold text-primary tracking-widest uppercase mb-1 block">
-                    SÉLECTION
-                  </span>
-                  <h2 className="font-headline font-semibold text-xl">{selectedWatchlist.name}</h2>
-                </div>
-                <button
-                  onClick={() => deactivateMutation.mutate(selectedWatchlist.id)}
-                  disabled={deactivateMutation.isPending || !selectedWatchlist.is_active}
-                  title="Désactiver cette watchlist"
-                  className="p-2 hover:bg-error/10 rounded-lg transition-colors disabled:opacity-30"
-                  data-testid="btn-deactivate-watchlist"
-                >
-                  <span className="material-symbols-outlined text-on-surface-variant hover:text-error text-sm">
-                    {deactivateMutation.isPending ? "hourglass_empty" : "delete"}
-                  </span>
-                </button>
+        <div className="mt-6 grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
+          <section className="min-w-0 rounded-2xl border border-outline-variant/45 bg-surface-container-low p-3 sm:p-4">
+            <div className="flex flex-col gap-3 border-b border-outline-variant/35 px-1 pb-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="font-headline text-sm font-bold text-on-surface">Périmètres suivis</h2>
+                <p className="mt-1 text-xs text-on-surface-variant">Sélectionnez une ligne pour lire sa situation.</p>
               </div>
+              <div className="flex rounded-xl border border-outline-variant/45 bg-surface p-1">
+                {(["Toutes", "Actives", "Inactives"] as TabFilter[]).map((filterValue) => (
+                  <button
+                    key={filterValue}
+                    onClick={() => setTab(filterValue)}
+                    className={`rounded-lg px-3 py-1.5 text-[10px] font-semibold transition-colors ${
+                      tab === filterValue
+                        ? "bg-monitor text-white"
+                        : "text-on-surface-variant hover:text-on-surface"
+                    }`}
+                    type="button"
+                  >
+                    {filterValue}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-              {metricsQuery.isLoading ? (
-                <div className="grid grid-cols-2 gap-4 mb-8">
-                  {[1, 2].map((item) => (
-                    <div key={item} className="h-20 bg-surface-container-low rounded-lg animate-pulse"></div>
-                  ))}
+            <div className="mt-3 space-y-2">
+              {watchlistsQuery.isLoading ? (
+                [1, 2, 3].map((item) => (
+                  <div key={item} className="h-24 animate-pulse rounded-xl bg-surface-container-high" />
+                ))
+              ) : watchlistsQuery.isError ? (
+                <div className="rounded-xl border border-error/20 bg-error/5 p-5 text-sm text-on-surface-variant">
+                  Les surveillances ne peuvent pas être chargées. Vérifiez la connexion aux sources puis réessayez.
                 </div>
-              ) : metricsQuery.isError || !metricsData ? (
-                <div className="bg-surface-container-low p-4 rounded-lg mb-8 text-sm text-on-surface-variant">
-                  Aucun snapshot métrique disponible pour cette watchlist.
+              ) : filtered.length === 0 ? (
+                <div className="flex min-h-64 flex-col items-center justify-center rounded-xl border border-dashed border-outline-variant/55 px-6 text-center">
+                  <SearchX className="h-7 w-7 text-on-surface-variant" aria-hidden="true" />
+                  <h3 className="mt-4 font-headline text-sm font-bold text-on-surface">Aucune surveillance trouvée</h3>
+                  <p className="mt-2 max-w-sm text-xs leading-5 text-on-surface-variant">
+                    Modifiez le filtre ou créez un nouveau périmètre avec ses mots-clés et ses sources.
+                  </p>
+                  <Button className="mt-4 gap-2" size="sm" onClick={() => setCreateOpen(true)}>
+                    <Plus className="h-4 w-4" aria-hidden="true" />
+                    Créer une surveillance
+                  </Button>
                 </div>
               ) : (
-                <>
-                  <div className="grid grid-cols-2 gap-4 mb-8">
-                    <div className="bg-surface-container-low p-4 rounded-lg">
-                      <span className="text-[10px] font-bold text-on-surface-variant/60 uppercase mb-2 block">
-                        Score NSS
+                filtered.map((watchlist) => {
+                  const selected = selectedWatchlist?.id === watchlist.id;
+                  return (
+                    <button
+                      key={watchlist.id}
+                      onClick={() => setSelectedId(watchlist.id)}
+                      className={`interactive-card flex w-full items-center gap-4 rounded-xl border p-4 text-left ${
+                        selected
+                          ? "border-monitor/30 bg-monitor-container/55"
+                          : "border-transparent bg-surface-container"
+                      }`}
+                      type="button"
+                    >
+                      <span
+                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                          watchlist.is_active
+                            ? "bg-success/10 text-success"
+                            : "bg-surface-container-highest text-on-surface-variant"
+                        }`}
+                      >
+                        {watchlist.is_active ? (
+                          <Radar className="h-5 w-5" aria-hidden="true" />
+                        ) : (
+                          <CircleOff className="h-5 w-5" aria-hidden="true" />
+                        )}
                       </span>
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-3xl font-bold text-white tracking-tighter">
-                          {metricsData.nss_score}
-                        </span>
-                        <div className={`flex items-center text-[10px] font-bold ${metricsData.nss_delta >= 0 ? "text-green-400" : "text-red-400"}`}>
-                          <span className="material-symbols-outlined text-sm">
-                            {metricsData.nss_delta >= 0 ? "arrow_upward" : "arrow_downward"}
+                      <span className="min-w-0 flex-1">
+                        <span className="flex flex-wrap items-center gap-2">
+                          <span className="truncate font-headline text-sm font-bold text-on-surface">{watchlist.name}</span>
+                          <span className="rounded-full border border-outline-variant/45 px-2 py-0.5 text-[9px] font-bold tracking-wide text-on-surface-variant">
+                            {watchlist.scope}
                           </span>
-                          {Math.abs(metricsData.nss_delta)}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="bg-surface-container-low p-4 rounded-lg">
-                      <span className="text-[10px] font-bold text-on-surface-variant/60 uppercase mb-2 block">
-                        Volume Feedback
-                      </span>
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-3xl font-bold text-white tracking-tighter">
-                          {metricsData.volume >= 1000
-                            ? `${(metricsData.volume / 1000).toFixed(1)}k`
-                            : metricsData.volume}
                         </span>
-                        <div className="flex items-center text-[10px] font-bold text-tertiary">
-                          <span className="material-symbols-outlined text-sm">
-                            {metricsData.volume_delta >= 0
-                              ? "arrow_upward"
-                              : "arrow_downward"}
-                          </span>
-                          {Math.abs(metricsData.volume_delta)}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4 mb-8">
-                    <div className="flex justify-between items-center">
-                      <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
-                        Répartition par Aspect
+                        <span className="mt-1.5 block truncate text-xs text-on-surface-variant">{watchlist.description}</span>
                       </span>
-                      <span className="text-[10px] text-on-surface-variant/40 italic">
-                        Mise à jour {metricsData.last_updated}
+                      <span className={`hidden text-[9px] font-bold uppercase tracking-wider sm:block ${watchlist.is_active ? "text-success" : "text-on-surface-variant"}`}>
+                        {watchlist.is_active ? "En écoute" : "Désactivée"}
                       </span>
-                    </div>
-                    <div className="space-y-3">
-                      {(metricsData.aspects.length ? metricsData.aspects : [{ name: "Aucun aspect", score: 0 }]).map(
-                        (aspect) => (
-                          <div key={aspect.name}>
-                            <div className="flex justify-between text-xs mb-1.5">
-                              <span className="text-on-surface/80">{aspect.name}</span>
-                              <span
-                                className={`font-bold ${
-                                  aspect.is_negative ? "text-error" : "text-primary"
-                                }`}
-                              >
-                                {aspect.score}%
-                              </span>
-                            </div>
-                            <div className="h-1.5 w-full bg-surface-container-highest rounded-full overflow-hidden">
-                              <div
-                                className={`h-full rounded-full transition-all duration-700 ${
-                                  aspect.is_negative
-                                    ? "bg-error"
-                                    : "bg-gradient-to-r from-primary to-primary-container"
-                                }`}
-                                style={{ width: `${aspect.score}%` }}
-                              ></div>
-                            </div>
-                          </div>
-                        ),
-                      )}
-                    </div>
-                  </div>
-                </>
+                      <ArrowRight className={`h-4 w-4 shrink-0 ${selected ? "text-primary" : "text-on-surface-variant"}`} aria-hidden="true" />
+                    </button>
+                  );
+                })
               )}
-
-              <button
-                className="w-full py-3 bg-surface-container-highest hover:bg-surface-bright transition-colors rounded-lg text-xs font-bold uppercase tracking-widest text-on-surface"
-                onClick={() => setLocation(`/explorateur?watchlist=${selectedWatchlist.id}`)}
-              >
-                Voir les détails analytiques
-              </button>
             </div>
+          </section>
 
-            <div className="bg-surface-container p-6 rounded-xl border border-white/5">
-              <h4 className="text-xs font-bold text-on-surface mb-4 flex items-center gap-2">
-                <span className="material-symbols-outlined text-tertiary text-sm">insights</span>
-                {buildInsightsTitle(selectedWatchlist.name)}
-              </h4>
-              <p className="text-[11px] text-on-surface-variant leading-relaxed">
-                {metricsData?.quick_insight ||
-                  "Aucun quick insight n'est encore disponible pour cette watchlist."}
-              </p>
-            </div>
+          <aside className="min-w-0 xl:sticky xl:top-32 xl:self-start">
+            {selectedWatchlist ? (
+              <div className="overflow-hidden rounded-2xl border border-outline-variant/50 bg-surface-container">
+                <div className="border-b border-outline-variant/40 p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-primary">SÉLECTION</p>
+                      <h2 className="mt-2 truncate font-headline text-lg font-bold text-on-surface">{selectedWatchlist.name}</h2>
+                      <p className="mt-1 text-xs text-on-surface-variant">{selectedWatchlist.scope}</p>
+                    </div>
+                    <button
+                      onClick={() => deactivateMutation.mutate(selectedWatchlist.id)}
+                      disabled={deactivateMutation.isPending || !selectedWatchlist.is_active}
+                      title="Désactiver cette surveillance"
+                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-outline-variant/45 text-on-surface-variant transition-colors hover:border-error/40 hover:bg-error/8 hover:text-error disabled:cursor-not-allowed disabled:opacity-35"
+                      data-testid="btn-deactivate-watchlist"
+                      type="button"
+                    >
+                      <Trash2 className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-5">
+                  {metricsQuery.isLoading ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="h-24 animate-pulse rounded-xl bg-surface-container-high" />
+                      <div className="h-24 animate-pulse rounded-xl bg-surface-container-high" />
+                    </div>
+                  ) : metricsQuery.isError || !metricsData ? (
+                    <div className="rounded-xl border border-outline-variant/40 bg-surface-container-low p-4 text-xs leading-5 text-on-surface-variant">
+                      Aucun calcul n’est encore disponible. La première collecte alimentera le score et les aspects.
+                    </div>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="rounded-xl bg-surface-container-low p-4">
+                          <p className="text-[9px] font-bold uppercase tracking-wider text-on-surface-variant">Score NSS</p>
+                          <div className="mt-2 flex items-baseline gap-2">
+                            <span className="metric-number text-3xl font-extrabold text-on-surface">{metricsData.nss_score}</span>
+                            <span className={metricsData.nss_delta >= 0 ? "text-success" : "text-error"}>
+                              {metricsData.nss_delta >= 0 ? "+" : ""}{metricsData.nss_delta}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="rounded-xl bg-surface-container-low p-4">
+                          <p className="text-[9px] font-bold uppercase tracking-wider text-on-surface-variant">Mentions</p>
+                          <div className="mt-2 flex items-baseline gap-2">
+                            <span className="metric-number text-3xl font-extrabold text-on-surface">{formatCompactNumber(metricsData.volume)}</span>
+                            <span className={metricsData.volume_delta >= 0 ? "text-success" : "text-error"}>
+                              {metricsData.volume_delta >= 0 ? "+" : ""}{metricsData.volume_delta}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-5">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-on-surface-variant">Répartition par Aspect</p>
+                          <p className="truncate text-[9px] text-on-surface-variant/65">{formatTimestamp(metricsData.last_updated)}</p>
+                        </div>
+                        <div className="mt-3 space-y-3">
+                          {(metricsData.aspects.length ? metricsData.aspects : [{ name: "Aucun aspect", score: 0 }]).slice(0, 4).map((aspect) => (
+                            <div key={aspect.name}>
+                              <div className="mb-1.5 flex justify-between text-[10px]">
+                                <span className="truncate text-on-surface-variant">{aspect.name}</span>
+                                <span className={aspect.is_negative ? "font-bold text-error" : "font-bold text-primary"}>{aspect.score}%</span>
+                              </div>
+                              <div className="h-1.5 overflow-hidden rounded-full bg-surface-container-highest">
+                                <div
+                                  className={`h-full rounded-full ${aspect.is_negative ? "bg-error" : "bg-primary"}`}
+                                  style={{ width: `${aspect.score}%` }}
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  <div className="mt-5 rounded-xl border border-tertiary/20 bg-tertiary/5 p-4">
+                    <div className="flex items-center gap-2 text-tertiary">
+                      <Sparkles className="h-4 w-4" aria-hidden="true" />
+                      <p className="text-[9px] font-bold uppercase tracking-[0.16em]">{buildInsightsTitle(selectedWatchlist.name)}</p>
+                    </div>
+                    <p className="mt-2 text-xs leading-5 text-on-surface-variant">
+                      {metricsData?.quick_insight || "Les premiers enseignements apparaîtront après la collecte."}
+                    </p>
+                  </div>
+
+                  <Button
+                    variant="secondary"
+                    className="mt-5 w-full justify-between"
+                    onClick={() => setLocation(`/explorateur?watchlist=${selectedWatchlist.id}`)}
+                  >
+                    Voir les détails analytiques
+                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-outline-variant/55 p-6 text-center">
+                <Radar className="mx-auto h-6 w-6 text-on-surface-variant" aria-hidden="true" />
+                <p className="mt-3 text-xs text-on-surface-variant">Sélectionnez une surveillance pour lire sa situation.</p>
+              </div>
+            )}
           </aside>
-        )}
+        </div>
       </div>
+
+      <Sheet open={showCreateForm} onOpenChange={setCreateOpen}>
+        <SheetContent
+          side="right"
+          className="w-full overflow-y-auto border-outline-variant/55 bg-surface-container p-0 sm:max-w-[860px]"
+        >
+          <SheetHeader className="sr-only">
+            <SheetTitle>Nouvelle surveillance</SheetTitle>
+            <SheetDescription>Définissez le signal et les sources à surveiller.</SheetDescription>
+          </SheetHeader>
+          <WatchScopeForm
+            presentation="drawer"
+            isSubmitting={createMutation.isPending}
+            onCancel={() => setCreateOpen(false)}
+            onSubmit={(value) => createMutation.mutate(value)}
+          />
+        </SheetContent>
+      </Sheet>
     </AppShell>
   );
 }

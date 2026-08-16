@@ -1,15 +1,35 @@
-import type { WatchSeedFilters, WatchlistCreatePayload } from "./apiMappings";
+import type {
+  OnboardingAnalysis,
+  WatchSeedFilters,
+  WatchlistCreatePayload,
+} from "./apiMappings";
 
 export interface WatchWizardInput {
   name: string;
   description?: string;
   brand_name: string;
   product_name?: string;
+  subject_type?: string;
+  keywords?: string[];
+  excluded_keywords?: string[];
   seed_urls?: string[];
   competitors?: string[];
   channels?: string[];
   languages?: string[];
   hashtags?: string[];
+  regions?: string[];
+  period_days?: number;
+  min_volume?: number;
+}
+
+export interface SmartOnboardingConfirmInput {
+  analysis: OnboardingAnalysis;
+  brand_name: string;
+  industry?: string;
+  selected_source_urls: string[];
+  selected_channels: string[];
+  selected_watchlist_names: string[];
+  selected_alert_profile_names: string[];
 }
 
 function normalizeText(value: string | null | undefined): string | null {
@@ -61,17 +81,52 @@ export function suggestBrandKeywords(raw: string): string[] {
   return Array.from(new Set(keywords));
 }
 
+export function suggestWatchKeywords(brandName: string, productName = ""): string[] {
+  return Array.from(
+    new Set([
+      ...suggestBrandKeywords(brandName),
+      ...suggestBrandKeywords(productName),
+    ]),
+  );
+}
+
+export function parseDelimitedWatchValues(raw: string): string[] {
+  return normalizeStringList(raw.split(/[\n,;]+/));
+}
+
 export function buildWatchWizardPayload(input: WatchWizardInput): WatchlistCreatePayload {
   const brandName = normalizeText(input.brand_name);
+  const productName = normalizeText(input.product_name);
+  const inferredKeywords = suggestWatchKeywords(brandName ?? "", productName ?? "");
   const filters: WatchSeedFilters = {
     brand_name: brandName,
-    product_name: normalizeText(input.product_name),
-    keywords: suggestBrandKeywords(brandName ?? ""),
+    product_name: productName,
+    keywords:
+      input.keywords === undefined
+        ? inferredKeywords
+        : normalizeStringList(input.keywords, { lowercase: true }),
     seed_urls: normalizeStringList(input.seed_urls),
     competitors: normalizeStringList(input.competitors),
     channels: normalizeStringList(input.channels, { lowercase: true }),
     languages: normalizeStringList(input.languages, { lowercase: true }),
     hashtags: normalizeStringList(input.hashtags, { lowercase: true }),
+    ...(input.subject_type
+      ? { subject_type: normalizeText(input.subject_type)?.toLowerCase() ?? null }
+      : {}),
+    ...(input.excluded_keywords
+      ? {
+          excluded_keywords: normalizeStringList(input.excluded_keywords, {
+            lowercase: true,
+          }),
+        }
+      : {}),
+    ...(input.regions ? { regions: normalizeStringList(input.regions) } : {}),
+    ...(input.period_days !== undefined
+      ? { period_days: Math.max(1, Math.trunc(input.period_days)) }
+      : {}),
+    ...(input.min_volume !== undefined
+      ? { min_volume: Math.max(0, Math.trunc(input.min_volume)) }
+      : {}),
   };
 
   return {
@@ -79,5 +134,32 @@ export function buildWatchWizardPayload(input: WatchWizardInput): WatchlistCreat
     description: input.description?.trim() ?? "",
     scope_type: "watch_seed",
     filters,
+  };
+}
+
+export function buildSmartOnboardingConfirmPayload(
+  input: SmartOnboardingConfirmInput,
+): Record<string, unknown> {
+  const selectedSourceUrls = new Set(normalizeStringList(input.selected_source_urls));
+  const selectedWatchlistNames = new Set(normalizeStringList(input.selected_watchlist_names));
+  const selectedAlertProfileNames = new Set(normalizeStringList(input.selected_alert_profile_names));
+  const normalizedIndustry = normalizeText(input.industry);
+
+  return {
+    review_confirmed: true,
+    tenant_setup: input.analysis.tenant_setup,
+    brand_name: normalizeText(input.brand_name) ?? input.analysis.tenant_setup.client_name,
+    ...(normalizedIndustry ? { industry: normalizedIndustry } : {}),
+    selected_sources: input.analysis.suggested_sources.filter((source) =>
+      selectedSourceUrls.has(source.url),
+    ),
+    selected_channels: normalizeStringList(input.selected_channels),
+    selected_watchlists: input.analysis.suggested_watchlists.filter((watchlist) =>
+      selectedWatchlistNames.has(watchlist.name),
+    ),
+    selected_alert_profiles: input.analysis.suggested_alert_profiles.filter((profile) =>
+      selectedAlertProfileNames.has(profile.profile_name),
+    ),
+    deferred_agent_config: input.analysis.deferred_agent_config,
   };
 }

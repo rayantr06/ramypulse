@@ -25,6 +25,21 @@ const explorerSearchPayload = {
   ],
 };
 
+const explorerRagPayload = {
+  query: "Que pensent les clients du goût ?",
+  answer: "Les signaux cités indiquent une perception négative du goût et de la fraîcheur.",
+  confidence: "high",
+  chunks: explorerSearchPayload.results.map((result) => ({
+    text: result.text,
+    channel: result.channel,
+    source_url: result.source_url,
+    url: result.source_url,
+    sentiment_label: result.sentiment_label,
+    aspect: result.aspect,
+    score: result.score,
+  })),
+};
+
 const explorerVerbatimsPayload = {
   results: [
     {
@@ -107,8 +122,25 @@ const watchlistMetrics = {
 };
 
 async function mockExplorerApi(page: Page) {
+  await page.addInitScript(() => {
+    localStorage.clear();
+    localStorage.setItem("ramypulse.activeTenantId", "tenant-ready");
+  });
+  await page.route("**/api/dashboard/summary", async (route) => {
+    await route.fulfill({
+      json: {
+        nss_global: 24,
+        total_mentions: 41,
+        active_alerts: 2,
+        active_watchlists: 3,
+      },
+    });
+  });
   await page.route("**/api/explorer/search**", async (route) => {
     await route.fulfill({ json: explorerSearchPayload });
+  });
+  await page.route("**/api/explorer/rag**", async (route) => {
+    await route.fulfill({ json: explorerRagPayload });
   });
   await page.route("**/api/explorer/verbatims**", async (route) => {
     await route.fulfill({ json: explorerVerbatimsPayload });
@@ -138,13 +170,28 @@ test("explorer golden path shows consultable RAG evidence and real source links"
     "href",
     "https://facebook.com/posts/1",
   );
-  await expect(page.locator('[data-demo-disabled="explorer-filter"]')).toBeVisible();
+  await expect(page.getByRole("button", { name: "Filtrer" })).toBeVisible();
   await expect(page.getByTestId("search-result-facebook-0-0.01639344")).toBeVisible();
   await expect(page.getByTestId("verbatim-row-facebook-0-2026-04-04T09:00:00Z")).toBeVisible();
 });
 
 test("watchlists golden path submits backend-aligned filters", async ({ page }) => {
   let postedPayload: unknown = null;
+  let postedRunPayload: unknown = null;
+  await page.addInitScript(() => {
+    localStorage.clear();
+    localStorage.setItem("ramypulse.activeTenantId", "tenant-ready");
+  });
+  await page.route("**/api/dashboard/summary", async (route) => {
+    await route.fulfill({
+      json: {
+        nss_global: 24,
+        total_mentions: 41,
+        active_alerts: 2,
+        active_watchlists: 3,
+      },
+    });
+  });
   await mockWatchlistsApi(page);
   await page.route("**/api/watchlists", async (route) => {
     if (route.request().method() === "POST") {
@@ -157,42 +204,43 @@ test("watchlists golden path submits backend-aligned filters", async ({ page }) 
   await page.route("**/api/watchlists/watch_new_1/metrics", async (route) => {
     await route.fulfill({ json: watchlistMetrics });
   });
+  await page.route("**/api/watch-runs", async (route) => {
+    postedRunPayload = route.request().postDataJSON();
+    await route.fulfill({ status: 202, json: { run_id: "run_new_1" } });
+  });
 
   await page.goto("/#/watchlists");
   await page.getByTestId("btn-create-watchlist").click();
 
-  await expect(page.getByPlaceholder("Produit")).toBeVisible();
-  await expect(page.getByPlaceholder("Wilaya")).toBeVisible();
-  await expect(page.getByPlaceholder("Canal")).toBeVisible();
-  await expect(page.getByPlaceholder("Aspect")).toBeVisible();
-  await expect(page.getByPlaceholder("Sentiment")).toBeVisible();
-  await expect(page.getByPlaceholder("Jours")).toBeVisible();
-  await expect(page.getByPlaceholder("Volume min.")).toBeVisible();
-
   await page.getByTestId("input-watchlist-name").fill("NSS Oran");
-  await page.getByPlaceholder("Description (optionnel)").fill("Surveille Oran");
-  await page.locator("select").nth(0).selectOption("region");
-  await page.getByPlaceholder("Produit").fill("ramy_citron");
-  await page.getByPlaceholder("Wilaya").fill("oran");
-  await page.getByPlaceholder("Canal").fill("google_maps");
-  await page.getByPlaceholder("Aspect").fill("gout");
-  await page.getByPlaceholder("Jours").fill("7");
-  await page.getByPlaceholder("Volume min.").fill("10");
+  await page.getByTestId("input-watch-keywords").fill("ramy citron, avis ramy");
+  await page.getByTestId("btn-next-watch-scope").click();
+  await page.getByTestId("input-watch-regions").fill("Oran");
+  await page.getByRole("button", { name: /Google Maps/ }).click();
+  await page.getByTestId("input-watch-period-days").fill("7");
+  await page.getByTestId("input-watch-min-volume").fill("10");
   await page.getByTestId("btn-submit-watchlist").click();
 
   await expect.poll(() => postedPayload).not.toBeNull();
   expect(postedPayload).toEqual({
     name: "NSS Oran",
-    description: "Surveille Oran",
-    scope_type: "region",
+    description: "",
+    scope_type: "watch_seed",
     filters: {
-      channel: "google_maps",
-      aspect: "gout",
-      wilaya: "oran",
-      product: "ramy_citron",
-      sentiment: null,
+      brand_name: null,
+      product_name: null,
+      keywords: ["ramy citron", "avis ramy"],
+      seed_urls: [],
+      competitors: [],
+      channels: ["web_search", "public_url_seed", "google_maps"],
+      languages: ["fr", "ar"],
+      hashtags: [],
+      subject_type: "keyword",
+      excluded_keywords: [],
+      regions: ["Oran"],
       period_days: 7,
       min_volume: 10,
     },
   });
+  await expect.poll(() => postedRunPayload).not.toBeNull();
 });

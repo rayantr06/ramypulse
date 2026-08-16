@@ -1,14 +1,29 @@
 import { useQuery } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import {
+  ArrowRight,
+  BellRing,
+  CircleCheck,
+  Compass,
+  Lightbulb,
+  MapPinned,
+  MessageSquareText,
+  Radio,
+  ShieldAlert,
+  TrendingDown,
+  TrendingUp,
+} from "lucide-react";
+import { Link, useLocation } from "wouter";
+
 import { AppShell } from "@/components/AppShell";
 import { EmptyTenantState } from "@/components/EmptyTenantState";
-import { apiRequest } from "@/lib/queryClient";
+import { PageHeader } from "@/components/PageHeader";
+import { Button } from "@/components/ui/button";
 import {
-  mapApiStatus,
   mapDashboardActions,
   mapDashboardAlerts,
   mapDashboardSummary,
 } from "@/lib/apiMappings";
+import { apiRequest } from "@/lib/queryClient";
 
 interface DashboardSummaryView {
   score: number;
@@ -27,7 +42,6 @@ interface DashboardAlertView {
   description: string;
   severity: string;
   timestamp: string;
-  icon: string;
 }
 
 interface DashboardActionView {
@@ -35,52 +49,10 @@ interface DashboardActionView {
   title: string;
   description: string;
   priority: string;
-  icon: string;
   ctaLabel: string;
   targetPlatform: string;
   confidence: number;
-}
-
-interface ApiStatusView {
-  apiStatus: string;
-  latencyMs: number | null;
-}
-
-function severityLabel(severity: string): string {
-  if (severity === "critical") return "Urgent";
-  if (severity === "high") return "Haute";
-  return "Analyse";
-}
-
-function severityIcon(severity: string): string {
-  if (severity === "critical") return "warning";
-  if (severity === "high") return "error";
-  return "monitoring";
-}
-
-function severityIconBg(severity: string): string {
-  if (severity === "critical") return "bg-error/10 text-error";
-  if (severity === "high") return "bg-primary/10 text-primary";
-  return "bg-surface-container-highest text-gray-400";
-}
-
-function priorityIcon(priority: string, fallback?: string): string {
-  if (fallback) return fallback;
-  if (priority === "high") return "rocket_launch";
-  if (priority === "medium") return "auto_awesome";
-  return "pending_actions";
-}
-
-function priorityColor(priority: string): string {
-  if (priority === "high") return "bg-primary/10 text-primary";
-  if (priority === "medium") return "bg-tertiary/10 text-tertiary";
-  return "bg-on-surface-variant/10 text-on-surface-variant";
-}
-
-function trendCopy(summary: DashboardSummaryView): string {
-  if (summary.trend === "up") return `Sentiment global en hausse (+${summary.delta} pts)`;
-  if (summary.trend === "down") return `Sentiment global en baisse (${summary.delta} pts)`;
-  return "Sentiment global stable";
+  isAvailable: boolean;
 }
 
 function mapSummaryView(value: unknown): DashboardSummaryView {
@@ -111,32 +83,72 @@ function mapAlertViews(value: unknown): DashboardAlertView[] {
     description: alert.description,
     severity: alert.severity,
     timestamp: alert.created_at,
-    icon: severityIcon(alert.severity),
   }));
 }
 
 function mapActionViews(value: unknown): DashboardActionView[] {
-  return mapDashboardActions(value).map((action) => ({
-    id: action.recommendation_id,
-    title: action.title,
-    description: action.description || "Aucune description détaillée disponible.",
-    priority: action.priority,
-    icon: priorityIcon(action.priority, action.icon),
-    ctaLabel: action.cta_label || "VOIR DETAILS",
-    targetPlatform: action.target_platform || "Toutes",
-    confidence: Math.round(Number(action.confidence_score ?? 0) * 100),
-  }));
+  return mapDashboardActions(value).map((action) => {
+    const sourceText = `${action.title} ${action.description || ""}`.toLocaleLowerCase("fr");
+    const isAvailable = !sourceText.includes("erreur de parsing") && !sourceText.includes("parsing error");
+
+    return {
+      id: action.recommendation_id,
+      title: isAvailable ? action.title : "Recommandation en attente de validation",
+      description: isAvailable
+        ? action.description || "Aucun détail disponible."
+        : "Le moteur n’a pas produit de recommandation structurée. L’analyse doit être vérifiée avant toute action.",
+      priority: action.priority,
+      ctaLabel: isAvailable ? action.cta_label || "Voir l’action" : "Examiner l’analyse",
+      targetPlatform: isAvailable ? action.target_platform || "Toutes" : "Contrôle requis",
+      confidence: Math.round(Number(action.confidence_score ?? 0) * 100),
+      isAvailable,
+    };
+  });
 }
 
-function SeverityBadge({ severity }: { severity: string }) {
-  const label = severityLabel(severity);
-  const className =
-    severity === "critical"
-      ? "text-[10px] font-bold text-error uppercase"
-      : severity === "high"
-        ? "text-[10px] font-bold text-primary uppercase"
-        : "text-[10px] font-bold text-gray-500 uppercase";
-  return <span className={className}>{label}</span>;
+function situationTitle(summary: DashboardSummaryView, alertCount: number): string {
+  if (alertCount > 0) {
+    return `${alertCount} alerte${alertCount > 1 ? "s" : ""} critique${alertCount > 1 ? "s" : ""} à traiter aujourd’hui.`;
+  }
+  if (summary.trend === "down") return "La perception recule : cherchez le point de rupture.";
+  if (summary.trend === "up") return "La perception progresse : identifiez ce qui fonctionne.";
+  return "La situation reste stable, sans urgence détectée.";
+}
+
+function situationSummary(summary: DashboardSummaryView, alertCount: number): string {
+  if (alertCount > 0) {
+    const movement = summary.trend === "down"
+      ? `recule de ${Math.abs(summary.delta)} points`
+      : summary.trend === "up"
+        ? `progresse de ${Math.abs(summary.delta)} points`
+        : "reste stable";
+    return `La perception globale ${movement}, mais ${alertCount} changement${alertCount > 1 ? "s" : ""} anormal${alertCount > 1 ? "aux" : ""} nécessite${alertCount > 1 ? "nt" : ""} une vérification.`;
+  }
+  return summary.summary;
+}
+
+function severityLabel(severity: string): string {
+  if (severity === "critical") return "Critique";
+  if (severity === "high") return "Haute";
+  return "À analyser";
+}
+
+function formatCompactNumber(value: number): string {
+  return new Intl.NumberFormat("fr-FR", {
+    notation: value >= 1_000 ? "compact" : "standard",
+    maximumFractionDigits: 1,
+  }).format(value);
+}
+
+function formatTimestamp(value: string): string {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(parsed);
 }
 
 export default function Dashboard() {
@@ -165,23 +177,11 @@ export default function Dashboard() {
     },
   });
 
-  const { data: apiStatus } = useQuery<ApiStatusView>({
-    queryKey: ["/api/status"],
-    queryFn: async () => {
-      const res = await apiRequest("GET", "/api/status");
-      const status = mapApiStatus(await res.json());
-      return {
-        apiStatus: status.api_status,
-        latencyMs: status.latency_ms,
-      };
-    },
-  });
-
   const summaryView = summary ?? {
     score: 0,
     trend: "flat" as const,
     delta: 0,
-    summary: "Pas de données suffisantes pour établir un diagnostic.",
+    summary: "Les premiers signaux alimenteront bientôt le briefing.",
     totalMentions: 0,
     period: "sur la période chargée",
     regionalDistribution: [],
@@ -189,11 +189,6 @@ export default function Dashboard() {
   };
   const currentAlerts = alertsList ?? [];
   const currentActions = actionsList ?? [];
-  const statusView = apiStatus ?? {
-    apiStatus: "Indisponible",
-    latencyMs: null,
-  };
-
   const shouldShowEmptyTenantState =
     !summaryLoading &&
     !alertsLoading &&
@@ -205,315 +200,338 @@ export default function Dashboard() {
   if (shouldShowEmptyTenantState) {
     return (
       <AppShell>
-        <div className="p-8">
+        <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
           <EmptyTenantState
-            title="Le dashboard attend les premiers signaux"
-            description="La collecte watch-first est lancée, mais il faut encore quelques documents normalisés pour calculer la santé de marque, les alertes et les recommandations."
+            title="Votre centre de veille est prêt"
+            description="Créez une première surveillance pour collecter les signaux, détecter les alertes et produire des recommandations vérifiables."
           />
         </div>
       </AppShell>
     );
   }
 
-  const circumference = 2 * Math.PI * 88;
-  const dashOffset = circumference * (1 - summaryView.score / 100);
+  const primaryAlert = currentAlerts[0] ?? null;
+  const topAction = currentActions[0] ?? null;
 
   return (
     <AppShell>
-      <div className="p-8 space-y-8">
-        <div className="flex items-end justify-between">
-          <div>
-            <span className="text-[10px] font-bold text-primary uppercase tracking-widest block mb-1">
-              Vue d'ensemble
-            </span>
-            <h2 className="text-3xl font-extrabold tracking-tight font-headline">
-              Tableau de bord
-            </h2>
-          </div>
-          <div className="flex gap-2">
-            <div className="bg-surface-container px-3 py-1.5 rounded text-[11px] font-semibold text-on-surface-variant flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>
-              Direct Temps Réel
-            </div>
-            <div className="bg-surface-container px-3 py-1.5 rounded text-[11px] font-semibold text-on-surface-variant">
-              Algérie (Toutes régions)
-            </div>
-          </div>
-        </div>
+      <div className="page-enter mx-auto w-full max-w-[1580px] space-y-7 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+        <PageHeader
+          eyebrow="Surveiller"
+          tone="monitor"
+          title="Situation du jour"
+          description="Les changements clients, leur explication et l’action à valider."
+        />
 
-        <div className="grid grid-cols-12 gap-6">
-          <div
-            className="col-span-12 lg:col-span-4 bg-surface-container p-6 rounded-xl flex flex-col items-center justify-center relative overflow-hidden group"
-            data-testid="card-health-score"
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-50"></div>
-            <span className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest absolute top-6 left-6">
-              SANTÉ DE LA MARQUE
-            </span>
-            {summaryLoading ? (
-              <div className="w-48 h-48 rounded-full bg-surface-container-high animate-pulse mt-4"></div>
-            ) : (
-              <div className="relative w-48 h-48 flex items-center justify-center mt-4">
-                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 192 192">
-                  <circle
-                    className="text-surface-container-highest"
-                    cx="96"
-                    cy="96"
-                    fill="transparent"
-                    r="88"
-                    stroke="currentColor"
-                    strokeWidth="8"
-                  />
-                  <circle
-                    className="text-primary"
-                    cx="96"
-                    cy="96"
-                    fill="transparent"
-                    r="88"
-                    stroke="currentColor"
-                    strokeDasharray={circumference}
-                    strokeDashoffset={dashOffset}
-                    strokeWidth="8"
-                    strokeLinecap="round"
-                    style={{ transition: "stroke-dashoffset 1s ease" }}
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span
-                    className="text-5xl font-black tracking-tighter text-on-surface"
-                    data-testid="nss-score"
-                  >
-                    {summaryView.score}
+        <section
+          className={`overflow-hidden rounded-2xl border bg-surface ${
+            currentAlerts.length > 0 ? "border-error/25" : "border-outline-variant"
+          }`}
+          aria-labelledby="daily-brief-title"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-outline-variant px-5 py-3 sm:px-7">
+            <div className="flex items-center gap-2 text-xs font-semibold text-on-surface">
+              <Radio className="h-3.5 w-3.5 text-success" aria-hidden="true" />
+              Brief opérationnel actualisé
+            </div>
+            <span className="text-[10px] text-on-surface-variant">{summaryView.period}</span>
+          </div>
+
+          <div className="grid lg:grid-cols-[11rem_minmax(0,1fr)_18rem]">
+            <div className={`hidden gap-4 p-5 lg:flex lg:flex-col lg:items-start lg:justify-between lg:border-r lg:border-outline-variant lg:p-7 ${currentAlerts.length > 0 ? "bg-error-container/55" : "bg-action-container/55"}`}>
+              <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${currentAlerts.length > 0 ? "bg-error text-white" : "bg-action text-white"}`}>
+                {currentAlerts.length > 0 ? <ShieldAlert className="h-5 w-5" aria-hidden="true" /> : <CircleCheck className="h-5 w-5" aria-hidden="true" />}
+              </span>
+              <div>
+                <p className={`metric-number text-4xl font-extrabold ${currentAlerts.length > 0 ? "text-error" : "text-action"}`}>{currentAlerts.length}</p>
+                <p className="mt-1 text-xs font-semibold leading-4 text-on-surface">
+                  {currentAlerts.length === 1 ? "alerte prioritaire" : "alertes prioritaires"}
+                </p>
+              </div>
+            </div>
+
+            <div className="p-6 sm:p-8 lg:p-9">
+              <h2 id="daily-brief-title" className="max-w-3xl font-headline text-[clamp(1.65rem,3vw,2.65rem)] font-extrabold leading-[1.08] tracking-[-0.04em] text-on-surface">
+                {situationTitle(summaryView, currentAlerts.length)}
+              </h2>
+              <p className="mt-4 max-w-3xl text-sm leading-6 text-on-surface-variant">
+                {situationSummary(summaryView, currentAlerts.length)}
+              </p>
+              <div className="mt-6 flex flex-wrap gap-3">
+                {currentAlerts.length > 0 ? (
+                  <Button className="gap-2 bg-error text-white hover:bg-error/90" onClick={() => navigate("/alertes")}>
+                    <BellRing className="h-4 w-4" aria-hidden="true" />
+                    Traiter les alertes
+                  </Button>
+                ) : (
+                  <Button className="gap-2" onClick={() => navigate("/explorateur")}>
+                    <Compass className="h-4 w-4" aria-hidden="true" />
+                    Explorer les avis
+                  </Button>
+                )}
+                <Button variant="outline" className="gap-2" onClick={() => navigate("/watchlists")}>
+                  <span className="sm:hidden">Surveillances</span>
+                  <span className="hidden sm:inline">Vérifier les surveillances</span>
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 border-t border-outline-variant bg-surface-container-low lg:grid-cols-1 lg:border-l lg:border-t-0">
+              <div className="p-4 sm:p-5" data-testid="card-health-score">
+                <p className="text-[10px] font-semibold text-on-surface-variant">Perception</p>
+                {summaryLoading ? (
+                  <div className="mt-3 h-9 animate-pulse rounded-lg bg-surface-container-high" />
+                ) : (
+                  <div className="mt-2 flex items-end gap-1.5">
+                    <span className="metric-number text-3xl font-extrabold text-on-surface" data-testid="nss-score">{summaryView.score}</span>
+                    <span className="pb-1 text-[10px] text-on-surface-variant">/100</span>
+                  </div>
+                )}
+                <div className={`mt-2 flex items-center gap-1 text-[9px] font-bold ${summaryView.trend === "down" ? "text-error" : "text-success"}`}>
+                  {summaryView.trend === "down" ? <TrendingDown className="h-3 w-3" /> : summaryView.trend === "up" ? <TrendingUp className="h-3 w-3" /> : null}
+                  {summaryView.trend === "flat" ? "Stable" : `${summaryView.delta > 0 ? "+" : ""}${summaryView.delta} pts`}
+                </div>
+              </div>
+              <div className="border-l border-outline-variant p-4 sm:p-5 lg:border-l-0 lg:border-t">
+                <p className="text-[10px] font-semibold text-on-surface-variant">Avis analysés</p>
+                <p className="metric-number mt-2 text-3xl font-extrabold text-on-surface">{formatCompactNumber(summaryView.totalMentions)}</p>
+              </div>
+              <div className="border-l border-outline-variant p-4 sm:p-5 lg:border-l-0 lg:border-t">
+                <p className="text-[10px] font-semibold text-on-surface-variant">État du suivi</p>
+                <p className={`mt-2 text-xs font-bold ${currentAlerts.length > 0 ? "text-error" : "text-action"}`}>
+                  {currentAlerts.length > 0 ? "Action requise" : "Sous contrôle"}
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section aria-labelledby="decision-trace-title">
+          <div className="mb-4 flex items-end justify-between gap-4">
+            <div>
+              <h2 id="decision-trace-title" className="font-headline text-xl font-bold tracking-tight text-on-surface">Du signal à la décision</h2>
+              <p className="mt-1 text-xs leading-5 text-on-surface-variant">LIDAL Pulse relie le changement détecté, son interprétation et l’action à valider.</p>
+            </div>
+            <Link href="/explorateur" className="hidden items-center gap-1.5 text-xs font-semibold text-insight hover:underline sm:flex">
+              Approfondir l’analyse <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+
+          <div className="decision-flow overflow-hidden rounded-2xl border border-outline-variant bg-surface">
+            <div className="grid lg:grid-cols-3">
+              <article className="decision-flow-step decision-flow-step--risk relative min-w-0 border-b border-outline-variant p-6 lg:border-b-0 lg:border-r">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-error-container text-error">
+                      <ShieldAlert className="h-4.5 w-4.5" aria-hidden="true" />
+                    </span>
+                    <div>
+                      <p className="font-headline text-sm font-bold text-on-surface">1 · Signal détecté</p>
+                      <p className="mt-0.5 text-[10px] text-on-surface-variant">Ce qui a changé</p>
+                    </div>
+                  </div>
+                  {primaryAlert ? <span className="badge-urgent">{severityLabel(primaryAlert.severity)}</span> : null}
+                </div>
+                {alertsLoading ? (
+                  <div className="mt-6 h-32 animate-pulse rounded-xl bg-surface-container-high" />
+                ) : primaryAlert ? (
+                  <div className="mt-6">
+                    <h3 className="break-words font-headline text-lg font-bold leading-snug text-on-surface">{primaryAlert.title}</h3>
+                    <p className="mt-3 line-clamp-3 text-xs leading-5 text-on-surface-variant">{primaryAlert.description}</p>
+                    <div className="mt-5 flex items-center justify-between gap-3">
+                      <span className="text-[10px] text-on-surface-variant">Détectée {formatTimestamp(primaryAlert.timestamp)}</span>
+                      <Button variant="outline" size="sm" className="gap-1.5" onClick={() => navigate("/alertes")}>
+                        Voir les preuves <ArrowRight className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-8 flex items-start gap-3">
+                    <CircleCheck className="h-5 w-5 shrink-0 text-success" aria-hidden="true" />
+                    <p className="text-xs leading-5 text-on-surface-variant">Aucun changement anormal ne demande de vérification immédiate.</p>
+                  </div>
+                )}
+              </article>
+
+              <article className="decision-flow-step decision-flow-step--insight relative min-w-0 border-b border-outline-variant p-6 lg:border-b-0 lg:border-r">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-insight-container text-insight">
+                    <Compass className="h-4.5 w-4.5" aria-hidden="true" />
                   </span>
-                  <span className="text-xs font-bold text-on-surface-variant">/ 100</span>
+                  <div>
+                    <p className="font-headline text-sm font-bold text-on-surface">2 · Ce que cela signifie</p>
+                    <p className="mt-0.5 text-[10px] text-on-surface-variant">Interprétation des avis</p>
+                  </div>
                 </div>
-              </div>
-            )}
-            <div className="mt-6 text-center">
-              <p className="text-sm font-semibold text-tertiary flex items-center gap-1 justify-center">
-                <span className="material-symbols-outlined text-sm">
-                  {summaryView.trend === "up"
-                    ? "trending_up"
-                    : summaryView.trend === "down"
-                      ? "trending_down"
-                      : "trending_flat"}
-                </span>
-                {trendCopy(summaryView)}
-              </p>
-              <p className="text-[11px] text-gray-500 mt-1 italic">
-                Basé sur {summaryView.totalMentions.toLocaleString("fr-FR")} mentions {summaryView.period}
-              </p>
-              <p className="text-[11px] text-gray-500 mt-2 italic">{summaryView.summary}</p>
-            </div>
-          </div>
+                <div className="mt-6">
+                  <p className="text-sm font-semibold leading-6 text-on-surface">{situationSummary(summaryView, currentAlerts.length)}</p>
+                  <dl className="mt-5 grid grid-cols-2 gap-3 border-y border-outline-variant py-4">
+                    <div>
+                      <dt className="text-[9px] text-on-surface-variant">Perception</dt>
+                      <dd className="metric-number mt-1 text-xl font-extrabold text-on-surface">{summaryView.score}/100</dd>
+                    </div>
+                    <div>
+                      <dt className="text-[9px] text-on-surface-variant">Évolution</dt>
+                      <dd className={`metric-number mt-1 text-xl font-extrabold ${summaryView.trend === "down" ? "text-error" : "text-success"}`}>
+                        {summaryView.trend === "flat" ? "Stable" : `${summaryView.delta > 0 ? "+" : ""}${summaryView.delta} pts`}
+                      </dd>
+                    </div>
+                  </dl>
+                  <Button variant="outline" size="sm" className="mt-5 gap-1.5" onClick={() => navigate("/explorateur")}>
+                    Explorer les verbatims <ArrowRight className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </article>
 
-          <div className="col-span-12 lg:col-span-8 bg-surface-container p-6 rounded-xl flex flex-col">
-            <div className="flex items-center justify-between mb-6">
-              <span className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest">
-                ALERTES CRITIQUES
-              </span>
-              <span className="px-2 py-0.5 bg-error-container text-error text-[10px] font-bold rounded">
-                {currentAlerts.length} NOUVELLES
-              </span>
-            </div>
-            {alertsLoading ? (
-              <div className="space-y-2 flex-1">
-                {[1, 2, 3].map((i) => (
-                  <div
-                    key={i}
-                    className="h-16 bg-surface-container-low rounded-sm animate-pulse"
-                  ></div>
-                ))}
-              </div>
-            ) : currentAlerts.length === 0 ? (
-              <div className="flex-1 flex items-center justify-center text-sm text-on-surface-variant bg-surface-container-low rounded-sm">
-                Aucune alerte critique active.
-              </div>
-            ) : (
-              <div className="space-y-2 flex-1">
-                {currentAlerts.map((alert) => (
-                  <div
-                    key={alert.id}
-                    onClick={() => navigate("/alertes")}
-                    className="flex items-center gap-4 p-4 bg-surface-container-low hover:bg-surface-container-high transition-colors duration-200 group cursor-pointer rounded-sm"
-                    data-testid={`alert-card-${alert.id}`}
-                  >
-                    <div
-                      className={`w-10 h-10 rounded-sm flex items-center justify-center ${severityIconBg(alert.severity)}`}
-                    >
-                      <span className="material-symbols-outlined">{alert.icon}</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-sm font-bold text-on-surface truncate">
-                        {alert.title}
-                      </h4>
-                      <p className="text-xs text-gray-500 line-clamp-1">{alert.description}</p>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <SeverityBadge severity={alert.severity} />
-                      <p className="text-[10px] text-gray-600 mt-1">{alert.timestamp}</p>
+              <article className="decision-flow-step decision-flow-step--action relative min-w-0 p-6">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-action-container text-action">
+                      <Lightbulb className="h-4.5 w-4.5" aria-hidden="true" />
+                    </span>
+                    <div>
+                      <p className="font-headline text-sm font-bold text-on-surface">3 · Décision proposée</p>
+                      <p className="mt-0.5 text-[10px] text-on-surface-variant">À vérifier avant d’agir</p>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <div className="flex items-center gap-4">
-            <span className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest">
-              ACTIONS RECOMMANDÉES PAR L'IA
-            </span>
-            <div className="h-px flex-1 bg-outline-variant/10"></div>
-          </div>
-          {actionsLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {[1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className="h-48 bg-surface-container-low rounded-sm animate-pulse"
-                ></div>
-              ))}
-            </div>
-          ) : currentActions.length === 0 ? (
-            <div className="bg-surface-container-low border border-outline-variant/10 p-6 rounded-sm text-sm text-on-surface-variant">
-              Aucune recommandation active disponible.
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {currentActions.map((action) => (
-                <div
-                  key={action.id}
-                  onClick={() => navigate("/recommandations")}
-                  className="bg-surface-container-low border border-outline-variant/10 p-6 hover:bg-surface-container-high transition-all duration-300 group cursor-pointer rounded-sm"
-                  data-testid={`action-card-${action.id}`}
-                >
-                  <div className="flex justify-between items-start mb-4">
-                    <div className={`p-2 rounded-sm ${priorityColor(action.priority)}`}>
-                      <span className="material-symbols-outlined text-2xl">{action.icon}</span>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-[10px] font-bold text-tertiary uppercase">
-                        CONFIANCE
-                      </span>
-                      <p className="text-xl font-black text-on-surface tracking-tighter">
-                        {action.confidence}%
-                      </p>
-                    </div>
-                  </div>
-                  <h4 className="text-base font-bold text-on-surface mb-3 font-headline">
-                    {action.title}
-                  </h4>
-                  <p className="text-sm text-gray-500 mb-8 leading-relaxed flex-1">
-                    {action.description}
-                  </p>
-                  <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-3">
-                    {action.targetPlatform}
-                  </p>
-                  <button
-                    className="w-full py-2.5 bg-gradient-to-r from-primary to-primary-container text-on-primary-fixed text-[11px] font-bold rounded-sm group-hover:scale-[1.02] transition-transform uppercase tracking-wider"
-                    onClick={() => navigate("/recommandations")}
-                    type="button"
-                  >
-                    {action.ctaLabel}
-                  </button>
+                  {topAction ? (
+                    <span className={`text-[10px] font-semibold ${topAction.isAvailable ? "text-action" : "text-error"}`}>
+                      {topAction.isAvailable ? `${topAction.confidence}% confiance` : "Contrôle requis"}
+                    </span>
+                  ) : null}
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="grid grid-cols-12 gap-6">
-          <div className="col-span-12 lg:col-span-7 bg-surface-container p-6 rounded-xl">
-            <span className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest block mb-6">
-              PERFORMANCE PRODUIT — Score Sentiment
-            </span>
-            {summaryLoading ? (
-              <div className="space-y-5">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-8 bg-surface-container-high rounded animate-pulse"></div>
-                ))}
-              </div>
-            ) : summaryView.productPerformance.length === 0 ? (
-              <div className="bg-surface-container-low rounded-sm p-6 text-sm text-on-surface-variant leading-relaxed">
-                Pas encore assez de données produit pour alimenter cette vue.
-              </div>
-            ) : (
-              <div className="space-y-5">
-                {summaryView.productPerformance.map((product, index) => (
-                  <div key={product.product} className="relative">
-                    <div className="flex justify-between items-end mb-2">
-                      <span className="text-sm font-bold">{product.product}</span>
-                      <span
-                        className={`text-xs font-bold ${
-                          product.trendPct >= 0 ? "text-tertiary" : "text-error"
-                        }`}
-                      >
-                        {product.trendPct >= 0 ? "+" : ""}
-                        {product.trendPct}%
-                      </span>
-                    </div>
-                    <div className="h-2 bg-surface-container-highest w-full rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-primary transition-all duration-700"
-                        style={{
-                          width: `${product.relativeVolume}%`,
-                          opacity: 1 - index * 0.2,
-                        }}
-                      ></div>
-                    </div>
+                {actionsLoading ? (
+                  <div className="mt-6 h-32 animate-pulse rounded-xl bg-surface-container-high" />
+                ) : topAction ? (
+                  <div className="mt-6">
+                    <span className="rounded-full border border-action/20 bg-action-container px-2.5 py-1 text-[9px] font-bold text-action">Canal · {topAction.targetPlatform}</span>
+                    <h3 className="mt-4 break-words font-headline text-lg font-bold leading-snug text-on-surface">{topAction.title}</h3>
+                    <p className="mt-3 line-clamp-3 text-xs leading-5 text-on-surface-variant">{topAction.description}</p>
+                    <Button className="mt-5 w-full justify-between bg-action text-white hover:bg-action/90" onClick={() => navigate("/recommandations")}>
+                      {topAction.ctaLabel}
+                      <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                    </Button>
                   </div>
-                ))}
-              </div>
-            )}
+                ) : (
+                  <p className="mt-8 text-xs leading-5 text-on-surface-variant">Une action apparaîtra lorsque les signaux seront suffisamment consolidés.</p>
+                )}
+              </article>
+            </div>
           </div>
 
-          <div className="col-span-12 lg:col-span-5 bg-surface-container p-6 rounded-xl flex flex-col">
-            <span className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest block mb-4">
-              DISTRIBUTION RÉGIONALE
-            </span>
-            <div className="flex-1 bg-surface-container-low rounded-sm relative overflow-hidden p-4">
-              {summaryLoading ? (
-                <div className="relative space-y-3">
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <div key={i} className="h-4 bg-surface-container-high rounded animate-pulse"></div>
-                  ))}
+          <div className="mt-5">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <h3 className="font-headline text-sm font-bold text-on-surface">File de traitement</h3>
+                <p className="mt-0.5 text-[10px] text-on-surface-variant">Les alertes sont classées par niveau d’urgence.</p>
+              </div>
+              <Link href="/alertes" className="flex items-center gap-1.5 text-xs font-semibold text-error hover:underline">
+                Tout afficher <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+            <div className="overflow-hidden rounded-2xl border border-outline-variant bg-surface">
+              {alertsLoading ? (
+                <div className="space-y-px bg-outline-variant">
+                  {[1, 2].map((item) => <div key={item} className="h-20 animate-pulse bg-surface-container-low" />)}
                 </div>
-              ) : summaryView.regionalDistribution.length === 0 ? (
-                <div className="h-full flex items-center justify-center text-center text-sm text-on-surface-variant max-w-xs mx-auto leading-relaxed">
-                  Pas encore assez de données régionales pour alimenter cette vue.
+              ) : currentAlerts.length === 0 ? (
+                <div className="flex items-center gap-3 p-5">
+                  <CircleCheck className="h-5 w-5 text-success" aria-hidden="true" />
+                  <p className="text-xs text-on-surface-variant">La file est vide. La surveillance continue en arrière-plan.</p>
                 </div>
               ) : (
-                <div className="relative space-y-3">
-                  {summaryView.regionalDistribution.map((region) => (
-                    <div key={region.wilaya} className="flex items-center justify-between text-[11px]">
-                      <span className="font-bold text-on-surface">{region.wilaya}</span>
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="h-1 bg-primary rounded-full"
-                          style={{ width: `${region.pct * 1.2}px` }}
-                        ></div>
-                        <span className="text-gray-400 w-8 text-right">{region.pct}%</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                currentAlerts.slice(0, 3).map((alert, index) => (
+                  <button
+                    key={alert.id}
+                    onClick={() => navigate("/alertes")}
+                    className="group grid w-full gap-3 border-b border-outline-variant p-4 text-left transition-colors last:border-b-0 hover:bg-surface-container-low sm:grid-cols-[2rem_minmax(0,1fr)_8rem_1.5rem] sm:items-center sm:px-5"
+                    data-testid={`alert-card-${alert.id}`}
+                    type="button"
+                  >
+                    <span className="metric-number text-xs font-bold text-error">{String(index + 1).padStart(2, "0")}</span>
+                    <span className="min-w-0">
+                      <span className="block truncate font-headline text-sm font-bold text-on-surface">{alert.title}</span>
+                      <span className="mt-1 block truncate text-[10px] text-on-surface-variant">{alert.description}</span>
+                    </span>
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-error sm:text-right">
+                      {severityLabel(alert.severity)} · {formatTimestamp(alert.timestamp)}
+                    </span>
+                    <ArrowRight className="hidden h-4 w-4 text-on-surface-variant transition-transform group-hover:translate-x-0.5 sm:block" aria-hidden="true" />
+                  </button>
+                ))
               )}
             </div>
           </div>
-        </div>
+        </section>
 
-        <footer className="pt-2 flex justify-between items-center text-[10px] text-gray-600 font-bold uppercase tracking-widest">
-          <div className="flex gap-4">
-            <span>{`API Status: ${statusView.apiStatus}`}</span>
-            <span>
-              {statusView.latencyMs == null
-                ? "Latency: n/a"
-                : `Latency: ${statusView.latencyMs}ms`}
-            </span>
+        <section className="grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(20rem,0.9fr)]">
+          <div className="rounded-2xl border border-outline-variant bg-surface p-5 sm:p-6">
+            <div className="flex items-center gap-3">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-insight-container text-insight"><MessageSquareText className="h-4 w-4" /></span>
+              <div>
+                <h2 className="font-headline text-sm font-bold text-on-surface">Produits à surveiller</h2>
+                <p className="mt-0.5 text-[10px] text-on-surface-variant">Évolution de la perception pour chaque produit analysé.</p>
+              </div>
+            </div>
+            <div className="mt-6 space-y-5">
+              {summaryLoading ? (
+                [1, 2, 3].map((item) => <div key={item} className="h-9 animate-pulse rounded-lg bg-surface-container-high" />)
+              ) : summaryView.productPerformance.length === 0 ? (
+                <p className="rounded-xl bg-surface-container p-5 text-xs text-on-surface-variant">Pas encore assez de données produit pour comparer les signaux.</p>
+              ) : (
+                summaryView.productPerformance.map((product) => (
+                  <div key={product.product}>
+                    <div className="mb-2 flex items-end justify-between gap-3">
+                      <span className="truncate text-xs font-semibold text-on-surface">{product.product}</span>
+                      <span className={`text-xs font-bold ${product.trendPct >= 0 ? "text-success" : "text-error"}`}>{product.trendPct >= 0 ? "+" : ""}{product.trendPct}%</span>
+                    </div>
+                    <div className="h-1.5 overflow-hidden rounded-full bg-surface-container-highest">
+                      <div className="h-full rounded-full bg-insight" style={{ width: `${product.relativeVolume}%` }} />
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
-          <div>© {new Date().getFullYear()} RamyPulse Intelligence Unit</div>
+
+          <div className="rounded-2xl border border-outline-variant bg-surface p-5 sm:p-6">
+            <div className="flex items-center gap-3">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-monitor-container text-monitor"><MapPinned className="h-4 w-4" /></span>
+              <div>
+                <h2 className="font-headline text-sm font-bold text-on-surface">Où les clients s’expriment</h2>
+                <p className="mt-0.5 text-[10px] text-on-surface-variant">Part des avis analysés pour chaque wilaya.</p>
+              </div>
+            </div>
+            <div className="mt-6 space-y-3">
+              {summaryLoading ? (
+                [1, 2, 3, 4].map((item) => <div key={item} className="h-8 animate-pulse rounded-lg bg-surface-container-high" />)
+              ) : summaryView.regionalDistribution.length === 0 ? (
+                <p className="rounded-xl bg-surface-container p-5 text-xs text-on-surface-variant">La localisation apparaîtra dès que les sources fourniront assez de contexte.</p>
+              ) : (
+                summaryView.regionalDistribution.map((region) => (
+                  <div key={region.wilaya} className="grid grid-cols-[minmax(0,1fr)_6rem_2.5rem] items-center gap-3">
+                    <span className="truncate text-xs font-semibold text-on-surface">{region.wilaya}</span>
+                    <div className="h-1.5 overflow-hidden rounded-full bg-surface-container-highest"><div className="h-full rounded-full bg-monitor" style={{ width: `${region.pct}%` }} /></div>
+                    <span className="text-right text-[10px] font-bold text-on-surface-variant">{region.pct}%</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </section>
+
+        <footer className="flex flex-col gap-3 border-t border-outline-variant pt-5 text-[10px] text-on-surface-variant sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-4">
+            <span className="flex items-center gap-1.5 font-semibold text-success">
+              <Radio className="h-3.5 w-3.5" aria-hidden="true" />
+              Collecte active
+            </span>
+            <span>Données analysées {summaryView.period}</span>
+          </div>
+          <Link href="/admin-sources" className="font-semibold text-monitor hover:underline">
+            Vérifier les sources de données
+          </Link>
         </footer>
       </div>
     </AppShell>

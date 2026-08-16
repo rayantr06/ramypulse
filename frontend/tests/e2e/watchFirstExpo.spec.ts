@@ -23,21 +23,19 @@ test("watch-first expo flow creates a tenant, starts a run, and offers a value s
     await route.fulfill({ json: { watchlist_id: "watch-001", status: "created" } });
   });
   await page.route("**/api/watch-runs", async (route) => {
-    if (route.request().method() === "POST") {
-      await route.fulfill({
-        json: {
-          run_id: "run-001",
-          client_id: "tenant-cevital-elio",
-          watchlist_id: "watch-001",
-          stage: "queued",
-          status: "queued",
-          records_collected: 0,
-          steps: {},
-        },
-      });
-      return;
-    }
-
+    await route.fulfill({
+      json: {
+        run_id: "run-001",
+        client_id: "tenant-cevital-elio",
+        watchlist_id: "watch-001",
+        stage: "queued",
+        status: "queued",
+        records_collected: 0,
+        steps: {},
+      },
+    });
+  });
+  await page.route("**/api/watch-runs/run-001", async (route) => {
     await route.fulfill({
       json: {
         run_id: "run-001",
@@ -69,6 +67,7 @@ test("watch-first expo flow creates a tenant, starts a run, and offers a value s
   });
 
   await page.goto("/#/nouveau-client");
+  await page.getByTestId("btn-switch-manual-onboarding").click();
 
   await page.getByTestId("input-brand-name").fill("Cevital Elio");
   await page.getByTestId("input-product-name").fill("Elio");
