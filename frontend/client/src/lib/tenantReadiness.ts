@@ -10,6 +10,7 @@ import {
   useStoredOnboardingRun,
 } from "./onboardingRunState";
 import { apiRequest } from "./queryClient";
+import { isDemoMode } from "./demoMode";
 
 export type TenantReadinessState =
   | "checking"
@@ -111,6 +112,7 @@ export function resolveTenantReadiness({
 
 export function useTenantReadiness() {
   const tenantId = useTenantId();
+  const demoMode = isDemoMode();
   const storedRun = useStoredOnboardingRun();
   const activeRun = storedRun && storedRun.clientId === tenantId ? storedRun : null;
 
@@ -120,13 +122,16 @@ export function useTenantReadiness() {
       const res = await apiRequest("GET", `/api/watch-runs/${activeRun?.runId}`);
       return (await res.json()) as WatchRunState;
     },
-    enabled: Boolean(tenantId && activeRun?.runId && getStoredTenantId()),
+    enabled: Boolean(!demoMode && tenantId && activeRun?.runId && getStoredTenantId()),
     retry: false,
   });
 
   const summaryQuery = useQuery<DashboardSignalSummary>({
     queryKey: ["/api/dashboard/summary", tenantId, "tenant-readiness"],
     queryFn: async () => {
+      if (demoMode) {
+        return { total_mentions: 200 };
+      }
       const res = await apiRequest("GET", "/api/dashboard/summary");
       const summary = mapDashboardSummary(await res.json());
       return { total_mentions: summary.total_mentions };

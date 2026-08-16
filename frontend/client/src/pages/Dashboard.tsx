@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { mapDashboardActions, mapDashboardAlerts, mapDashboardSummary } from "@/lib/apiMappings";
 import { apiRequest } from "@/lib/queryClient";
 import { useTenantId } from "@/lib/tenantContext";
+import { isDemoMode } from "@/lib/demoMode";
 
 interface DashboardSummaryView {
   score: number;
@@ -50,6 +51,56 @@ interface DashboardActionView {
   confidence: number;
   isAvailable: boolean;
 }
+
+const DEMO_SUMMARY: DashboardSummaryView = {
+  score: 72,
+  trend: "up",
+  delta: 5,
+  summary: "La perception progresse, mais deux signaux négatifs demandent une vérification.",
+  totalMentions: 200,
+  period: "90 derniers jours",
+  regionalDistribution: [
+    { wilaya: "Alger", pct: 28 },
+    { wilaya: "Oran", pct: 22 },
+    { wilaya: "Constantine", pct: 20 },
+    { wilaya: "Annaba", pct: 16 },
+  ],
+  productPerformance: [
+    { product: "Yaourt Abricot 150 g", trendPct: 10, relativeVolume: 82 },
+    { product: "Lait fermenté", trendPct: 4, relativeVolume: 61 },
+    { product: "Fromage frais", trendPct: -3, relativeVolume: 44 },
+  ],
+};
+
+const DEMO_ALERTS: DashboardAlertView[] = [
+  {
+    id: "demo-alert-1",
+    title: "Volume de mentions négatives en hausse",
+    description: "Hausse de 45 % des avis négatifs sur Google Maps, concentrée dans trois wilayas.",
+    severity: "critical",
+    timestamp: "2026-08-16T16:32:00Z",
+  },
+  {
+    id: "demo-alert-2",
+    title: "Baisse du score sur l’aspect goût",
+    description: "Le score associé au goût recule de 12 points sur les commentaires récents.",
+    severity: "high",
+    timestamp: "2026-08-16T14:18:00Z",
+  },
+];
+
+const DEMO_ACTIONS: DashboardActionView[] = [
+  {
+    id: "demo-action-1",
+    title: "Vérifier les lots et points de vente concernés",
+    description: "Comparer les verbatims récents par wilaya avant de lancer une action corrective ciblée.",
+    priority: "high",
+    ctaLabel: "Examiner la recommandation",
+    targetPlatform: "Google Maps",
+    confidence: 84,
+    isAvailable: true,
+  },
+];
 
 function mapSummaryView(value: unknown): DashboardSummaryView {
   const summary = mapDashboardSummary(value);
@@ -142,17 +193,24 @@ function formatTimestamp(value: string): string {
 export default function Dashboard() {
   const [, navigate] = useLocation();
   const tenantId = useTenantId();
+  const demoMode = isDemoMode();
   const { data: summary, isLoading: summaryLoading } = useQuery<DashboardSummaryView>({
     queryKey: ["/api/dashboard/summary", { tenantId }],
-    queryFn: async () => mapSummaryView(await (await apiRequest("GET", "/api/dashboard/summary")).json()),
+    queryFn: async () => demoMode
+      ? DEMO_SUMMARY
+      : mapSummaryView(await (await apiRequest("GET", "/api/dashboard/summary")).json()),
   });
   const { data: alertsList, isLoading: alertsLoading } = useQuery<DashboardAlertView[]>({
     queryKey: ["/api/dashboard/alerts-critical", { tenantId }],
-    queryFn: async () => mapAlertViews(await (await apiRequest("GET", "/api/dashboard/alerts-critical")).json()),
+    queryFn: async () => demoMode
+      ? DEMO_ALERTS
+      : mapAlertViews(await (await apiRequest("GET", "/api/dashboard/alerts-critical")).json()),
   });
   const { data: actionsList, isLoading: actionsLoading } = useQuery<DashboardActionView[]>({
     queryKey: ["/api/dashboard/top-actions", { tenantId }],
-    queryFn: async () => mapActionViews(await (await apiRequest("GET", "/api/dashboard/top-actions")).json()),
+    queryFn: async () => demoMode
+      ? DEMO_ACTIONS
+      : mapActionViews(await (await apiRequest("GET", "/api/dashboard/top-actions")).json()),
   });
 
   const summaryView = summary ?? {
