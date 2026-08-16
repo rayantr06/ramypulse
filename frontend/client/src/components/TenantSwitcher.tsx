@@ -1,14 +1,17 @@
 import { FormEvent, useEffect, useState } from "react";
-import { Building2, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
+import { ProfileMark } from "@/components/ProfileMark";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { formatTenantLabel } from "@/lib/productNavigation";
 import { getStoredTenantId, setStoredTenantId, useTenantId } from "@/lib/tenantContext";
+import { getTenantBranding } from "@/lib/tenantBranding";
 
 export function TenantSwitcher() {
   const tenantId = useTenantId();
   const tenantLabel = formatTenantLabel(tenantId);
+  const tenantBranding = getTenantBranding(tenantId, tenantLabel);
   const [draftTenantId, setDraftTenantId] = useState(getStoredTenantId() ?? "");
   const [isOpen, setIsOpen] = useState(false);
 
@@ -36,9 +39,12 @@ export function TenantSwitcher() {
           type="button"
           aria-label="Changer l’espace client"
         >
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-container text-primary">
-            <Building2 className="h-3.5 w-3.5" aria-hidden="true" />
-          </span>
+          <ProfileMark
+            className="h-7 w-7 rounded-lg"
+            imageAlt={tenantBranding.logoAlt}
+            imageSrc={tenantBranding.logoSrc}
+            label={tenantLabel}
+          />
           <span className="min-w-0">
             <span className="block text-[9px] font-bold uppercase tracking-[0.16em] text-on-surface-variant">
               Espace client

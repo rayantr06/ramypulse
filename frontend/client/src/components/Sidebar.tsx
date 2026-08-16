@@ -11,6 +11,7 @@ import {
   type ProductStage,
 } from "@/lib/productNavigation";
 import { useTenantId } from "@/lib/tenantContext";
+import { getTenantBranding } from "@/lib/tenantBranding";
 
 interface SidebarProps {
   footerAvatarSrc?: string;
@@ -34,8 +35,8 @@ function mobileActiveTone(href: string): string {
 }
 
 export function Sidebar({
-  footerAvatarSrc: _footerAvatarSrc,
-  footerAvatarAlt = "Profil organisation",
+  footerAvatarSrc,
+  footerAvatarAlt,
   footerSubtitle,
   isOpen = false,
   onNavigate,
@@ -44,6 +45,10 @@ export function Sidebar({
   const tenantId = useTenantId();
   const isOperatorConsole = location.startsWith("/admin-sources") && !tenantId;
   const organizationLabel = isOperatorConsole ? "Console opérateur" : formatTenantLabel(tenantId);
+
+  const tenantBranding = getTenantBranding(tenantId, organizationLabel);
+  const organizationLogoSrc = footerAvatarSrc ?? tenantBranding.logoSrc;
+  const organizationLogoAlt = footerAvatarAlt ?? tenantBranding.logoAlt;
 
   return (
     <aside
@@ -67,7 +72,12 @@ export function Sidebar({
 
       <div className="mt-6 border-y border-outline-variant py-3.5 lg:hidden">
         <div className="flex items-center gap-3">
-          <ProfileMark label={organizationLabel} className="h-9 w-9" />
+          <ProfileMark
+            className="h-10 w-10"
+            imageAlt={organizationLogoAlt}
+            imageSrc={organizationLogoSrc}
+            label={organizationLabel}
+          />
           <div className="min-w-0 flex-1">
             <p className="truncate font-headline text-sm font-bold text-on-surface">{organizationLabel}</p>
             <p className="mt-0.5 text-[10px] text-on-surface-variant">
@@ -132,7 +142,12 @@ export function Sidebar({
       <div className="mt-4 border-t border-outline-variant pt-4">
         <div className="flex items-center gap-3 rounded-2xl px-2 py-1.5 lg:flex-col lg:px-0">
           <div className="relative">
-            <ProfileMark label={footerAvatarAlt || organizationLabel} className="h-9 w-9" />
+            <ProfileMark
+              className="h-9 w-9"
+              imageAlt={organizationLogoAlt}
+              imageSrc={organizationLogoSrc}
+              label={organizationLabel}
+            />
             <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-surface bg-success" />
           </div>
           <div className="min-w-0 flex-1 lg:hidden">
