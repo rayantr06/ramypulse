@@ -46,7 +46,8 @@ def charger(chemin: Path) -> list[str]:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument('--data', default='sft_trace_json', choices=sorted(MARQUEURS))
-    ap.add_argument('--racine', default='data/processed/slm_v2_sft')
+    ap.add_argument('--racine', default='.',
+                    help='dossier des .jsonl ; par defaut le dossier courant')
     ap.add_argument('--modele', default='Qwen/Qwen3.5-0.8B')
     ap.add_argument('--sortie', required=True)
     ap.add_argument('--methode', default='complet', choices=('complet', 'qlora'))
