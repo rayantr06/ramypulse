@@ -63,6 +63,8 @@ def main() -> int:
     # defaut, et disponible si un modele plus gros venait a saturer.
     ap.add_argument('--checkpointing', action='store_true',
                     help='economise la VRAM au prix de la vitesse ; inutile sous 2 B')
+    ap.add_argument('--reprendre', action='store_true',
+                    help='repart du dernier point de sauvegarde du dossier de sortie')
     args = ap.parse_args()
 
     import torch
@@ -138,6 +140,13 @@ def main() -> int:
         'logging_steps': 25,
         'eval_strategy': 'steps',
         'eval_steps': 200,
+        # Sans ceci, la boucle d'evaluation accumule les logits des 766 exemples
+        # de validation avant de reduire quoi que ce soit. Avec un vocabulaire de
+        # 248 044, cela demande plusieurs dizaines de gigaoctets et fait tomber
+        # un entrainement qui tournait parfaitement depuis 200 pas.
+        'prediction_loss_only': True,
+        'per_device_eval_batch_size': 1,
+        'eval_accumulation_steps': 1,
         'save_strategy': 'steps',
         'save_steps': 200,
         'save_total_limit': 2,
@@ -156,7 +165,7 @@ def main() -> int:
         train_dataset=jeux['train'],
         eval_dataset=jeux['dev'],
         data_collator=DataCollatorForSeq2Seq(tok, padding=True, label_pad_token_id=-100),
-    ).train()
+    ).train(resume_from_checkpoint=args.reprendre or None)
 
     modele.save_pretrained(args.sortie)
     tok.save_pretrained(args.sortie)
