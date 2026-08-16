@@ -176,7 +176,12 @@ def projeter(annotation: dict, texte: str) -> dict:
 
     langue = annotation.get('language') or {}
     sentiment = annotation.get('sentiment') or {}
-    entites = annotation.get('entities') or []
+    # Le socle arabizi a ete annote avant que le prompt n'impose la forme des
+    # entites : 270 des 281 y sont sans identifiant. Les ignorer plutot que de
+    # les inventer — un identifiant fabrique ici ne renverrait a rien dans les
+    # aspects, qui n'en portent pas non plus.
+    entites = [e for e in (annotation.get('entities') or [])
+               if isinstance(e, dict) and e.get('id')]
     for e in entites:
         resoudre_entite(e, texte)
 
