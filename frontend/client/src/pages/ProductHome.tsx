@@ -1,9 +1,6 @@
 import Dashboard from "@/pages/Dashboard";
-import WatchOnboarding from "@/pages/WatchOnboarding";
-import { useTenantId } from "@/lib/tenantContext";
+import { TenantInitializationGate } from "@/components/TenantInitializationGate";
 
 export default function ProductHome() {
-  const tenantId = useTenantId();
-
-  return tenantId ? <Dashboard /> : <WatchOnboarding />;
+  return <TenantInitializationGate component={Dashboard} />;
 }

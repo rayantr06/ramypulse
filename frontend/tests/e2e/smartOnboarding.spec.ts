@@ -206,3 +206,84 @@ test("smart onboarding offers a manual fallback when providers are unavailable",
 
   await expect(page.getByTestId("btn-switch-manual-onboarding")).toBeVisible();
 });
+
+test("smart onboarding stops the pipeline and shows the failing step clearly", async ({
+  page,
+}) => {
+  await page.addInitScript(() => localStorage.clear());
+
+  await page.route("**/api/onboarding/analyze", async (route) => {
+    await route.fulfill({ json: smartAnalysis });
+  });
+
+  await page.route("**/api/onboarding/confirm", async (route) => {
+    await route.fulfill({
+      json: {
+        client_id: "yaghurt-plus",
+        watch_seed_watchlist_id: "watch-seed-001",
+        watchlist_ids: ["watch-seed-001", "watch-product-001", "watch-channel-001"],
+        source_ids: ["src-facebook-001"],
+        pending_credentials: smartAnalysis.required_credentials,
+        pending_alert_profiles: smartAnalysis.suggested_alert_profiles,
+        deferred_agent_config: smartAnalysis.deferred_agent_config,
+        run_id: "run-001",
+        watchlist_id: "watch-seed-001",
+      },
+    });
+  });
+
+  await page.route("**/api/watch-runs/run-001", async (route) => {
+    await route.fulfill({
+      json: {
+        run_id: "run-001",
+        client_id: "yaghurt-plus",
+        watchlist_id: "watch-seed-001",
+        requested_channels: ["public_url_seed", "web_search", "facebook"],
+        stage: "normalizing",
+        status: "error",
+        records_collected: 4,
+        steps: {
+          "collect:public_url_seed": {
+            step_key: "collect:public_url_seed",
+            stage: "collecting",
+            collector_key: "public_url_seed",
+            status: "success",
+            records_seen: 2,
+            error_message: null,
+          },
+          "normalize:signals": {
+            step_key: "normalize:signals",
+            stage: "normalizing",
+            collector_key: null,
+            status: "error",
+            records_seen: 0,
+            error_message: "Signal normalization failed for facebook payload.",
+          },
+          "index:artifacts": {
+            step_key: "index:artifacts",
+            stage: "indexing",
+            collector_key: null,
+            status: "success",
+            records_seen: 0,
+            error_message: null,
+          },
+        },
+      },
+    });
+  });
+
+  await page.goto("/#/nouveau-client");
+
+  await page.getByTestId("input-brand-name").fill("Yaghurt Plus");
+  await page.getByTestId("input-product-name").fill("Yaourt");
+  await page.getByTestId("btn-smart-analyze").click();
+  await page.getByTestId("btn-confirm-smart-onboarding").click();
+
+  await expect(page.getByText("Une etape a echoue")).toBeVisible();
+  await expect(page.getByText("Le pipeline est arrete sur l'etape en erreur.")).toBeVisible();
+  await expect(page.getByText("Signal normalization failed for facebook payload.")).toBeVisible();
+  await expect(page.getByTestId("watch-run-stage-indexing")).toContainText("En attente");
+  await expect(page.getByTestId("watch-run-stage-finished")).toContainText("En attente");
+  await expect(page.getByText("Run termine sans signaux exploitables")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Relancer l'initialisation" })).toBeVisible();
+});

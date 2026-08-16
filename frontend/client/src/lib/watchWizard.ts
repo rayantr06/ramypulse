@@ -9,11 +9,17 @@ export interface WatchWizardInput {
   description?: string;
   brand_name: string;
   product_name?: string;
+  subject_type?: string;
+  keywords?: string[];
+  excluded_keywords?: string[];
   seed_urls?: string[];
   competitors?: string[];
   channels?: string[];
   languages?: string[];
   hashtags?: string[];
+  regions?: string[];
+  period_days?: number;
+  min_volume?: number;
 }
 
 export interface SmartOnboardingConfirmInput {
@@ -75,17 +81,52 @@ export function suggestBrandKeywords(raw: string): string[] {
   return Array.from(new Set(keywords));
 }
 
+export function suggestWatchKeywords(brandName: string, productName = ""): string[] {
+  return Array.from(
+    new Set([
+      ...suggestBrandKeywords(brandName),
+      ...suggestBrandKeywords(productName),
+    ]),
+  );
+}
+
+export function parseDelimitedWatchValues(raw: string): string[] {
+  return normalizeStringList(raw.split(/[\n,;]+/));
+}
+
 export function buildWatchWizardPayload(input: WatchWizardInput): WatchlistCreatePayload {
   const brandName = normalizeText(input.brand_name);
+  const productName = normalizeText(input.product_name);
+  const inferredKeywords = suggestWatchKeywords(brandName ?? "", productName ?? "");
   const filters: WatchSeedFilters = {
     brand_name: brandName,
-    product_name: normalizeText(input.product_name),
-    keywords: suggestBrandKeywords(brandName ?? ""),
+    product_name: productName,
+    keywords:
+      input.keywords === undefined
+        ? inferredKeywords
+        : normalizeStringList(input.keywords, { lowercase: true }),
     seed_urls: normalizeStringList(input.seed_urls),
     competitors: normalizeStringList(input.competitors),
     channels: normalizeStringList(input.channels, { lowercase: true }),
     languages: normalizeStringList(input.languages, { lowercase: true }),
     hashtags: normalizeStringList(input.hashtags, { lowercase: true }),
+    ...(input.subject_type
+      ? { subject_type: normalizeText(input.subject_type)?.toLowerCase() ?? null }
+      : {}),
+    ...(input.excluded_keywords
+      ? {
+          excluded_keywords: normalizeStringList(input.excluded_keywords, {
+            lowercase: true,
+          }),
+        }
+      : {}),
+    ...(input.regions ? { regions: normalizeStringList(input.regions) } : {}),
+    ...(input.period_days !== undefined
+      ? { period_days: Math.max(1, Math.trunc(input.period_days)) }
+      : {}),
+    ...(input.min_volume !== undefined
+      ? { min_volume: Math.max(0, Math.trunc(input.min_volume)) }
+      : {}),
   };
 
   return {

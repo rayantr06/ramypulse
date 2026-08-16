@@ -4,6 +4,18 @@ export const STORAGE_KEY = "ramypulse.activeTenantId";
 const TENANT_CHANGE_EVENT = "ramypulse:tenant-change";
 let pendingTenantId: string | null | undefined;
 
+function getConfiguredDefaultTenantId(): string | null {
+  const env = (
+    import.meta as ImportMeta & {
+      env?: Record<string, string | boolean | undefined>;
+    }
+  ).env;
+  const configuredTenantId = env?.VITE_RAMYPULSE_DEFAULT_TENANT_ID;
+  return typeof configuredTenantId === "string" && configuredTenantId.trim()
+    ? configuredTenantId.trim()
+    : null;
+}
+
 function getStorage(): Storage | null {
   if (typeof window === "undefined") {
     return null;
@@ -27,16 +39,17 @@ export function getStoredTenantId(): string | null {
     return pendingTenantId;
   }
 
+  const defaultTenantId = getConfiguredDefaultTenantId();
   const storage = getStorage();
   if (!storage) {
-    return null;
+    return defaultTenantId;
   }
 
   try {
     const value = storage.getItem(STORAGE_KEY);
-    return value && value.trim() ? value : null;
+    return value && value.trim() ? value : defaultTenantId;
   } catch {
-    return null;
+    return defaultTenantId;
   }
 }
 

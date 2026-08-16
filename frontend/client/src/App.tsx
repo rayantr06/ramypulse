@@ -6,7 +6,9 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useTenantId } from "@/lib/tenantContext";
+import { useTenantReadiness } from "@/lib/tenantReadiness";
 import { shouldGateProductRoute } from "@/lib/routeAccess";
+import { TenantReadinessScreen } from "@/components/TenantReadinessScreen";
 import NotFound from "@/pages/not-found";
 import Explorateur from "@/pages/Explorateur";
 import Campagnes from "@/pages/Campagnes";
@@ -18,17 +20,21 @@ import ProductHome from "@/pages/ProductHome";
 import WatchOnboarding from "@/pages/WatchOnboarding";
 
 function TenantProtectedRoute({ component: Component }: { component: ComponentType }) {
-  const tenantId = useTenantId();
+  const readiness = useTenantReadiness();
   const [location, setLocation] = useLocation();
   const path = location.split("?")[0] || "/";
 
   useEffect(() => {
-    if (shouldGateProductRoute(path, tenantId) && path !== "/nouveau-client") {
+    if (shouldGateProductRoute(path, readiness.state) && path !== "/nouveau-client") {
       setLocation("/nouveau-client");
     }
-  }, [path, setLocation, tenantId]);
+  }, [path, readiness.state, setLocation]);
 
-  if (shouldGateProductRoute(path, tenantId)) {
+  if (readiness.state === "checking") {
+    return <TenantReadinessScreen />;
+  }
+
+  if (shouldGateProductRoute(path, readiness.state)) {
     return <WatchOnboarding />;
   }
 
@@ -42,6 +48,7 @@ function AppRouter() {
       <Route path="/nouveau-client" component={WatchOnboarding} />
       <Route path="/explorateur" component={() => <TenantProtectedRoute component={Explorateur} />} />
       <Route path="/campagnes" component={() => <TenantProtectedRoute component={Campagnes} />} />
+      <Route path="/watchlists/new" component={() => <TenantProtectedRoute component={Watchlists} />} />
       <Route path="/watchlists" component={() => <TenantProtectedRoute component={Watchlists} />} />
       <Route path="/alertes" component={() => <TenantProtectedRoute component={Alertes} />} />
       <Route

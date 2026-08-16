@@ -19,6 +19,7 @@ import {
   buildWatchWizardPayload,
   suggestBrandKeywords,
 } from "@/lib/watchWizard";
+import { setStoredOnboardingRun } from "@/lib/onboardingRunState";
 import { setStoredTenantId } from "@/lib/tenantContext";
 
 interface WatchOnboardingWizardProps {
@@ -126,7 +127,15 @@ function ManualWatchOnboardingFlow({
         watchlist_id: watchlistId,
       };
     },
-    onSuccess: (payload) => onRunCreated(payload),
+    onSuccess: (payload) => {
+      setStoredOnboardingRun({
+        clientId: payload.client_id,
+        runId: payload.run_id,
+        watchlistId: payload.watchlist_id,
+        source: "manual",
+      });
+      onRunCreated(payload);
+    },
     onError: (error: Error) => {
       toast({
         title: "Erreur",
@@ -408,6 +417,12 @@ export function WatchOnboardingWizard({ onRunCreated }: WatchOnboardingWizardPro
     },
     onSuccess: (payload) => {
       setStoredTenantId(payload.client_id);
+      setStoredOnboardingRun({
+        clientId: payload.client_id,
+        runId: payload.run_id,
+        watchlistId: payload.watchlist_id,
+        source: "smart",
+      });
       onRunCreated(payload);
     },
     onError: (error: Error) => {
@@ -468,18 +483,17 @@ export function WatchOnboardingWizard({ onRunCreated }: WatchOnboardingWizardPro
   }
 
   return (
-    <div className="mx-auto max-w-5xl rounded-2xl border border-outline-variant/15 bg-surface-container p-8 shadow-[0_24px_80px_rgba(0,0,0,0.22)]">
+    <div className="mx-auto max-w-5xl rounded-3xl border border-outline-variant/55 bg-surface-container-low p-6 shadow-ambient sm:p-8">
       <div className="mb-8 flex items-start justify-between gap-6">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-primary">
-            Smart onboarding
+            Configuration guidée
           </p>
           <h1 className="mt-3 font-headline text-4xl font-black tracking-tight text-on-surface">
-            Analysez, revisez, puis confirmez votre premier perimetre de veille
+            Décrivez votre activité, nous préparons votre première veille
           </h1>
           <p className="mt-4 max-w-3xl text-sm leading-6 text-on-surface-variant">
-            Le flow intelligent prepare un tenant, des sources draft, une watchlist watch_seed et
-            des watchlists d'analyse. Rien n'est cree tant que la revue finale n'est pas confirmee.
+            LIDAL Pulse propose les sujets, mots-clés et sources les plus utiles. Vous gardez le contrôle et rien n’est lancé avant votre confirmation.
           </p>
         </div>
         <div className="flex flex-col items-end gap-3">
@@ -488,7 +502,7 @@ export function WatchOnboardingWizard({ onRunCreated }: WatchOnboardingWizardPro
             variant="outline"
             onClick={() => setMode("manual")}
           >
-            Passer au wizard manuel
+            Configurer manuellement
           </Button>
           <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-right">
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">

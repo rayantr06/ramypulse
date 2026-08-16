@@ -53,6 +53,11 @@ export interface WatchSeedFilters {
   channels: string[];
   languages: string[];
   hashtags: string[];
+  subject_type?: string | null;
+  excluded_keywords?: string[];
+  regions?: string[];
+  period_days?: number;
+  min_volume?: number;
 }
 
 export type WatchlistFilters = LegacyWatchlistFilters | WatchSeedFilters | UnknownRecord;

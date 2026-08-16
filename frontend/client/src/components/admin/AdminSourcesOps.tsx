@@ -57,28 +57,32 @@ export default function AdminSourcesOps() {
   const activeViewMeta = ADMIN_VIEWS.find((view) => view.id === activeView) ?? ADMIN_VIEWS[0];
 
   return (
-    <div className="p-8" data-testid="admin-ops-canvas" data-view={activeView}>
-      <div className="mb-8 flex items-center justify-between gap-4">
-        <div>
-          <p className="text-on-surface-variant font-bold tracking-[0.15em] mb-1 uppercase text-[10px]">
-            COMMAND CENTER
+    <div className="mx-auto w-full max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8" data-testid="admin-ops-canvas" data-view={activeView}>
+      <div className="mb-7 flex flex-col justify-between gap-4 border-b border-outline-variant/55 pb-6 sm:flex-row sm:items-end">
+        <div className="signal-rail pl-4">
+          <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
+            Opérations & qualité des données
           </p>
-          <h1 className="text-3xl font-headline font-extrabold tracking-tight">
-            Ramy Intelligence Dashboard
+          <h1 className="font-headline text-2xl font-extrabold tracking-tight text-on-surface sm:text-3xl">
+            Centre de contrôle des sources
           </h1>
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-on-surface-variant">
+            Supervisez les connecteurs, les accès et les cycles d’ingestion qui alimentent les analyses.
+          </p>
         </div>
-        <div className="text-sm text-on-surface-variant">
-          Vue active: <span className="text-on-surface font-semibold">{activeViewMeta.label}</span>
+        <div className="flex items-center gap-2 self-start rounded-lg border border-outline-variant/60 bg-surface-container px-3 py-2 text-xs text-on-surface-variant sm:self-auto">
+          <span className="h-2 w-2 rounded-full bg-success" />
+          Vue active <span className="font-semibold text-on-surface">{activeViewMeta.label}</span>
         </div>
       </div>
 
-      <div className="mb-8 flex flex-wrap gap-3">
+      <div className="mb-8 flex w-fit max-w-full flex-wrap gap-1 rounded-xl border border-outline-variant/60 bg-surface-container-low p-1.5">
         {ADMIN_VIEWS.map((view) => (
           <button
             key={view.id}
             onClick={() => navigateToAdminView(view.id)}
             data-testid={`admin-view-${view.id}`}
-            className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${activeView === view.id ? "bg-primary text-on-primary shadow-lg shadow-primary/15" : "bg-surface-container text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high"}`}
+            className={`rounded-lg px-4 py-2 text-xs font-bold transition-colors ${activeView === view.id ? "bg-primary text-on-primary shadow-pulse-glow" : "text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"}`}
           >
             {view.label}
           </button>

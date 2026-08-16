@@ -106,6 +106,30 @@ const recommendationList = [
   },
 ];
 
+async function seedReadyTenant(page: Page, clientId = "tenant-ready") {
+  await page.addInitScript((tenant) => {
+    localStorage.clear();
+    localStorage.setItem("ramypulse.activeTenantId", tenant);
+  }, clientId);
+
+  await page.route("**/api/dashboard/summary", async (route) => {
+    await route.fulfill({
+      json: {
+        nss_global: 24,
+        total_mentions: 41,
+        positive_mentions: 20,
+        neutral_mentions: 10,
+        negative_mentions: 11,
+        active_alerts: 2,
+        active_watchlists: 3,
+        recommendation_count: 1,
+        top_aspect: "gout",
+        top_channel: "facebook",
+      },
+    });
+  });
+}
+
 async function mockExplorerApi(page: Page) {
   await page.route("**/api/explorer/search**", async (route) => {
     await route.fulfill({ json: explorerSearchPayload });
@@ -140,6 +164,7 @@ async function mockRecommendationsApi(page: Page) {
 }
 
 test("Explorer search shows consultable cited sources", async ({ page }) => {
+  await seedReadyTenant(page);
   await mockExplorerApi(page);
   await page.goto("/#/explorateur");
   await page.getByTestId("search-input").fill("Que pensent les clients du goût ?");
@@ -155,7 +180,9 @@ test("Explorer search shows consultable cited sources", async ({ page }) => {
 
 test("Watchlists create flow submits backend-aligned filters", async ({ page }) => {
   let postedPayload: unknown = null;
+  let postedRunPayload: unknown = null;
 
+  await seedReadyTenant(page);
   await mockWatchlistsApi(page);
   await page.route("**/api/watchlists", async (route) => {
     if (route.request().method() === "POST") {
@@ -168,38 +195,54 @@ test("Watchlists create flow submits backend-aligned filters", async ({ page }) 
   await page.route("**/api/watchlists/watch_new_1/metrics", async (route) => {
     await route.fulfill({ json: watchlistMetrics });
   });
+  await page.route("**/api/watch-runs", async (route) => {
+    postedRunPayload = route.request().postDataJSON();
+    await route.fulfill({ status: 202, json: { run_id: "run_new_1" } });
+  });
 
   await page.goto("/#/watchlists");
   await page.getByTestId("btn-create-watchlist").click();
   await page.getByTestId("input-watchlist-name").fill("NSS Oran");
-  await page.getByPlaceholder("Description (optionnel)").fill("Surveille Oran");
-  await page.locator("select").nth(0).selectOption("region");
-  await page.getByPlaceholder("Produit").fill("ramy_citron");
-  await page.getByPlaceholder("Wilaya").fill("oran");
-  await page.getByPlaceholder("Canal").fill("google_maps");
-  await page.getByPlaceholder("Aspect").fill("gout");
-  await page.getByPlaceholder("Jours").fill("7");
-  await page.getByPlaceholder("Volume min.").fill("10");
+  await page.getByTestId("input-watch-keywords").fill("ramy citron, avis ramy");
+  await page.getByTestId("input-watch-excluded-keywords").fill("emploi");
+  await page.getByTestId("btn-next-watch-scope").click();
+  await page.getByTestId("input-watch-seed-urls").fill("https://example.test/ramy");
+  await page.getByTestId("input-watch-regions").fill("Oran");
+  await page.getByRole("button", { name: /Google Maps/ }).click();
+  await page.getByTestId("input-watch-period-days").fill("7");
+  await page.getByTestId("input-watch-min-volume").fill("10");
   await page.getByTestId("btn-submit-watchlist").click();
 
   await expect.poll(() => postedPayload).not.toBeNull();
   expect(postedPayload).toEqual({
     name: "NSS Oran",
-    description: "Surveille Oran",
-    scope_type: "region",
+    description: "",
+    scope_type: "watch_seed",
     filters: {
-      channel: "google_maps",
-      aspect: "gout",
-      wilaya: "oran",
-      product: "ramy_citron",
-      sentiment: null,
+      brand_name: null,
+      product_name: null,
+      keywords: ["ramy citron", "avis ramy"],
+      seed_urls: ["https://example.test/ramy"],
+      competitors: [],
+      channels: ["web_search", "public_url_seed", "google_maps"],
+      languages: ["fr", "ar"],
+      hashtags: [],
+      subject_type: "keyword",
+      excluded_keywords: ["emploi"],
+      regions: ["Oran"],
       period_days: 7,
       min_volume: 10,
     },
   });
+  await expect.poll(() => postedRunPayload).not.toBeNull();
+  expect(postedRunPayload).toEqual({
+    watchlist_id: "watch_new_1",
+    requested_channels: ["web_search", "public_url_seed", "google_maps"],
+  });
 });
 
 test("Recommendations AI shortcut routes to Explorer", async ({ page }) => {
+  await seedReadyTenant(page);
   await mockRecommendationsApi(page);
   await page.goto("/#/recommandations");
   await page.getByTestId("recommendations-ai-shortcut").click();

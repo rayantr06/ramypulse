@@ -1,6 +1,13 @@
 node_modules/
 dist/
 .env
+.env.*
+!.env.example
 *.db
+*.log
 playwright-report/
 test-results/
+output/
+.playwright-cli/
+
+.vercel

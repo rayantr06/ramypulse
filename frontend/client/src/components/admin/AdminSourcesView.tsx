@@ -447,14 +447,14 @@ export function AdminSourcesView() {
   return (
     <div className="grid grid-cols-12 gap-8 items-start">
       <div className="col-span-12 lg:col-span-8 space-y-6">
-        <div className="flex items-end justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-on-surface-variant font-bold tracking-[0.15em] mb-1 uppercase text-[10px]">
               SOURCES DE DONNÉES
             </p>
             <h2 className="text-2xl font-headline font-extrabold tracking-tight">Ingestion Operations</h2>
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-3 self-start sm:self-auto">
             <button
               onClick={() => selectedSource && syncMutation.mutate(selectedSource.id)}
               disabled={!selectedSource || syncMutation.isPending}
@@ -476,8 +476,8 @@ export function AdminSourcesView() {
           </div>
         </div>
 
-        <div className="bg-surface-container rounded-xl overflow-hidden border border-white/5">
-          <table className="w-full text-left border-collapse">
+        <div className="overflow-x-auto rounded-xl border border-outline-variant/60 bg-surface-container">
+          <table className="min-w-[720px] w-full text-left border-collapse">
             <thead>
               <tr className="bg-surface-container-high">
                 {["Nom", "Plateforme", "Owner", "Santé", "Actif", "Dernier Sync"].map((heading) => (
@@ -487,7 +487,7 @@ export function AdminSourcesView() {
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/[0.03]">
+            <tbody className="divide-y divide-outline-variant/30">
               {sourcesLoading ? (
                 <tr>
                   <td colSpan={6} className="px-6 py-4">
@@ -534,18 +534,18 @@ export function AdminSourcesView() {
           </table>
         </div>
 
-        <div className="bg-surface-container p-6 rounded-xl border border-white/5">
+        <div className="rounded-xl border border-outline-variant/60 bg-surface-container p-5 sm:p-6">
           <p className="text-xs font-bold text-on-surface-variant tracking-widest uppercase mb-6">
             PIPELINE TRACE & DÉBIT
           </p>
-          <div className="flex items-center justify-between gap-4">
+          <div className="grid grid-cols-2 gap-3 xl:grid-cols-4 xl:gap-4">
             {[
               { icon: "input", color: "text-primary", borderColor: "border-primary", label: "Source Data", value: pipelineData.source_count },
               { icon: "description", color: "text-tertiary", borderColor: "border-tertiary", label: "Raw Docs", value: pipelineData.raw_count },
               { icon: "rule", color: "text-primary", borderColor: "border-primary", label: "Normalized", value: pipelineData.normalized_count },
               { icon: "auto_awesome", color: "text-tertiary", borderColor: "border-tertiary", label: "Enriched", value: pipelineData.enriched_count },
             ].map(({ icon, color, borderColor, label, value }) => (
-              <div key={label} className={`flex-1 bg-surface-container-high p-4 rounded-lg flex flex-col items-center gap-2 text-center border-l-2 ${borderColor}`}>
+              <div key={label} className={`flex min-w-0 flex-col items-center gap-2 rounded-lg border-l-2 bg-surface-container-high p-4 text-center ${borderColor}`}>
                 <span className={`material-symbols-outlined ${color}`}>{icon}</span>
                 <span className="text-xl font-headline font-bold">{compactNumber(value)}</span>
                 <span className="text-[10px] font-bold uppercase tracking-tighter opacity-60">{label}</span>
@@ -554,13 +554,13 @@ export function AdminSourcesView() {
           </div>
         </div>
 
-        <div className="bg-surface-container rounded-xl border border-white/5">
-          <div className="p-6 border-b border-white/5 flex justify-between items-center">
+        <div className="overflow-x-auto rounded-xl border border-outline-variant/60 bg-surface-container">
+          <div className="flex items-center justify-between border-b border-outline-variant/50 p-6">
             <h3 className="text-sm font-bold uppercase tracking-widest text-on-surface-variant">
               Historique Sync Runs
             </h3>
           </div>
-          <table className="w-full text-left text-sm">
+          <table className="min-w-[680px] w-full text-left text-sm">
             <thead className="bg-surface-container-high/30">
               <tr>
                 {["Run ID", "Mode", "Status", "Records (F/I/E)", "Started at"].map((heading) => (
@@ -568,7 +568,7 @@ export function AdminSourcesView() {
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/[0.03]">
+            <tbody className="divide-y divide-outline-variant/30">
               {runsLoading ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-4">
@@ -592,7 +592,7 @@ export function AdminSourcesView() {
       </div>
 
       <div className="col-span-12 lg:col-span-4 space-y-6">
-        <div className="bg-surface-container p-6 rounded-xl border border-white/5">
+        <div className="rounded-xl border border-outline-variant/60 bg-surface-container p-6">
           <p className="text-xs font-bold text-on-surface-variant tracking-widest uppercase mb-5">
             {isCreateMode || !selectedSource ? "CRÉATION DE SOURCE" : "ÉDITION DE SOURCE"}
           </p>
@@ -610,7 +610,7 @@ export function AdminSourcesView() {
                 ))}
               </select>
             </div>
-            <textarea className="w-full bg-[#0d0e10] p-3 rounded-lg font-mono text-[11px] text-primary/80 h-28 overflow-y-auto border border-white/5" value={sourceForm.config_text} onChange={(event) => setSourceForm({ ...sourceForm, config_text: event.target.value })} />
+            <textarea className="h-28 w-full overflow-y-auto rounded-lg border border-outline-variant/60 bg-surface-container-lowest p-3 font-mono text-[11px] text-primary/80" value={sourceForm.config_text} onChange={(event) => setSourceForm({ ...sourceForm, config_text: event.target.value })} />
             <div className="grid grid-cols-2 gap-4">
               <input className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" type="number" value={sourceForm.sync_frequency_minutes} onChange={(event) => setSourceForm({ ...sourceForm, sync_frequency_minutes: Number(event.target.value || 0) })} />
               <input className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" type="number" value={sourceForm.freshness_sla_hours} onChange={(event) => setSourceForm({ ...sourceForm, freshness_sla_hours: Number(event.target.value || 0) })} />
