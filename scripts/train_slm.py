@@ -97,7 +97,7 @@ def main() -> int:
             encoder, batched=True, remove_columns=['texte'])
         print(f'{split:5s} {len(jeux[split])} exemples')
 
-    charge = {'torch_dtype': torch.bfloat16, 'device_map': 'auto'}
+    charge = {'device_map': 'auto', 'dtype': torch.bfloat16}
     if args.methode == 'qlora':
         from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
         from transformers import BitsAndBytesConfig
@@ -114,29 +114,39 @@ def main() -> int:
         modele.print_trainable_parameters()
     modele.config.use_cache = False
 
+    # `transformers` renomme et retire regulierement des parametres — `dtype` a
+    # remplace `torch_dtype`, `warmup_ratio` a disparu de la signature installee
+    # sur la station. Filtrer sur la signature reelle evite d'epingler une
+    # version, et dit a l'ecran ce qui a ete ignore plutot que de le taire.
+    import inspect
+    voulus = {
+        'output_dir': args.sortie,
+        'num_train_epochs': args.epochs,
+        'per_device_train_batch_size': args.batch,
+        'gradient_accumulation_steps': args.accum,
+        'learning_rate': args.lr,
+        'lr_scheduler_type': 'cosine',
+        'warmup_ratio': 0.03,
+        'bf16': True,
+        'gradient_checkpointing': True,
+        'logging_steps': 25,
+        'eval_strategy': 'steps',
+        'eval_steps': 200,
+        'save_strategy': 'steps',
+        'save_steps': 200,
+        'save_total_limit': 2,
+        'load_best_model_at_end': True,
+        'metric_for_best_model': 'eval_loss',
+        'seed': args.seed,
+        'report_to': [],
+    }
+    connus = set(inspect.signature(TrainingArguments.__init__).parameters)
+    ignores = sorted(set(voulus) - connus)
+    if ignores:
+        print(f'parametres absents de cette version de transformers : {ignores}')
     Trainer(
         model=modele,
-        args=TrainingArguments(
-            output_dir=args.sortie,
-            num_train_epochs=args.epochs,
-            per_device_train_batch_size=args.batch,
-            gradient_accumulation_steps=args.accum,
-            learning_rate=args.lr,
-            lr_scheduler_type='cosine',
-            warmup_ratio=0.03,
-            bf16=True,
-            gradient_checkpointing=True,
-            logging_steps=25,
-            eval_strategy='steps',
-            eval_steps=200,
-            save_strategy='steps',
-            save_steps=200,
-            save_total_limit=2,
-            load_best_model_at_end=True,
-            metric_for_best_model='eval_loss',
-            seed=args.seed,
-            report_to=[],
-        ),
+        args=TrainingArguments(**{k: v for k, v in voulus.items() if k in connus}),
         train_dataset=jeux['train'],
         eval_dataset=jeux['dev'],
         data_collator=DataCollatorForSeq2Seq(tok, padding=True, label_pad_token_id=-100),
