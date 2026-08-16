@@ -57,6 +57,12 @@ def main() -> int:
     ap.add_argument('--accum', type=int, default=4)
     ap.add_argument('--cutoff', type=int, default=1024)
     ap.add_argument('--seed', type=int, default=1)
+    # Le checkpointing de gradient recalcule les activations pour economiser la
+    # memoire, au prix de 30 a 40 % de vitesse. Sur 24 Go de VRAM et un modele de
+    # 0,8 milliard de parametres, cette economie ne sert a rien : desactive par
+    # defaut, et disponible si un modele plus gros venait a saturer.
+    ap.add_argument('--checkpointing', action='store_true',
+                    help='economise la VRAM au prix de la vitesse ; inutile sous 2 B')
     args = ap.parse_args()
 
     import torch
@@ -128,7 +134,7 @@ def main() -> int:
         'lr_scheduler_type': 'cosine',
         'warmup_ratio': 0.03,
         'bf16': True,
-        'gradient_checkpointing': True,
+        'gradient_checkpointing': args.checkpointing,
         'logging_steps': 25,
         'eval_strategy': 'steps',
         'eval_steps': 200,
