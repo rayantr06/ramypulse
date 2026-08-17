@@ -64,6 +64,12 @@ def _build_metadata_and_texts(dataframe: pd.DataFrame) -> tuple[list[str], list[
             "channel": channel,
             "source_url": source_url,
             "timestamp": timestamp,
+            "signal_id": getattr(row, "signal_id", "") or "",
+            "annotation": getattr(row, "annotation", None),
+            "validation_status": getattr(row, "validation_status", "") or "",
+            "model_version": getattr(row, "model_version", "") or "",
+            "compiler_version": getattr(row, "compiler_version", "") or "",
+            "inference_ms": getattr(row, "inference_ms", None),
         }
 
         if aspect_sentiments:

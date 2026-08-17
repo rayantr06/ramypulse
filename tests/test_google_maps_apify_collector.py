@@ -64,6 +64,67 @@ def test_skips_without_api_key(monkeypatch) -> None:
     assert result == {"status": "skipped", "documents": [], "reason": "missing_api_key"}
 
 
+def test_accepts_apify_v3_typed_run(monkeypatch) -> None:
+    """Apify Client v3 retourne un objet typé, pas un dictionnaire camelCase."""
+    c = _mod()
+
+    class _TypedRun:
+        default_dataset_id = "ds-v3"
+
+    class _Actor:
+        def call(self, **_kwargs):
+            return _TypedRun()
+
+    class _Client:
+        def actor(self, _actor_id):
+            return _Actor()
+
+        def dataset(self, dataset_id):
+            assert dataset_id == "ds-v3"
+            return _FakeDataset([])
+
+    monkeypatch.setattr(c.config, "APIFY_API_KEY", "k", raising=False)
+    monkeypatch.setattr(c, "ApifyClient", lambda token: _Client())
+
+    assert c.collect_google_maps_reviews_apify(
+        client_id="t1", search_terms=["restaurant"]
+    ) == []
+
+
+def test_derives_search_terms_from_watchlist(monkeypatch) -> None:
+    c = _mod()
+    recorder: list[dict[str, object]] = []
+    monkeypatch.setattr(c.config, "APIFY_API_KEY", "k", raising=False)
+    monkeypatch.setattr(c, "ApifyClient", lambda token: _client([], recorder))
+    monkeypatch.setattr(
+        c,
+        "get_watchlist",
+        lambda watchlist_id, client_id=None: {
+            "watchlist_id": watchlist_id,
+            "client_id": client_id,
+            "filters": {
+                "brand_name": "Algérie Télécom",
+                "product_name": "Idoom Fibre",
+                "keywords": ["connexion", "service client"],
+                "competitors": ["Djezzy"],
+            },
+        },
+    )
+
+    result = c.collect_google_maps_reviews_apify(
+        client_id="t1", watchlist_id="watch-1"
+    )
+
+    assert result == []
+    assert recorder[0]["searchStringsArray"] == [
+        "Algérie Télécom",
+        "Idoom Fibre",
+        "connexion",
+        "service client",
+        "Djezzy",
+    ]
+
+
 def test_skips_without_search_terms(monkeypatch) -> None:
     c = _mod()
     monkeypatch.setattr(c.config, "APIFY_API_KEY", "k", raising=False)

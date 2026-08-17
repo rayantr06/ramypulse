@@ -161,9 +161,20 @@ const LABELS: Record<string, string> = {
 };
 
 function asRecord(value: unknown): Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value)
-    ? value as Record<string, unknown>
-    : {};
+  if (value !== null && typeof value === "object" && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  if (typeof value === "string" && value.trim().startsWith("{")) {
+    try {
+      const parsed: unknown = JSON.parse(value);
+      return parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)
+        ? parsed as Record<string, unknown>
+        : {};
+    } catch {
+      return {};
+    }
+  }
+  return {};
 }
 
 function asString(value: unknown, fallback = ""): string {

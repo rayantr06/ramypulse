@@ -162,6 +162,13 @@ _SCHEMA_STATEMENTS = {
             channel TEXT,
             event_timestamp TEXT,
             normalizer_version TEXT,
+            annotation_json TEXT,
+            raw_model_output TEXT,
+            validation_status TEXT,
+            model_version TEXT,
+            compiler_version TEXT,
+            inference_ms INTEGER,
+            annotation_created_at TEXT,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
         )
     """,
@@ -1338,6 +1345,28 @@ def _migrate_raw_documents_identity_if_needed(connection: sqlite3.Connection) ->
         connection.execute("ALTER TABLE raw_documents ADD COLUMN canonical_key TEXT")
 
 
+def _migrate_enriched_signals_v04_if_needed(connection: sqlite3.Connection) -> None:
+    """Ajoute l'enveloppe SLM V0.4 sans casser les projections historiques."""
+
+    if not _table_exists(connection, "enriched_signals"):
+        return
+    columns = _column_definitions(connection, "enriched_signals")
+    additions = {
+        "annotation_json": "TEXT",
+        "raw_model_output": "TEXT",
+        "validation_status": "TEXT",
+        "model_version": "TEXT",
+        "compiler_version": "TEXT",
+        "inference_ms": "INTEGER",
+        "annotation_created_at": "TEXT",
+    }
+    for column, sql_type in additions.items():
+        if column not in columns:
+            connection.execute(
+                f"ALTER TABLE enriched_signals ADD COLUMN {column} {sql_type}"
+            )
+
+
 def _backfill_content_items_if_needed(connection: sqlite3.Connection) -> None:
     """Crée et rattache les content_items pour les raw_documents existants."""
     if not _table_exists(connection, "content_items") or not _table_exists(connection, "raw_documents"):
@@ -1464,6 +1493,7 @@ class DatabaseManager:
             _migrate_campaigns_add_revenue_if_needed(connection)
             _migrate_sources_governance_if_needed(connection)
             _migrate_raw_documents_identity_if_needed(connection)
+            _migrate_enriched_signals_v04_if_needed(connection)
             _backfill_content_items_if_needed(connection)
             _seed_default_client(connection)
             _seed_default_alert_rules(connection, DEFAULT_CLIENT_ID)

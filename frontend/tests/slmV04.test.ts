@@ -86,6 +86,18 @@ test("parseSlmAnalysis accepts additive annotation fields on legacy explorer rou
   assert.deepEqual(result?.annotation.intents, ["plainte", "partage_experience"]);
 });
 
+test("parseSlmAnalysis accepts SQLite JSON text without backend reshaping", () => {
+  const result = parseSlmAnalysis({
+    annotation: JSON.stringify(annotation),
+    validation_status: "valid",
+    model_version: "answer_only_s1",
+  });
+
+  assert.equal(result?.annotation.sentiment.label, "negatif");
+  assert.equal(result?.annotation.actionability.queue, "digital");
+  assert.equal(result?.modelVersion, "answer_only_s1");
+});
+
 test("missing validation metadata remains unknown instead of claiming validity", () => {
   const result = parseSlmAnalysis({ annotation });
   assert.equal(result?.validationStatus, "unknown");

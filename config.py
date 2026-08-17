@@ -69,6 +69,23 @@ EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "intfloat/multilingual-e5-ba
 EMBEDDING_DIM: int = 768
 """Dimension des vecteurs d'embedding produits par multilingual-e5-base."""
 
+SLM_V04_BASE_URL: str = os.getenv("SLM_V04_BASE_URL", "").strip()
+"""URL interne du service LIDAL SLM V0.4, par exemple via Tailscale."""
+
+SLM_V04_API_KEY: str = os.getenv("SLM_V04_API_KEY", "").strip()
+"""Secret serveur-vers-serveur du service SLM ; jamais exposé au frontend."""
+
+SLM_V04_TIMEOUT_SECONDS: float = float(os.getenv("SLM_V04_TIMEOUT_SECONDS", "30"))
+"""Délai maximal d'une annotation unitaire avant repli sur l'analyse historique."""
+
+SLM_V04_ENABLED: bool = os.getenv("SLM_V04_ENABLED", "false").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+"""Active la double écriture V2 + V0.4 dans le pipeline de normalisation."""
+
 # ---------------------------------------------------------------------------
 # Index FAISS
 # ---------------------------------------------------------------------------
@@ -299,4 +316,4 @@ ALERT_DETECTION_INTERVAL_MINUTES: int = 30
 # ---------------------------------------------------------------------------
 
 APIFY_API_KEY: str | None = os.getenv("APIFY_API_KEY") or None
-"""Clé API Apify pour les scrapers Facebook et Google Maps. Optionnelle."""
+"""Clé API Apify pour les collecteurs Facebook, Instagram et Google Maps."""

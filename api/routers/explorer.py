@@ -56,6 +56,12 @@ def _build_fallback_metadata(
             "timestamp": str(row.get("timestamp", "") or ""),
             "aspect": str(row.get("aspect", "") or ""),
             "sentiment_label": str(row.get("sentiment_label", "") or ""),
+            "signal_id": str(row.get("signal_id", "") or ""),
+            "annotation": row.get("annotation"),
+            "validation_status": str(row.get("validation_status", "") or ""),
+            "model_version": str(row.get("model_version", "") or ""),
+            "compiler_version": str(row.get("compiler_version", "") or ""),
+            "inference_ms": row.get("inference_ms"),
         }
         for row in df.fillna("").to_dict(orient="records")
     ]

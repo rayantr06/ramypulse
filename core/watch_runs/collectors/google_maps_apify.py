@@ -26,6 +26,8 @@ from datetime import datetime, timezone
 from typing import Iterable
 
 import config
+from core.watch_runs.collectors.apify_utils import default_dataset_id
+from core.watchlists.watchlist_manager import get_watchlist
 
 try:
     from apify_client import ApifyClient
@@ -41,6 +43,35 @@ _DEFAULT_MAX_REVIEWS = 30
 
 def _resolve_apify_token() -> str | None:
     return str(getattr(config, "APIFY_API_KEY", "") or "").strip() or None
+
+
+def _resolve_search_terms(
+    *,
+    client_id: str,
+    watchlist_id: str | None,
+    search_terms: Iterable[str] | None,
+) -> list[str]:
+    terms = [str(term).strip() for term in (search_terms or []) if str(term).strip()]
+    if terms or not watchlist_id:
+        return list(dict.fromkeys(terms))
+
+    watchlist = get_watchlist(watchlist_id, client_id=client_id)
+    if not watchlist:
+        raise ValueError(f"watchlist not found or tenant mismatch: {watchlist_id}")
+    filters = watchlist.get("filters") or {}
+    candidates = [
+        filters.get("brand_name"),
+        filters.get("product_name"),
+        *(filters.get("keywords") or []),
+        *(filters.get("competitors") or []),
+    ]
+    return list(
+        dict.fromkeys(
+            str(candidate).strip()
+            for candidate in candidates
+            if str(candidate or "").strip()
+        )
+    )
 
 
 def _clean_text(text: object) -> str | None:
@@ -92,6 +123,7 @@ def _review_to_document(
     *,
     place: dict,
     language: str | None,
+    watchlist_id: str | None = None,
 ) -> dict[str, object] | None:
     raw_text = _clean_text(review.get("text"))
     if not raw_text:
@@ -113,6 +145,8 @@ def _review_to_document(
         "raw_payload": review,
         "raw_metadata": {
             "channel": "google_maps",
+            "watchlist_id": watchlist_id,
+            "source_url": str(review.get("reviewUrl") or place.get("url") or "").strip(),
             "place_id": place_id,
             "place_name": place.get("title"),
             "place_category": place.get("categoryName"),
@@ -132,6 +166,7 @@ def _review_to_document(
 def collect_google_maps_reviews_apify(
     *,
     client_id: str,
+    watchlist_id: str | None = None,
     search_terms: Iterable[str] | None = None,
     country_code: str | None = None,
     city: str | None = None,
@@ -152,7 +187,11 @@ def collect_google_maps_reviews_apify(
     if ApifyClient is None:
         return {"status": "skipped", "documents": [], "reason": "missing_dependency"}
 
-    terms = [str(t).strip() for t in (search_terms or []) if str(t).strip()]
+    terms = _resolve_search_terms(
+        client_id=client_id,
+        watchlist_id=watchlist_id,
+        search_terms=search_terms,
+    )
     if not terms:
         return {"status": "skipped", "documents": [], "reason": "no_search_terms"}
 
@@ -177,9 +216,14 @@ def collect_google_maps_reviews_apify(
 
     documents: list[dict[str, object]] = []
     seen_ids: set[str] = set()
-    for place in apify_client.dataset(run["defaultDatasetId"]).iterate_items():
+    for place in apify_client.dataset(default_dataset_id(run)).iterate_items():
         for review in place.get("reviews") or []:
-            document = _review_to_document(review, place=place, language=language)
+            document = _review_to_document(
+                review,
+                place=place,
+                language=language,
+                watchlist_id=watchlist_id,
+            )
             if not document:
                 continue
             external_document_id = str(document["external_document_id"])

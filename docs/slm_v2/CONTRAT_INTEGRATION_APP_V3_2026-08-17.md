@@ -1,6 +1,6 @@
 # Contrat d’intégration application V3 — SLM V0.4
 
-**Statut :** contrat frontend et architecture de migration
+**Statut :** implémenté sur `codex/lidal-pulse-v3`, activation pilote en attente des portes qualité
 **Produit :** LIDAL Pulse V3
 **Contrat source :** `business_comment_annotation_v0.4.schema.json`
 
@@ -167,3 +167,17 @@ filtres et agrégations fréquentes.
 
 Les recommandations et alertes ne déclenchent aucune action externe automatique.
 La validation humaine reste obligatoire pendant la phase pilote.
+
+## 9. Implémentation livrée
+
+- service d’inférence : `inference/slm_v04_service.py` ;
+- client serveur-vers-serveur : `core/analysis/slm_v04_client.py` ;
+- compilateur et validation : `core/analysis/slm_v04_compiler.py` ;
+- double écriture : `core/normalization/normalizer_pipeline.py` ;
+- stockage de l’annotation et de sa provenance dans `enriched_signals` ;
+- exposition additive dans les routes de l’Explorateur et les métadonnées FAISS ;
+- lecture par le frontend des annotations JSON natives ou sérialisées par SQLite.
+
+Le drapeau `SLM_V04_ENABLED` reste désactivé par défaut. Une sortie invalide ou une
+indisponibilité réseau ne bloque pas la collecte : la projection historique est
+conservée et l’échec est enregistré pour contrôle.

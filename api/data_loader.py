@@ -83,7 +83,14 @@ def _load_from_sqlite(client_id: str) -> pd.DataFrame:
             COALESCE(es.sku, '') AS sku,
             COALESCE(ci.content_item_id, rd.content_item_id, '') AS content_item_id,
             COALESCE(ci.external_content_id, rd.external_document_id, '') AS external_content_id,
-            COALESCE(ci.coverage_key, '') AS coverage_key
+            COALESCE(ci.coverage_key, '') AS coverage_key,
+            es.signal_id,
+            es.annotation_json AS annotation,
+            es.validation_status,
+            es.model_version,
+            es.compiler_version,
+            es.inference_ms,
+            es.annotation_created_at
         FROM enriched_signals es
         INNER JOIN normalized_records nr
             ON nr.normalized_record_id = es.normalized_record_id

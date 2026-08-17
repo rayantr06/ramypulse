@@ -11,6 +11,7 @@ from typing import Iterable
 
 import config
 
+from core.watch_runs.collectors.apify_utils import default_dataset_id
 from core.watchlists.watchlist_manager import get_watchlist
 
 try:
@@ -113,7 +114,7 @@ def _discover_post_urls(apify_client, page_url: str, max_posts: int) -> list[dic
         return []
 
     posts: list[dict[str, str]] = []
-    for item in apify_client.dataset(run["defaultDatasetId"]).iterate_items():
+    for item in apify_client.dataset(default_dataset_id(run)).iterate_items():
         post_url = str(item.get("postUrl") or item.get("url") or "").strip()
         if post_url:
             posts.append({"url": post_url, "text": _extract_post_text(item)})
@@ -151,7 +152,7 @@ def _collect_post_items(
         return []
 
     collected_items: list[dict] = []
-    for item in apify_client.dataset(run["defaultDatasetId"]).iterate_items():
+    for item in apify_client.dataset(default_dataset_id(run)).iterate_items():
         collected_items.append(item)
         for reply in item.get("comments") or []:
             collected_items.append({**reply, "_is_reply": True})
@@ -159,7 +160,11 @@ def _collect_post_items(
 
 
 def _item_to_document(
-    item: dict, *, post_url: str, post_text: str = ""
+    item: dict,
+    *,
+    post_url: str,
+    post_text: str = "",
+    watchlist_id: str | None = None,
 ) -> dict[str, object] | None:
     raw_text = _clean_text(item.get("text") or "")
     if not raw_text:
@@ -179,6 +184,9 @@ def _item_to_document(
         "raw_payload": item,
         "raw_metadata": {
             "channel": "facebook",
+            "watchlist_id": watchlist_id,
+            "source_url": source_url,
+            "published_at": str(item.get("date") or ""),
             "post_url": post_url,
             "post_text": post_text,
             "author": author,
@@ -233,7 +241,10 @@ def collect_facebook_comments_apify(
             )
             for item in raw_items:
                 document = _item_to_document(
-                    item, post_url=post_url, post_text=post.get("text", "")
+                    item,
+                    post_url=post_url,
+                    post_text=post.get("text", ""),
+                    watchlist_id=watchlist_id,
                 )
                 if not document:
                     continue

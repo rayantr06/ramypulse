@@ -11,6 +11,7 @@ from typing import Iterable
 
 import config
 
+from core.watch_runs.collectors.apify_utils import default_dataset_id
 from core.watchlists.watchlist_manager import get_watchlist
 
 try:
@@ -93,7 +94,7 @@ def _discover_post_urls(apify_client, profile_url: str, max_posts: int) -> list[
         return []
 
     post_urls: list[str] = []
-    for item in apify_client.dataset(run["defaultDatasetId"]).iterate_items():
+    for item in apify_client.dataset(default_dataset_id(run)).iterate_items():
         post_url = str(item.get("url") or "").strip()
         short_code = str(item.get("shortCode") or "").strip()
         if not post_url and short_code:
@@ -131,10 +132,15 @@ def _collect_post_items(
     if run is None:
         return []
 
-    return list(apify_client.dataset(run["defaultDatasetId"]).iterate_items())
+    return list(apify_client.dataset(default_dataset_id(run)).iterate_items())
 
 
-def _item_to_document(item: dict, *, post_url: str) -> dict[str, object] | None:
+def _item_to_document(
+    item: dict,
+    *,
+    post_url: str,
+    watchlist_id: str | None = None,
+) -> dict[str, object] | None:
     raw_text = _clean_text(item.get("text") or "")
     if not raw_text:
         return None
@@ -152,6 +158,9 @@ def _item_to_document(item: dict, *, post_url: str) -> dict[str, object] | None:
         "raw_payload": item,
         "raw_metadata": {
             "channel": "instagram",
+            "watchlist_id": watchlist_id,
+            "source_url": source_url,
+            "published_at": str(item.get("timestamp") or ""),
             "post_url": post_url,
             "author": author,
             "date": str(item.get("timestamp") or ""),
@@ -203,7 +212,11 @@ def collect_instagram_comments_apify(
                 delay_between_calls=delay_between_calls,
             )
             for item in raw_items:
-                document = _item_to_document(item, post_url=post_url)
+                document = _item_to_document(
+                    item,
+                    post_url=post_url,
+                    watchlist_id=watchlist_id,
+                )
                 if not document:
                     continue
                 external_document_id = str(document["external_document_id"])
