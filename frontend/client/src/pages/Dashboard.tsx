@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowRight,
+  BarChart3,
+  CalendarDays,
   CircleCheck,
   Compass,
   Lightbulb,
@@ -11,6 +13,18 @@ import {
   TrendingDown,
   TrendingUp,
 } from "lucide-react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { Link, useLocation } from "wouter";
 
 import { AppShell } from "@/components/AppShell";
@@ -51,6 +65,23 @@ interface DashboardActionView {
   confidence: number;
   isAvailable: boolean;
 }
+
+const REGION_COLORS = [
+  "hsl(var(--primary))",
+  "hsl(var(--insight))",
+  "hsl(var(--action))",
+  "hsl(var(--signal-warning))",
+  "hsl(var(--outline))",
+] as const;
+
+const CHART_TOOLTIP_STYLE = {
+  border: "1px solid hsl(var(--outline-variant))",
+  borderRadius: "12px",
+  background: "hsl(var(--surface))",
+  boxShadow: "0 10px 28px hsl(var(--shadow-color) / 0.1)",
+  color: "hsl(var(--on-surface))",
+  fontSize: "12px",
+} as const;
 
 const DEMO_SUMMARY: DashboardSummaryView = {
   score: 72,
@@ -243,16 +274,23 @@ export default function Dashboard() {
 
   const primaryAlert = currentAlerts[0] ?? null;
   const topAction = currentActions[0] ?? null;
+  const topRegion = summaryView.regionalDistribution[0] ?? null;
 
   return (
     <AppShell>
-      <div className="page-enter mx-auto w-full max-w-[1580px] space-y-7 px-4 pb-24 pt-5 sm:px-6 lg:px-8 lg:py-8">
+      <div className="page-enter mx-auto w-full max-w-[1580px] space-y-5 px-4 pb-24 pt-5 sm:px-6 lg:px-8 lg:py-7">
         <PageHeader
           eyebrow="Surveiller"
           tone="monitor"
           title="Situation du jour"
           description="Un parcours lisible du signal jusqu’à la décision, avec les preuves à portée de main."
           descriptionClassName="hidden sm:block"
+          actions={(
+            <span className="inline-flex h-9 items-center gap-2 rounded-full border border-outline-variant bg-surface px-3 text-[10px] font-semibold text-on-surface-variant">
+              <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
+              {summaryView.period}
+            </span>
+          )}
         />
 
         <section className="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Indicateurs de la situation">
@@ -273,6 +311,148 @@ export default function Dashboard() {
           <article className="dashboard-stat">
             <div className="dashboard-stat__icon bg-error-container text-error"><ShieldAlert className="h-4 w-4" /></div>
             <div><p className="dashboard-stat__label">Alertes à traiter</p><p className="dashboard-stat__value">{currentAlerts.length}<span> ouvertes</span></p></div>
+          </article>
+        </section>
+
+        <section className="grid gap-5 xl:grid-cols-[minmax(0,1.55fr)_minmax(20rem,0.75fr)]" aria-label="Analyse visuelle de la perception">
+          <article className="cling-panel min-w-0 overflow-hidden">
+            <div className="flex flex-col gap-3 border-b border-outline-variant px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-container text-primary">
+                  <BarChart3 className="h-4 w-4" aria-hidden="true" />
+                </span>
+                <div className="min-w-0">
+                  <h2 className="font-headline text-base font-bold text-on-surface">Performance par produit</h2>
+                  <p className="mt-0.5 text-[10px] text-on-surface-variant">Volume relatif des conversations et évolution de la perception.</p>
+                </div>
+              </div>
+              <Link href="/explorateur" className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-primary hover:underline">
+                Explorer les avis <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+              </Link>
+            </div>
+
+            <div className="px-4 pb-5 pt-4 sm:px-6">
+              {summaryLoading ? (
+                <div className="h-[18rem] animate-pulse rounded-2xl bg-surface-container-low" />
+              ) : summaryView.productPerformance.length === 0 ? (
+                <div className="flex h-[18rem] items-center justify-center rounded-2xl bg-surface-container-low px-6 text-center text-xs leading-5 text-on-surface-variant">
+                  Les performances apparaîtront quand plusieurs produits auront assez de commentaires comparables.
+                </div>
+              ) : (
+                <>
+                  <div className="h-[18rem] w-full" role="img" aria-label="Graphique du volume relatif par produit">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={summaryView.productPerformance}
+                        layout="vertical"
+                        margin={{ top: 8, right: 18, bottom: 4, left: 4 }}
+                      >
+                        <CartesianGrid horizontal={false} stroke="hsl(var(--outline-variant))" strokeDasharray="3 5" />
+                        <XAxis
+                          type="number"
+                          domain={[0, 100]}
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fill: "hsl(var(--on-surface-variant))", fontSize: 10 }}
+                          tickFormatter={(value) => `${value}%`}
+                        />
+                        <YAxis
+                          dataKey="product"
+                          type="category"
+                          width={118}
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fill: "hsl(var(--on-surface))", fontSize: 10, fontWeight: 600 }}
+                        />
+                        <Tooltip
+                          cursor={{ fill: "hsl(var(--surface-container-low))" }}
+                          contentStyle={CHART_TOOLTIP_STYLE}
+                        />
+                        <Bar
+                          dataKey="relativeVolume"
+                          name="Volume relatif"
+                          unit="%"
+                          fill="hsl(var(--primary))"
+                          radius={[0, 8, 8, 0]}
+                          maxBarSize={28}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-2 border-t border-outline-variant pt-3" aria-label="Évolution de la perception par produit">
+                    {summaryView.productPerformance.map((product) => (
+                      <span key={product.product} className="inline-flex items-center gap-1.5 rounded-full bg-surface-container-low px-2.5 py-1 text-[9px] font-semibold text-on-surface-variant">
+                        <span className="max-w-32 truncate">{product.product}</span>
+                        <strong className={product.trendPct >= 0 ? "text-success" : "text-error"}>
+                          {product.trendPct >= 0 ? "+" : ""}{product.trendPct}%
+                        </strong>
+                      </span>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </article>
+
+          <article className="cling-panel min-w-0 p-5 sm:p-6">
+            <div className="flex items-center gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-monitor-container text-monitor">
+                <MapPinned className="h-4 w-4" aria-hidden="true" />
+              </span>
+              <div className="min-w-0">
+                <h2 className="font-headline text-base font-bold text-on-surface">Répartition par wilaya</h2>
+                <p className="mt-0.5 text-[10px] text-on-surface-variant">Origine des avis analysés.</p>
+              </div>
+            </div>
+
+            {summaryLoading ? (
+              <div className="mt-5 h-[17rem] animate-pulse rounded-2xl bg-surface-container-low" />
+            ) : summaryView.regionalDistribution.length === 0 ? (
+              <div className="mt-5 flex h-[17rem] items-center justify-center rounded-2xl bg-surface-container-low px-6 text-center text-xs leading-5 text-on-surface-variant">
+                La localisation apparaîtra dès que les sources fourniront assez de contexte.
+              </div>
+            ) : (
+              <>
+                <div className="relative mt-3 h-52" role="img" aria-label="Graphique de la répartition des avis par wilaya">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={summaryView.regionalDistribution}
+                        dataKey="pct"
+                        nameKey="wilaya"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={58}
+                        outerRadius={82}
+                        paddingAngle={3}
+                        stroke="hsl(var(--surface))"
+                        strokeWidth={3}
+                      >
+                        {summaryView.regionalDistribution.map((region, index) => (
+                          <Cell key={region.wilaya} fill={REGION_COLORS[index % REGION_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                    <strong className="font-headline text-2xl font-extrabold tabular-nums text-on-surface">{topRegion?.pct ?? 0}%</strong>
+                    <span className="mt-0.5 text-[9px] font-semibold text-on-surface-variant">{topRegion?.wilaya ?? "Wilaya principale"}</span>
+                  </div>
+                </div>
+                <div className="space-y-2.5 border-t border-outline-variant pt-4">
+                  {summaryView.regionalDistribution.map((region, index) => (
+                    <div key={region.wilaya} className="flex items-center justify-between gap-3 text-[10px]">
+                      <span className="flex min-w-0 items-center gap-2 font-semibold text-on-surface">
+                        <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: REGION_COLORS[index % REGION_COLORS.length] }} />
+                        <span className="truncate">{region.wilaya}</span>
+                      </span>
+                      <span className="tabular-nums text-on-surface-variant">{region.pct}%</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </article>
         </section>
 
@@ -308,7 +488,8 @@ export default function Dashboard() {
               <div className="flex items-center gap-2.5"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-insight-container text-insight"><Compass className="h-4 w-4" /></span><h2 className="font-headline text-base font-bold text-on-surface">Analyse du jour</h2></div>
               <span className="rounded-full bg-surface-container px-2.5 py-1 text-[9px] font-semibold text-on-surface-variant">{summaryView.period}</span>
             </div>
-            <h3 className="mt-5 font-headline text-base font-bold leading-snug text-on-surface">{situationSummary(summaryView, currentAlerts.length)}</h3>
+            <h3 className="mt-5 font-headline text-lg font-bold leading-snug text-on-surface">{situationTitle(summaryView, currentAlerts.length)}</h3>
+            <p className="mt-2 text-xs leading-5 text-on-surface-variant">{situationSummary(summaryView, currentAlerts.length)}</p>
             <div className="mt-4 rounded-xl bg-surface-container-low p-3.5">
               <p className="text-[9px] font-semibold text-on-surface-variant">Signal le mieux étayé</p>
               <p className="mt-1.5 line-clamp-3 text-xs leading-5 text-on-surface">{primaryAlert?.description ?? summaryView.summary}</p>
@@ -326,29 +507,6 @@ export default function Dashboard() {
             <article className="decision-summary-step"><span className="decision-summary-step__icon bg-error-container text-error"><ShieldAlert className="h-4 w-4" /></span><div className="min-w-0"><p className="decision-summary-step__label">1 · Signal détecté</p><p className="mt-1 truncate text-sm font-semibold text-on-surface">{primaryAlert?.title ?? "Aucun signal critique"}</p><button type="button" onClick={() => navigate("/alertes")} className="mt-2 text-[10px] font-semibold text-primary hover:underline">Voir les preuves</button></div></article>
             <article className="decision-summary-step"><span className="decision-summary-step__icon bg-insight-container text-insight"><Compass className="h-4 w-4" /></span><div><p className="decision-summary-step__label">2 · Ce que cela signifie</p><p className="mt-1 line-clamp-2 text-xs leading-5 text-on-surface-variant">{situationSummary(summaryView, currentAlerts.length)}</p></div></article>
             <article className="decision-summary-step"><span className="decision-summary-step__icon bg-action-container text-action"><Lightbulb className="h-4 w-4" /></span><div className="min-w-0 flex-1"><p className="decision-summary-step__label">3 · Décision proposée</p><p className="mt-1 line-clamp-1 text-sm font-semibold text-on-surface">{topAction?.title ?? "Consolider les signaux"}</p><Button size="sm" className="mt-2 w-full justify-between bg-action text-white hover:bg-action/90" onClick={() => navigate("/recommandations")}>{topAction?.ctaLabel ?? "Voir la recommandation"}<ArrowRight className="h-3.5 w-3.5" /></Button></div></article>
-          </div>
-        </section>
-
-        <section className="grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(20rem,0.9fr)]">
-          <div className="cling-panel p-5 sm:p-6">
-            <div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-insight-container text-insight"><MessageSquareText className="h-4 w-4" /></span><div><h2 className="font-headline text-sm font-bold text-on-surface">Produits à surveiller</h2><p className="mt-0.5 text-[10px] text-on-surface-variant">Évolution de la perception par produit.</p></div></div>
-            <div className="mt-6 space-y-5">
-              {summaryLoading ? [1, 2, 3].map((item) => <div key={item} className="h-9 animate-pulse rounded-lg bg-surface-container-high" />) : summaryView.productPerformance.length === 0 ? (
-                <p className="rounded-xl bg-surface-container p-5 text-xs text-on-surface-variant">Pas encore assez de données produit pour comparer les signaux.</p>
-              ) : summaryView.productPerformance.map((product) => (
-                <div key={product.product}><div className="mb-2 flex items-end justify-between gap-3"><span className="truncate text-xs font-semibold text-on-surface">{product.product}</span><span className={`text-xs font-bold ${product.trendPct >= 0 ? "text-success" : "text-error"}`}>{product.trendPct >= 0 ? "+" : ""}{product.trendPct}%</span></div><div className="h-1.5 overflow-hidden rounded-full bg-surface-container-highest"><div className="h-full rounded-full bg-insight" style={{ width: `${product.relativeVolume}%` }} /></div></div>
-              ))}
-            </div>
-          </div>
-          <div className="cling-panel p-5 sm:p-6">
-            <div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-monitor-container text-monitor"><MapPinned className="h-4 w-4" /></span><div><h2 className="font-headline text-sm font-bold text-on-surface">Où les clients s’expriment</h2><p className="mt-0.5 text-[10px] text-on-surface-variant">Part des avis analysés par wilaya.</p></div></div>
-            <div className="mt-6 space-y-3">
-              {summaryLoading ? [1, 2, 3, 4].map((item) => <div key={item} className="h-8 animate-pulse rounded-lg bg-surface-container-high" />) : summaryView.regionalDistribution.length === 0 ? (
-                <p className="rounded-xl bg-surface-container p-5 text-xs text-on-surface-variant">La localisation apparaîtra dès que les sources fourniront assez de contexte.</p>
-              ) : summaryView.regionalDistribution.map((region) => (
-                <div key={region.wilaya} className="grid grid-cols-[minmax(0,1fr)_6rem_2.5rem] items-center gap-3"><span className="truncate text-xs font-semibold text-on-surface">{region.wilaya}</span><div className="h-1.5 overflow-hidden rounded-full bg-surface-container-highest"><div className="h-full rounded-full bg-monitor" style={{ width: `${region.pct}%` }} /></div><span className="text-right text-[10px] font-bold text-on-surface-variant">{region.pct}%</span></div>
-              ))}
-            </div>
           </div>
         </section>
 

@@ -38,8 +38,8 @@ test("Dashboard exposes a plain-language alert-to-action flow", () => {
   contains(source, "2 · Ce que cela signifie");
   contains(source, "3 · Décision proposée");
   contains(source, "File de traitement");
-  contains(source, "Produits à surveiller");
-  contains(source, "Où les clients s’expriment");
+  contains(source, "Performance par produit");
+  contains(source, "Répartition par wilaya");
   contains(source, "Vérifier les sources de données");
   lacks(source, "/api/status");
   lacks(source, "API Status:");
