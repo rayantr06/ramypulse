@@ -163,7 +163,7 @@ function situationSummary(summary: DashboardSummaryView, alertCount: number): st
     : summary.trend === "up"
       ? `progresse de ${Math.abs(summary.delta)} points`
       : "reste stable";
-  return `La perception globale ${movement}. ${alertCount} signal${alertCount > 1 ? "s" : ""} demande${alertCount > 1 ? "nt" : ""} une vérification.`;
+  return `La perception globale ${movement}. ${alertCount} ${alertCount > 1 ? "signaux demandent" : "signal demande"} une vérification.`;
 }
 
 function severityLabel(severity: string): string {

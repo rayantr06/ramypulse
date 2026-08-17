@@ -205,7 +205,15 @@ function asObjectArray(value: unknown): UnknownRecord[] {
 }
 
 function asNumberRecord(value: unknown): Record<string, number> {
-  const record = asRecord(value);
+  let candidate = value;
+  if (typeof value === "string" && value.trim() !== "") {
+    try {
+      candidate = JSON.parse(value) as unknown;
+    } catch {
+      return {};
+    }
+  }
+  const record = asRecord(candidate);
   return Object.fromEntries(
     Object.entries(record).map(([key, rawValue]) => [key, asNumber(rawValue)]),
   );
@@ -561,11 +569,11 @@ export function mapContextPreview(value: unknown): ContextPreview {
 function mapRecommendationItem(value: unknown): RecommendationItem {
   const record = asRecord(value);
   return {
-    title: asString(record.title),
+    title: asString(record.title) || asString(record.action),
     priority: asString(record.priority) || null,
-    description: asString(record.description) || null,
-    target_platform: asString(record.target_platform) || null,
-    kpi_impact: asString(record.kpi_impact) || null,
+    description: asString(record.description) || asString(record.rationale) || null,
+    target_platform: asString(record.target_platform) || asString(record.platform) || null,
+    kpi_impact: asString(record.kpi_impact) || asString(record.expected_kpi) || null,
     timing: asString(record.timing) || null,
   };
 }

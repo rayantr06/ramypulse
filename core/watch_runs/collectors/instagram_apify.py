@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import hashlib
 import logging
-import os
 import re
 import time
 from datetime import datetime, timezone
@@ -26,11 +25,7 @@ APIFY_IG_COMMENTS = "apify/instagram-comment-scraper"
 
 
 def _resolve_apify_token() -> str | None:
-    return (
-        str(getattr(config, "APIFY_API_KEY", "") or "").strip()
-        or str(os.getenv("APIFY_API_KEY") or "").strip()
-        or None
-    )
+    return str(getattr(config, "APIFY_API_KEY", "") or "").strip() or None
 
 
 def _normalize_seed_urls(seed_urls: Iterable[str] | None) -> list[str]:

@@ -86,9 +86,28 @@ function mapWatchlistMetricsView(value: unknown): WatchlistMetricsView {
     aspects,
     quick_insight:
       metrics.quick_insight ||
-      "Aucun enseignement automatique n’est encore disponible pour cette surveillance.",
+      buildMetricsInsight(metrics.delta_nss, metrics.volume_delta),
     last_updated: metrics.computed_at || "Non calculé",
   };
+}
+
+function buildMetricsInsight(
+  deltaNss: number | null | undefined,
+  deltaVolume: number | null | undefined,
+): string {
+  const nss = Number(deltaNss ?? 0);
+  const volume = Number(deltaVolume ?? 0);
+  const nssTrend = nss > 0
+    ? `Le score de perception progresse de ${nss} point${nss > 1 ? "s" : ""}`
+    : nss < 0
+      ? `Le score de perception recule de ${Math.abs(nss)} point${Math.abs(nss) > 1 ? "s" : ""}`
+      : "Le score de perception reste stable";
+  const volumeTrend = volume > 0
+    ? `le volume augmente de ${volume} mention${volume > 1 ? "s" : ""}`
+    : volume < 0
+      ? `le volume diminue de ${Math.abs(volume)} mention${Math.abs(volume) > 1 ? "s" : ""}`
+      : "le volume reste stable";
+  return `${nssTrend}, tandis que ${volumeTrend}.`;
 }
 
 function buildInsightsTitle(name: string): string {

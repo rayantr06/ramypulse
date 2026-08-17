@@ -15,6 +15,7 @@ import config
 from api.data_loader import load_annotated, reset_cache
 from api.deps.tenant import resolve_client_id
 from core.rag.embedder import Embedder
+from core.rag.generator import Generator
 from core.rag.retriever import Retriever
 from core.rag.vector_store import VectorStore
 from core.tenancy.tenant_paths import get_tenant_paths
@@ -173,6 +174,37 @@ def search_verbatims(
     except Exception as e:
         logger.error("Erreur RAG search: %s", e)
         raise HTTPException(status_code=500, detail="Search failed")
+
+
+@router.get("/rag")
+def rag_insight(
+    q: str,
+    limit: int = 5,
+    client_id: str = Depends(resolve_client_id),
+):
+    """Génère une synthèse LLM ancrée dans les verbatims récupérés par le retriever RAG.
+
+    Enchaîne retrieval hybride (FAISS + BM25) puis génération Gemini.
+    Retourne answer, sources citées, confiance et les chunks bruts.
+    """
+    if not q.strip():
+        raise HTTPException(status_code=400, detail="Le paramètre 'q' ne peut pas être vide.")
+
+    try:
+        retriever = _get_retriever(client_id=client_id)
+        chunks = retriever.search(question=q, top_k=limit)
+        generator = Generator()
+        result = generator.generate(question=q, chunks=chunks)
+        return {
+            "query": q,
+            "answer": result.get("answer", ""),
+            "sources": result.get("sources", []),
+            "confidence": result.get("confidence", "low"),
+            "chunks": chunks,
+        }
+    except Exception as e:
+        logger.error("Erreur RAG insight: %s", e)
+        raise HTTPException(status_code=500, detail="RAG insight failed")
 
 
 @router.get("/verbatims")

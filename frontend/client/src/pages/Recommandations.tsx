@@ -98,7 +98,7 @@ function formatRelativeRunLabel(value: string | undefined | null): string {
 
 function normalizePriority(value: string | undefined | null, confidence: number): string {
   const raw = (value || "").toUpperCase();
-  if (raw.includes("HIGH") || raw.includes("URGENT")) return "URGENT";
+  if (raw.includes("HIGH") || raw.includes("HAUT") || raw.includes("URGENT")) return "URGENT";
   if (raw.includes("LOW") || raw.includes("BAS")) return "BAS";
   if (raw.includes("MED") || raw.includes("MOYEN")) return "MOYEN";
   if (confidence >= 85) return "URGENT";

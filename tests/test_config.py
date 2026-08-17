@@ -179,6 +179,9 @@ class TestApifyApiKey:
     def test_apify_api_key_none_sans_env(self, monkeypatch):
         """Sans variable d'environnement, la clé vaut None ou chaîne vide."""
         monkeypatch.delenv("APIFY_API_KEY", raising=False)
+        # Block load_dotenv so .env cannot restore the key when config reloads
+        import dotenv
+        monkeypatch.setattr(dotenv, "load_dotenv", lambda *a, **kw: None)
         cfg = _reload_config()
         # Doit être None ou "" sans .env
         assert cfg.APIFY_API_KEY is None or cfg.APIFY_API_KEY == ""

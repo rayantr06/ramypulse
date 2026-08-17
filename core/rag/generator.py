@@ -15,8 +15,11 @@ logger = logging.getLogger(__name__)
 
 MAX_RETRIES = 3
 RETRY_DELAYS = (1, 2, 4)
-_CONFIDENCE_HIGH_THRESHOLD = 0.7
-_CONFIDENCE_MEDIUM_THRESHOLD = 0.4
+# Seuils calibrés pour les scores RRF (plage réelle : 0.016 – 0.033)
+# high  = chunk présent dans les deux rankings dense + sparse
+# medium = chunk présent dans un seul ranking
+_CONFIDENCE_HIGH_THRESHOLD = 0.025
+_CONFIDENCE_MEDIUM_THRESHOLD = 0.018
 _TIMEOUT_SECONDS = 180
 
 _ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
@@ -25,10 +28,10 @@ _GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 _ANTHROPIC_VERSION_HEADER = "2023-06-01"
 
 _DEFAULT_MODELS = {
-    "ollama_local": "llama3.2:3b",
     "google_gemini": "gemini-2.5-flash",
-    "openai": "gpt-4o",
     "anthropic": "claude-opus-4-6",
+    "openai": "gpt-4o",
+    "ollama_local": "llama3.2:3b",
 }
 
 _SYSTEM_PROMPT = (
@@ -58,7 +61,7 @@ def _resolve_backend() -> tuple[str, str, str | None]:
     provider = (
         os.getenv("RAG_GENERATOR_PROVIDER")
         or getattr(config, "RAG_GENERATOR_PROVIDER", "")
-        or "ollama_local"
+        or "google_gemini"
     )
 
     model = (
@@ -67,7 +70,7 @@ def _resolve_backend() -> tuple[str, str, str | None]:
         or (
             getattr(config, "OLLAMA_MODEL", _DEFAULT_MODELS["ollama_local"])
             if provider == "ollama_local"
-            else _DEFAULT_MODELS.get(provider, _DEFAULT_MODELS["ollama_local"])
+            else _DEFAULT_MODELS.get(provider, _DEFAULT_MODELS["google_gemini"])
         )
     )
 
@@ -274,8 +277,12 @@ class Generator:
                         {
                             "text": chunk.get("text", ""),
                             "channel": chunk.get("channel", ""),
-                            "url": chunk.get("url", ""),
+                            "url": chunk.get("url", "") or chunk.get("source_url", ""),
                             "timestamp": chunk.get("timestamp", ""),
+                            "sentiment_label": chunk.get("sentiment_label", ""),
+                            "aspect": chunk.get("aspect", ""),
+                            "wilaya": chunk.get("wilaya", ""),
+                            "score": chunk.get("score", 0),
                         }
                     )
             except (ValueError, TypeError):
@@ -301,8 +308,12 @@ class Generator:
                 {
                     "text": source.get("text", ""),
                     "channel": source.get("channel", ""),
-                    "url": source.get("url", ""),
+                    "url": source.get("url", "") or source.get("source_url", ""),
                     "timestamp": source.get("timestamp", ""),
+                    "sentiment_label": source.get("sentiment_label", ""),
+                    "aspect": source.get("aspect", ""),
+                    "wilaya": source.get("wilaya", ""),
+                    "score": source.get("score", 0),
                 }
             ],
             "confidence": "low",

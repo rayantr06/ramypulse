@@ -35,11 +35,17 @@ CREATE TABLE IF NOT EXISTS watchlist_metric_snapshots (
 """
 
 _SENTIMENT_ALIASES = {
+    # Labels canoniques FR 5 classes (slugs normalisés)
     "tres_positif": "très_positif",
     "positif": "positif",
     "neutre": "neutre",
     "negatif": "négatif",
     "tres_negatif": "très_négatif",
+    # Fallback défensif : labels DziriBERT 3 classes EN (données pré-fix pipeline)
+    # Conversion approximative sans le score de confiance — évite NSS=0 sur vieux data
+    "positive": "positif",
+    "negative": "négatif",
+    "neutral": "neutre",
 }
 _ASPECT_ALIASES = {
     "gout": "goût",

@@ -115,9 +115,13 @@ def filter_signals_for_campaign(
 
     result = df.copy()
 
-    # Filtre temporel
+    # Filtre temporel — aligne la tz pour éviter le mismatch naive/aware
     if "timestamp" in result.columns:
-        ts = pd.to_datetime(result["timestamp"], errors="coerce")
+        ts = pd.to_datetime(result["timestamp"], errors="coerce", utc=True)
+        if start_dt.tzinfo is None:
+            start_dt = start_dt.tz_localize("UTC")
+        if end_dt.tzinfo is None:
+            end_dt = end_dt.tz_localize("UTC")
         result = result[ts.between(start_dt, end_dt)]
 
     if result.empty:

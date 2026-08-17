@@ -15,12 +15,14 @@ except Exception:  # pragma: no cover - depend de l'environnement
     AutoModelForSequenceClassification = None
     AutoTokenizer = None
 
+import requests as _requests
+
 try:
     import ollama
 except Exception:  # pragma: no cover - depend de l'environnement
     ollama = None
 
-from config import DZIRIBERT_MODEL_PATH, OLLAMA_MODEL, SENTIMENT_LABELS
+from config import DZIRIBERT_MODEL_PATH, GOOGLE_API_KEY, OLLAMA_MODEL, SENTIMENT_LABELS
 
 logger = logging.getLogger(__name__)
 
@@ -28,13 +30,18 @@ _DEFAULT_MODEL_NAME = "alger-ia/dziribert"
 _MAX_SEQ_LEN = 128
 _POSITIVE_WORDS = {"bon", "bnin", "good", "mlih", "mli7", "wa3er", "frais", "excellent", "top"}
 _NEGATIVE_WORDS = {"ghali", "cher", "bad", "mauvais", "khayeb", "perime", "fuite", "rupture"}
-_OLLAMA_PROMPT = (
+_SENTIMENT_PROMPT = (
     "Tu es un classifieur de sentiment pour RamyPulse. "
     "Classe le texte dans exactement une des 5 classes suivantes: "
     "très_positif, positif, neutre, négatif, très_négatif. "
     "Réponds uniquement en JSON avec ce format exact: "
     '{"label":"...", "confidence": 0.0}'
 )
+# Alias pour rétrocompatibilité avec l'ancien nom
+_OLLAMA_PROMPT = _SENTIMENT_PROMPT
+
+_GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+_GEMINI_TIMEOUT = 30
 
 
 class _FallbackModelOutput:
@@ -253,7 +260,14 @@ class SentimentClassifier:
             self._use_best_available_fallback()
 
     def _use_best_available_fallback(self) -> None:
-        """Active le meilleur fallback disponible, avec priorité à Ollama."""
+        """Active le meilleur fallback disponible : Gemini > Ollama > local."""
+        if GOOGLE_API_KEY:
+            self._fallback_mode = True
+            self._fallback_backend = "gemini"
+            self.tokenizer = _FallbackTokenizer()
+            self.model = _FallbackSequenceClassifier(self.num_labels).to(self.device)
+            logger.info("Fallback DziriBERT : Gemini API activée.")
+            return
         if ollama is not None:
             self._fallback_mode = True
             self._fallback_backend = "ollama"
@@ -269,9 +283,41 @@ class SentimentClassifier:
         self.tokenizer = _FallbackTokenizer()
         self.model = _FallbackSequenceClassifier(self.num_labels).to(self.device)
 
+    def _run_gemini_fallback_inference(self, texts: list) -> list:
+        """Classification zero-shot via Gemini API (fallback DziriBERT indisponible)."""
+        results = []
+        for text in texts:
+            try:
+                response = _requests.post(
+                    _GEMINI_API_URL,
+                    params={"key": GOOGLE_API_KEY},
+                    json={
+                        "contents": [{"parts": [{"text": f"{_SENTIMENT_PROMPT}\n\nTexte: {text}"}]}],
+                        "generationConfig": {"responseMimeType": "application/json"},
+                    },
+                    timeout=_GEMINI_TIMEOUT,
+                )
+                response.raise_for_status()
+                raw = response.json()["candidates"][0]["content"]["parts"][0]["text"]
+                payload = json.loads(raw)
+                label = str(payload.get("label", "neutre"))
+                if label not in SENTIMENT_LABELS:
+                    raise ValueError(f"Label invalide renvoyé par Gemini: {label}")
+                confidence = float(payload.get("confidence", 0.5))
+                confidence = min(max(confidence, 0.0), 1.0)
+                logits = [0.0] * self.num_labels
+                logits[SENTIMENT_LABELS.index(label)] = round(1.0 + confidence, 6)
+                results.append({"label": label, "confidence": confidence, "logits": logits})
+            except Exception as exc:
+                logger.warning("Fallback Gemini indisponible (%s). Repli heuristique local.", exc)
+                results.extend(self._run_fallback_inference([text]))
+        return results
+
     def _run_inference(self, texts: list) -> list:
         """Execute l'inference sur une liste de textes."""
         if self._fallback_mode:
+            if self._fallback_backend == "gemini":
+                return self._run_gemini_fallback_inference(texts)
             if self._fallback_backend == "ollama":
                 return self._run_ollama_fallback_inference(texts)
             return self._run_fallback_inference(texts)
