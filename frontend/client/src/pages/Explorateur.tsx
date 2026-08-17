@@ -798,7 +798,9 @@ export default function Explorateur() {
                 verbatimsData.items.map((verbatim) => {
                   const isSelected = selectedSignal?.id === verbatim.id;
                   const annotation = verbatim.analysis?.annotation;
-                  const aspectLabels = annotation?.aspects.slice(0, 2).map((aspect) => aspect.family) ?? [verbatim.aspect];
+                  const aspectLabels = annotation
+                    ? Array.from(new Set(annotation.aspects.map((aspect) => aspect.family))).slice(0, 2)
+                    : [verbatim.aspect];
                   return (
                     <article
                       key={verbatim.id}

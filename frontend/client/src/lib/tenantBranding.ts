@@ -5,8 +5,8 @@ export interface TenantBranding {
 
 const TENANT_BRANDING: Record<string, TenantBranding> = {
   "demo-expo-2026": {
-    logoAlt: "Logo Ramy Food",
-    logoSrc: "/brands/ramy-food.png",
+    logoAlt: "Logo LIDAL Pulse",
+    logoSrc: null,
   },
   ramy_client_001: {
     logoAlt: "Logo Ramy Food",

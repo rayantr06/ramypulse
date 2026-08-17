@@ -186,7 +186,7 @@ export function getProductRoute(location: string): ProductNavItem {
 
 export function formatTenantLabel(tenantId: string | null): string {
   if (!tenantId) return "Aucun espace";
-  if (tenantId === "demo-expo-2026") return "Ramy · Démo Expo";
+  if (tenantId === "demo-expo-2026") return "LIDAL · Démo métier";
   if (tenantId === "ramy_client_001") return "Groupe Ramy";
   return tenantId
     .split(/[-_]/)

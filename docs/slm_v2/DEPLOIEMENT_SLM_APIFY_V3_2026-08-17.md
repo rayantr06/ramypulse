@@ -119,3 +119,32 @@ Passer simplement `SLM_V04_ENABLED=false` et redémarrer le backend. Les annotat
 V0.4 déjà stockées restent auditables ; les écrans historiques continuent grâce aux
 colonnes de projection. Pour Apify, retirer `APIFY_API_KEY` force Google Maps à
 utiliser Places et marque Facebook/Instagram comme sources non configurées.
+
+## 7. Client de démonstration fondé sur le corpus DEV
+
+La V3 peut être peuplée localement avec les 766 commentaires du jeu DEV annoté
+V0.4. Le script ne publie pas le corpus et ne modifie que le tenant demandé :
+
+```bash
+python scripts/seed_training_demo.py --reset
+```
+
+Configuration locale du backend :
+
+```dotenv
+SAFE_EXPO_CLIENT_ID=demo-expo-2026
+RAMYPULSE_RUNTIME_MODE=offline
+```
+
+Configuration Vite dans `frontend/client/.env.local` :
+
+```dotenv
+VITE_RAMYPULSE_DEMO_MODE=false
+VITE_RAMYPULSE_DEFAULT_TENANT_ID=demo-expo-2026
+VITE_RAMYPULSE_API_KEY=dev
+```
+
+Le tableau de bord, l'Explorateur, les alertes, les recommandations, les campagnes
+et la surveillance utilisent alors les mêmes annotations. Les liens externes sont
+des recherches publiques reconstruites depuis le contexte du corpus, car les URL
+exactes des avis ne figurent pas dans le jeu DEV.
