@@ -30,7 +30,12 @@ if (-not $SkipDependencies) {
     Write-Host "Installation des dépendances frontend..." -ForegroundColor Yellow
     Push-Location $frontendRoot
     try {
-        & $npmCommand install
+        if (Test-Path -LiteralPath (Join-Path $frontendRoot "package-lock.json")) {
+            & $npmCommand ci
+        }
+        else {
+            & $npmCommand install
+        }
     }
     finally {
         Pop-Location
