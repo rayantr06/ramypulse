@@ -1,4 +1,38 @@
+import fs from "node:fs";
+import path from "node:path";
+
 import { expect, test, type Page } from "@playwright/test";
+
+const explorerAnnotationV04 = {
+  schema_version: "0.4.0",
+  is_exploitable: true,
+  non_exploitable_reason: null,
+  business_relevance: "directe",
+  author_role: "consommateur",
+  requires_parent_context: false,
+  language: { dominant: "francais", detected: ["francais"], code_switching: false, scripts: ["latin"] },
+  entities: [{ id: "ent_1", type: "produit", name: "YaghurtPlus", mention: null, source: "contexte" }],
+  sentiment: {
+    label: "negatif",
+    intensity: "forte",
+    emotion: "deception",
+    sarcasm: false,
+    target_entity_ids: ["ent_1"],
+    evidence: [{ text: "goût est mauvais", start: 3, end: 19 }],
+  },
+  intents: ["plainte", "partage_experience"],
+  aspects: [{
+    family: "produit_service",
+    attribute: "gout",
+    target_entity_id: "ent_1",
+    sentiment: "negatif",
+    intensity: "forte",
+    implicit: false,
+    evidence: [{ text: "goût est mauvais", start: 3, end: 19 }],
+  }],
+  alerts: [],
+  actionability: { actionable: true, queue: "produit", priority: "moyenne" },
+};
 
 const explorerSearchPayload = {
   query: "Que pensent les clients du goût ?",
@@ -12,6 +46,10 @@ const explorerSearchPayload = {
       aspect: "gout",
       sentiment_label: "negatif",
       score: 0.01639344,
+      annotation: explorerAnnotationV04,
+      model_version: "lidal-slm-search-s1",
+      compiler_version: "compiler-v0.4",
+      validation_status: "valid",
     },
     {
       text: "Le goût manque de fraîcheur",
@@ -50,6 +88,9 @@ const explorerVerbatimsPayload = {
       aspect: "gout",
       sentiment_label: "negatif",
       wilaya: "alger",
+      annotation: explorerAnnotationV04,
+      model_version: "lidal-slm-0.8b-s1",
+      validation_status: "valid",
     },
     {
       text: "Le prix est trop élevé",
@@ -205,6 +246,17 @@ test("explorer golden path shows consultable RAG evidence and real source links"
   await expect(page.getByRole("button", { name: "Filtrer" })).toBeVisible();
   await expect(page.getByTestId("search-result-facebook-0-0.01639344")).toBeVisible();
   await expect(page.getByTestId("verbatim-row-facebook-0-2026-04-04T09:00:00Z")).toBeVisible();
+
+  if (process.env.CAPTURE_V3_REVIEW === "1") {
+    const reviewDirectory = path.resolve(process.cwd(), "../.impeccable/review");
+    fs.mkdirSync(reviewDirectory, { recursive: true });
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.screenshot({ path: path.join(reviewDirectory, "explorer-v3-desktop.png"), fullPage: true });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.reload();
+    await expect(page.getByTestId("signal-analysis-panel")).toBeVisible();
+    await page.screenshot({ path: path.join(reviewDirectory, "explorer-v3-mobile.png"), fullPage: true });
+  }
 });
 
 test("watchlists golden path submits backend-aligned filters", async ({ page }) => {

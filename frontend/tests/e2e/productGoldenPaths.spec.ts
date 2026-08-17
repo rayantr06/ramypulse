@@ -1,5 +1,36 @@
 import { expect, test, type Page } from "@playwright/test";
 
+const explorerAnnotationV04 = {
+  schema_version: "0.4.0",
+  is_exploitable: true,
+  non_exploitable_reason: null,
+  business_relevance: "directe",
+  author_role: "consommateur",
+  requires_parent_context: false,
+  language: { dominant: "francais", detected: ["francais"], code_switching: false, scripts: ["latin"] },
+  entities: [{ id: "ent_1", type: "produit", name: "YaghurtPlus", mention: null, source: "contexte" }],
+  sentiment: {
+    label: "negatif",
+    intensity: "forte",
+    emotion: "deception",
+    sarcasm: false,
+    target_entity_ids: ["ent_1"],
+    evidence: [{ text: "goût est mauvais", start: 3, end: 19 }],
+  },
+  intents: ["plainte", "partage_experience"],
+  aspects: [{
+    family: "produit_service",
+    attribute: "gout",
+    target_entity_id: "ent_1",
+    sentiment: "negatif",
+    intensity: "forte",
+    implicit: false,
+    evidence: [{ text: "goût est mauvais", start: 3, end: 19 }],
+  }],
+  alerts: [],
+  actionability: { actionable: true, queue: "produit", priority: "moyenne" },
+};
+
 const explorerSearchPayload = {
   query: "Que pensent les clients du goût ?",
   total: 2,
@@ -12,6 +43,10 @@ const explorerSearchPayload = {
       aspect: "gout",
       sentiment_label: "negatif",
       score: 0.01639344,
+      annotation: explorerAnnotationV04,
+      model_version: "lidal-slm-search-s1",
+      compiler_version: "compiler-v0.4",
+      validation_status: "valid",
     },
     {
       text: "Le goût manque de fraîcheur",
@@ -35,6 +70,9 @@ const explorerVerbatimsPayload = {
       aspect: "gout",
       sentiment_label: "negatif",
       wilaya: "alger",
+      annotation: explorerAnnotationV04,
+      model_version: "lidal-slm-0.8b-s1",
+      validation_status: "valid",
     },
   ],
   total: 1,
@@ -219,6 +257,10 @@ test("Explorer search shows consultable cited sources", async ({ page }) => {
     "https://facebook.com/posts/1",
   );
   await expect(page.getByTestId("search-result-facebook-0-0.01639344")).toBeVisible();
+  await page.getByRole("button", { name: "Ouvrir le dossier" }).first().click();
+  await expect(page.getByTestId("signal-analysis-panel")).toContainText("SLM 0.4.0");
+  await expect(page.getByTestId("signal-analysis-panel")).toContainText("Plainte");
+  await expect(page.getByTestId("signal-analysis-panel")).toContainText("lidal-slm-search-s1");
 });
 
 test("Watchlists create flow submits backend-aligned filters", async ({ page }) => {

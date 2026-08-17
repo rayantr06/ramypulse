@@ -126,7 +126,8 @@ test("Explorateur keeps evidence-oriented search copy", () => {
   contains(source, 'title="Explorer les avis clients"');
   contains(source, "consultez les verbatims, leurs sources");
   contains(source, "Que pensent les clients du goût à Alger ?");
-  contains(source, "Base de données complète des interactions clients");
+  contains(source, "Sélectionnez un verbatim pour ouvrir son dossier d’analyse");
+  contains(source, "intentions et ses preuves");
 });
 
 test("Explorateur keeps Stitch relative date and sentiment labels", () => {
