@@ -5,10 +5,6 @@
   "outputDirectory": "dist/public",
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "https://powerful-suggestions-connecting-prospects.trycloudflare.com/api/:path*"
-    },
-    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
