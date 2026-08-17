@@ -29,7 +29,9 @@ def _keyword_to_regex(keyword: str) -> str:
     parts = [re.escape(part) for part in keyword.split("_")]
     body = r"[\s_-]+".join(parts)
     if re.search(r"[\u0600-\u06FF]", keyword):
+        # Permet l'article défini arabe et les connecteurs (و، ف، ب، ل) collés au mot
         body = r"(?:ال)?" + body
+        return r"(?:(?<!\w)|(?<=[وفبل]))" + body + r"(?!\w)"
     return r"(?<!\w)" + body + r"(?!\w)"
 
 

@@ -1,0 +1,202 @@
+{
+  "version": "0.3.0",
+  "measurement_scope": "end_to_end",
+  "purpose": "Autoriser ou refuser la generation du pilote d'entrainement SLM V2.",
+  "calibration_principle": "Aucune porte ne depasse l accord inter-annotateurs MESURE sur le meme contrat. Plafonds A3 vs C apres migration V0.3. Marge ~10 a 15 pourcent sous le plafond.",
+  "status": "MESURE — plafonds A3 vs C, 305 paires, contrat V0.3 (2026-07-30)",
+  "evaluation_policy": {
+    "missing_or_invalid_output": "scored_as_wrong",
+    "maximum_controlled_retry": 1,
+    "test_split_policy": "locked_after_baseline; no prompt or ontology tuning from test errors",
+    "gold_training_policy": "gold_dev and gold_test are excluded from training",
+    "derived_fields_not_scored": [
+      "actionability.queue",
+      "actionability.priority"
+    ],
+    "aspect_scoring_level": "family+sentiment; l'attribut est un detail non evalue",
+    "neutral_aspects": "interdits par le schema V0.2, donc hors scoring"
+  },
+  "gates": {
+    "valid_output_rate": {
+      "operator": ">=",
+      "threshold": 1.0,
+      "critical": true,
+      "ceiling_observed": 1.0
+    },
+    "evidence_grounding_rate": {
+      "operator": ">=",
+      "threshold": 1.0,
+      "critical": true,
+      "ceiling_observed": 1.0
+    },
+    "is_exploitable.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.78,
+      "critical": true,
+      "ceiling_observed": 0.879,
+      "ceiling_source": "A3 vs C, contrat V0.3, 305 paires"
+    },
+    "business_relevance.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.85,
+      "critical": true,
+      "ceiling_observed": 0.945,
+      "ceiling_source": "A3 vs C, contrat V0.3, 305 paires"
+    },
+    "sentiment.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.75,
+      "critical": true,
+      "ceiling_observed": 0.851,
+      "ceiling_source": "A3 vs C, contrat V0.3, 305 paires",
+      "note": "Plafond global. OPTIMISTE sur darija_arabizi : voir gates_par_langue. Validation humaine du 2026-07-30."
+    },
+    "language.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.78,
+      "critical": false,
+      "ceiling_observed": 0.881,
+      "ceiling_source": "A3 vs C, contrat V0.3, 305 paires"
+    },
+    "intents.micro_f1": {
+      "operator": ">=",
+      "threshold": 0.68,
+      "critical": true,
+      "ceiling_observed": 0.776,
+      "ceiling_source": "A3 vs C, contrat V0.3, 305 paires"
+    },
+    "aspects_family_sentiment.micro_f1": {
+      "operator": ">=",
+      "threshold": 0.62,
+      "critical": true,
+      "ceiling_observed": 0.71,
+      "ceiling_source": "A3 vs C, contrat V0.3, 305 paires",
+      "note": "Plafond global. OPTIMISTE sur darija_arabizi : voir gates_par_langue. Validation humaine du 2026-07-30."
+    },
+    "entities_type_name.micro_f1": {
+      "operator": ">=",
+      "threshold": 0.55,
+      "critical": false,
+      "ceiling_observed": 0.627,
+      "ceiling_source": "A3 vs C, campagne V0.2, 304 paires"
+    },
+    "actionability.actionable.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.85,
+      "critical": false,
+      "ceiling_observed": 0.956,
+      "ceiling_source": "A3 vs C, contrat V0.3, 305 paires"
+    },
+    "alert_present.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.8,
+      "critical": false,
+      "ceiling_observed": 0.906,
+      "ceiling_source": "A3 vs C, contrat V0.3, 305 paires",
+      "note": "NON EVALUABLE. 16 evenements d alerte distincts seulement (le cluster eaux usees compte pour 1, pas 10). IC 95 pourcent bootstrap par evenement : [0,444 ; 0,931], largeur 0,486. Le seuil se situe a l interieur de l intervalle : cette porte ne distingue pas un bon modele d un mauvais. ~158 evenements seraient necessaires pour un IC de largeur 0,15. Rendue NON CRITIQUE jusqu a nouvelle collecte.",
+      "status": "non_evaluable",
+      "distinct_events": 16,
+      "ci95_by_event": [
+        0.444,
+        0.931
+      ]
+    },
+    "alerts_type.micro_f1": {
+      "operator": ">=",
+      "threshold": 0.68,
+      "critical": false,
+      "ceiling_observed": 0.783,
+      "ceiling_source": "A3 vs C, contrat V0.3, 305 paires",
+      "status": "non_evaluable",
+      "note": "NON EVALUABLE. 16 evenements d alerte distincts seulement (le cluster eaux usees compte pour 1, pas 10). IC 95 pourcent bootstrap par evenement : [0,444 ; 0,931], largeur 0,486. Le seuil se situe a l interieur de l intervalle : cette porte ne distingue pas un bon modele d un mauvais. ~158 evenements seraient necessaires pour un IC de largeur 0,15. Rendue NON CRITIQUE jusqu a nouvelle collecte.",
+      "distinct_events": 16,
+      "ci95_by_event": [
+        0.444,
+        0.931
+      ]
+    },
+    "alerts_type_severity.micro_f1": {
+      "operator": ">=",
+      "threshold": 0.68,
+      "critical": false,
+      "ceiling_observed": 0.783,
+      "ceiling_source": "A3 vs C, contrat V0.3",
+      "note": "NON EVALUABLE. 16 evenements d alerte distincts seulement (le cluster eaux usees compte pour 1, pas 10). IC 95 pourcent bootstrap par evenement : [0,444 ; 0,931], largeur 0,486. Le seuil se situe a l interieur de l intervalle : cette porte ne distingue pas un bon modele d un mauvais. ~158 evenements seraient necessaires pour un IC de largeur 0,15. Rendue NON CRITIQUE jusqu a nouvelle collecte.",
+      "status": "non_evaluable",
+      "distinct_events": 16,
+      "ci95_by_event": [
+        0.444,
+        0.931
+      ]
+    },
+    "actionability.priority.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.8,
+      "critical": false,
+      "ceiling_observed": 0.907,
+      "ceiling_source": "A3 vs C, contrat V0.3, champ derive",
+      "note": "Derive. Gain de +0,201 apporte par l echelle de severite a 3 niveaux."
+    },
+    "requires_parent_context.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.45,
+      "critical": false,
+      "ceiling_observed": 0.53,
+      "ceiling_source": "A3 vs C, contrat V0.3, 305 paires",
+      "note": "Champ neuf, definition encore floue. A resserrer en V0.3."
+    },
+    "author_role.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.85,
+      "critical": false,
+      "ceiling_observed": 1.0,
+      "ceiling_source": "A3 vs C, contrat V0.3, 305 paires"
+    },
+    "harcelement_discrimination.exercice": {
+      "operator": ">",
+      "threshold": 0,
+      "critical": true,
+      "status": "non_exercee",
+      "ceiling_observed": 0,
+      "note": "0 alerte harcelement_discrimination sur 305 items, 0 detection sur 2 items candidats, tous deux en arabizi. Categorie jamais exercee. Toute campagne doit signaler explicitement si elle n en pose aucune."
+    }
+  },
+  "blocking_conditions": [
+    "Le gold V0.3 n est PAS utilisable tel quel pour l entrainement sur ses 41 items arabizi : biais partage confirme par relecture humaine. Reannotation requise avant usage.",
+    "harcelement_discrimination jamais exercee : 0 alerte sur 305 items, 0 detection sur 2 candidats.",
+    "Portes d alerte NON EVALUABLES : 16 evenements distincts, IC 95 pourcent [0,444 ; 0,931]. Le pool est epuise — 1589 items organisation non echantillonnes ne fournissent que la meme rumeur repetee et 6 candidats reels, majoritairement synthetiques. Nouvelle collecte requise.",
+    "Plafonds issus d un accord machine-machine. Validation humaine FAITE le 2026-07-30 sur 60 items : pas de biais global (90 pourcent), mais biais localise confirme sur l arabizi.",
+    "requires_parent_context plafonne a 0,530, non derivable. Correctif en amont : capturer le post parent.",
+    "Scope secteur non teste. Trois marques seulement, toutes agroalimentaires.",
+    "D13 (accusation circulante contre incident rapporte) non validee par la mesure."
+  ],
+  "human_validation": {
+    "date": "2026-07-30",
+    "sample": 60,
+    "design": "30 accords tires au hasard + 30 desaccords, melanges, presentation uniforme",
+    "accord_group_acceptable": 0.9,
+    "disagreement_group_acceptable": 0.97,
+    "shared_bias_global": "non detecte au seuil de 0,85",
+    "shared_bias_localise": "OUI sur darija_arabizi : 3 des 4 erreurs franches. Repli partage sur neutre et aucun aspect. Accord le PLUS eleve du corpus (k 0,919) la ou la validite est la plus basse : l accord y mesure une convention, pas une lecture correcte."
+  },
+  "gates_par_langue": {
+    "motif": "L accord global surestime la qualite sur l arabizi. Le modele doit etre evalue separement par langue, et l accord ne peut pas servir de plafond sur l arabizi.",
+    "darija_arabizi": {
+      "sentiment.macro_f1": {
+        "operator": ">=",
+        "threshold": 0.6,
+        "critical": true,
+        "note": "Seuil fixe a la main, PAS derive de l accord (k 0,919 non valide). 41 items."
+      },
+      "neutral_rate_max": {
+        "operator": "<=",
+        "threshold": 0.45,
+        "critical": true,
+        "note": "Garde-fou anti-repli. Les annotateurs sont a 54 pourcent de neutre sur l arabizi contre 41 ailleurs."
+      }
+    },
+    "autres_langues": {
+      "reference": "voir gates principales"
+    }
+  }
+}

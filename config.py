@@ -10,7 +10,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 # Charger les variables d'environnement depuis .env (optionnel)
-load_dotenv()
+load_dotenv(override=True)
 
 # ---------------------------------------------------------------------------
 # Chemins de base
@@ -51,11 +51,17 @@ DZIRIBERT_MODEL_PATH: Path = MODELS_DIR / "dziribert-sentiment"
 WHISPER_MODEL_SIZE: str = os.getenv("WHISPER_MODEL_SIZE", "large-v3")
 """Taille du modèle Whisper: tiny, base, small, medium, large, large-v2, large-v3."""
 
-OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "llama3.2:3b")
+OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL") or "llama3.2:3b"
 """Modèle Ollama utilisé pour la génération RAG."""
 
-OLLAMA_BASE_URL: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+OLLAMA_BASE_URL: str = os.getenv("OLLAMA_BASE_URL") or "http://localhost:11434"
 """URL de base de l'API Ollama locale."""
+
+RAG_GENERATOR_PROVIDER: str = os.getenv("RAG_GENERATOR_PROVIDER", "google_gemini")
+"""Provider LLM pour la génération RAG : google_gemini | anthropic | openai | ollama_local."""
+
+RAG_GENERATOR_MODEL: str = os.getenv("RAG_GENERATOR_MODEL", "gemini-2.5-flash")
+"""Modèle utilisé par le générateur RAG."""
 
 EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "intfloat/multilingual-e5-base")
 """Modèle d'embedding multilingue pour FAISS (768 dimensions)."""
@@ -202,6 +208,7 @@ TAVILY_API_KEY: str = os.getenv("TAVILY_API_KEY", "")
 YOUTUBE_API_KEY: str = os.getenv("YOUTUBE_API_KEY", "")
 GOOGLE_MAPS_API_KEY: str = os.getenv("GOOGLE_MAPS_API_KEY", "")
 PERPLEXITY_API_KEY: str = os.getenv("PERPLEXITY_API_KEY", "")
+SERPAPI_API_KEY: str = os.getenv("SERPAPI_API_KEY", "")
 
 # ---------------------------------------------------------------------------
 # Recommendation Agent
@@ -210,8 +217,8 @@ PERPLEXITY_API_KEY: str = os.getenv("PERPLEXITY_API_KEY", "")
 ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
 OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
 GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")
-DEFAULT_AGENT_PROVIDER: str = os.getenv("AGENT_PROVIDER", "google_gemini")
-DEFAULT_AGENT_MODEL: str = os.getenv("AGENT_MODEL", "gemini-2.5-flash")
+DEFAULT_AGENT_PROVIDER: str = os.getenv("AGENT_PROVIDER") or "google_gemini"
+DEFAULT_AGENT_MODEL: str = os.getenv("AGENT_MODEL") or "gemini-2.5-flash"
 DEFAULT_RUNTIME_MODE: str = os.getenv("RAMYPULSE_RUNTIME_MODE", "")
 RECOMMENDATION_AGENT_PROMPT_VERSION: str = "1.1"
 WEEKLY_REPORT_EMAIL_TO: str = os.getenv("WEEKLY_REPORT_EMAIL_TO", "")
@@ -223,25 +230,34 @@ ALERT_NOTIFICATION_MIN_SEVERITY: str = os.getenv("ALERT_NOTIFICATION_MIN_SEVERIT
 # Estimated prompt input pricing, expressed in USD per 1K input tokens.
 # Used only for pre-generation cost previews in the UI.
 LLM_INPUT_PRICING_USD_PER_1K_TOKENS: dict[str, dict[str, float]] = {
+    # Source : pages de pricing officielles — avril 2026
+    # Prix en USD / 1K tokens input (= prix MTok / 1000)
     "anthropic": {
-        "claude-opus-4-6": 0.015,
-        "claude-sonnet-4-6": 0.003,
-        "claude-haiku-4-5-20251001": 0.0008,
+        "claude-opus-4-6": 0.005,       # $5.00 / MTok
+        "claude-sonnet-4-6": 0.003,     # $3.00 / MTok
+        "claude-haiku-4-5": 0.001,      # $1.00 / MTok
     },
     "openai": {
-        "gpt-4o": 0.0025,
-        "gpt-4-turbo": 0.01,
-        "o1-preview": 0.015,
+        "gpt-4o": 0.0025,               # $2.50 / MTok
+        "gpt-4o-mini": 0.00015,         # $0.15 / MTok
+        "gpt-5.4": 0.0025,              # $2.50 / MTok
+        "gpt-5.4-mini": 0.00075,        # $0.75 / MTok
+        "gpt-5.4-nano": 0.0002,         # $0.20 / MTok
+        "o3": 0.002,                    # $2.00 / MTok
+        "o4-mini": 0.0011,              # $1.10 / MTok
     },
     "google_gemini": {
-        "gemini-2.5-flash": 0.0003,
-        "gemini-2.5-pro": 0.00125,
-        "gemini-2.0-flash": 0.0001,
+        "gemini-3.1-pro": 0.002,        # $2.00 / MTok (≤200K tokens)
+        "gemini-3.1-flash-lite": 0.00025,  # $0.25 / MTok
+        "gemini-2.5-flash": 0.0003,     # $0.30 / MTok (fallback stable)
     },
     "ollama_local": {
-        "qwen2.5:14b": 0.0,
-        "llama3.2:3b": 0.0,
-        "mistral:7b": 0.0,
+        "llama4": 0.0,
+        "gemma4:27b": 0.0,
+        "qwen3.5:32b": 0.0,
+        "qwen3.6:14b": 0.0,
+        "mistral-small4": 0.0,
+        "deepseek-r1:14b": 0.0,
     },
 }
 

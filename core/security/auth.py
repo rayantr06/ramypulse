@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import importlib
 import json
 import logging
 import secrets
@@ -28,8 +29,13 @@ class AuthContext(NamedTuple):
     scopes: list[str]
 
 
+def _config_module():
+    """Retourne le module config courant, même après reload dans les tests."""
+    return importlib.import_module("config")
+
+
 def _get_connection() -> sqlite3.Connection:
-    conn = sqlite3.connect(str(config.SQLITE_DB_PATH))
+    conn = sqlite3.connect(str(getattr(_config_module(), "SQLITE_DB_PATH", config.SQLITE_DB_PATH)))
     conn.row_factory = sqlite3.Row
     return conn
 

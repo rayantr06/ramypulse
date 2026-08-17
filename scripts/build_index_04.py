@@ -30,17 +30,63 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def _build_metadata(dataframe: pd.DataFrame) -> list[dict]:
-    """Construit la liste de metadata pour l'index FAISS."""
-    metadata = []
+def _build_metadata_and_texts(dataframe: pd.DataFrame) -> tuple[list[str], list[dict]]:
+    """Construit les textes et metadata pour l'index FAISS.
+
+    Si le DataFrame contient les colonnes ABSA (aspect_sentiments, sentiment_label),
+    on explode par aspect : chaque (texte, aspect) devient une entrée distincte
+    pour permettre une recherche ABSA précise.
+    Sans colonnes ABSA, on indexe une entrée par texte sans informations de sentiment.
+
+    Returns:
+        Tuple (texts, metadata) de même longueur.
+    """
+    has_absa = "aspect_sentiments" in dataframe.columns and "sentiment_label" in dataframe.columns
+
+    texts: list[str] = []
+    metadata: list[dict] = []
+
     for row in dataframe.itertuples(index=False):
-        metadata.append({
-            "text": getattr(row, "text", ""),
-            "channel": getattr(row, "channel", ""),
-            "source_url": getattr(row, "source_url", ""),
-            "timestamp": getattr(row, "timestamp", ""),
-        })
-    return metadata
+        text = getattr(row, "text", "") or ""
+        channel = getattr(row, "channel", "") or ""
+        source_url = getattr(row, "source_url", "") or ""
+        timestamp = getattr(row, "timestamp", "") or ""
+        global_sentiment = getattr(row, "sentiment_label", "") if has_absa else ""
+        global_confidence = float(getattr(row, "confidence", 0.0) or 0.0) if has_absa else 0.0
+
+        if has_absa:
+            aspect_sentiments = getattr(row, "aspect_sentiments", None) or []
+        else:
+            aspect_sentiments = []
+
+        base = {
+            "text": text,
+            "channel": channel,
+            "source_url": source_url,
+            "timestamp": timestamp,
+        }
+
+        if aspect_sentiments:
+            # Une entrée FAISS par aspect détecté
+            for asp in aspect_sentiments:
+                texts.append(text)
+                metadata.append({
+                    **base,
+                    "aspect": asp.get("aspect", ""),
+                    "sentiment_label": asp.get("sentiment", global_sentiment),
+                    "confidence": float(asp.get("confidence", global_confidence) or 0.0),
+                })
+        else:
+            # Pas d'aspect détecté — entrée globale
+            texts.append(text)
+            metadata.append({
+                **base,
+                "aspect": "",
+                "sentiment_label": global_sentiment,
+                "confidence": global_confidence,
+            })
+
+    return texts, metadata
 
 
 def _build_bm25(texts: list[str], output_path: Path) -> None:
@@ -77,8 +123,7 @@ def build_index(
         logger.warning("DataFrame vide, aucun index à construire.")
         return
 
-    texts = dataframe["text"].tolist()
-    metadata = _build_metadata(dataframe)
+    texts, metadata = _build_metadata_and_texts(dataframe)
 
     logger.info("Génération des embeddings pour %d textes...", len(texts))
     embedder = Embedder()

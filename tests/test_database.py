@@ -44,6 +44,8 @@ EXPECTED_TABLES = {
     "post_engagement_metrics",
     "content_items",
     "api_keys",
+    "watch_runs",
+    "watch_run_steps",
 }
 
 

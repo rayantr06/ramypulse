@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
+import { PageHeader } from "@/components/PageHeader";
 import { EmptyTenantState } from "@/components/EmptyTenantState";
 import { buildExplorerAiView, toDisplayRelevanceScores } from "@/lib/explorerAiView";
 import { apiRequest } from "@/lib/queryClient";
@@ -267,9 +268,32 @@ export default function Explorateur() {
       params.set("limit", "10");
       if (channelFilter) params.set("channel", channelFilter);
       const res = await apiRequest("GET", `/api/explorer/search?${params.toString()}`);
-  return mapSearchView(await res.json());
+      return mapSearchView(await res.json());
     },
     enabled: Boolean(activeSearch.trim()),
+  });
+
+  const { data: ragData, isLoading: ragLoading } = useQuery<{
+    query: string;
+    answer: string;
+    confidence: string;
+    chunks: Array<{ text: string; channel: string; source_url: string; url: string; sentiment_label: string; aspect: string; score: number }>;
+  }>({
+    queryKey: ["/api/explorer/rag", activeSearch],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.set("q", activeSearch);
+      params.set("limit", "5");
+      const res = await apiRequest("GET", `/api/explorer/rag?${params.toString()}`);
+      return res.json() as Promise<{
+        query: string;
+        answer: string;
+        confidence: string;
+        chunks: Array<{ text: string; channel: string; source_url: string; url: string; sentiment_label: string; aspect: string; score: number }>;
+      }>;
+    },
+    enabled: Boolean(activeSearch.trim()),
+    staleTime: 60_000,
   });
 
   const { data: verbatims, isLoading: verbatimsLoading } = useQuery<VerbatimsView>({
@@ -294,10 +318,29 @@ export default function Explorateur() {
   };
 
   const searchResults = results ?? [];
-  const aiInsight = useMemo(
-    () => buildExplorerAiView(searchResults, activeSearch),
-    [searchResults, activeSearch],
-  );
+
+  const aiInsight = useMemo(() => {
+    if (!ragData?.answer || ragData.chunks.length === 0) {
+      return buildExplorerAiView(searchResults, activeSearch);
+    }
+    const scores = ragData.chunks.map((c) => c.score ?? 0);
+    const displayScores = toDisplayRelevanceScores(scores);
+    const uniqueSources = new Set(ragData.chunks.map((c) => c.channel).filter(Boolean));
+    const confidenceLabel: Record<string, string> = { high: "haute", medium: "moyenne", low: "basse" };
+    return {
+      summary: ragData.answer,
+      coverageLabel: `${ragData.chunks.length} signaux • confiance ${confidenceLabel[ragData.confidence] ?? ragData.confidence}`,
+      evidence: ragData.chunks.map((chunk, i) => ({
+        text: chunk.text,
+        source: chunk.channel || "import",
+        sentiment: formatSentimentLabel(chunk.sentiment_label || "neutre"),
+        aspect: (chunk.aspect?.trim() && chunk.aspect !== "n/a") ? chunk.aspect : "signal général",
+        relevanceScore: displayScores[i] ?? 0,
+        sourceUrl: chunk.url || chunk.source_url || "",
+      })),
+      _uniqueSources: uniqueSources.size,
+    };
+  }, [activeSearch, ragData, searchResults]);
   const verbatimsData = useMemo(() => {
     return (
       verbatims ?? {
@@ -337,25 +380,22 @@ export default function Explorateur() {
       avatarSrc={STITCH_AVATARS.explorateur.src}
       avatarAlt={STITCH_AVATARS.explorateur.alt}
     >
-      <div className="p-8 space-y-8 max-w-7xl mx-auto w-full">
-        <section>
-          <h2 className="text-3xl font-extrabold font-headline tracking-tighter text-on-surface">
-            Explorateur
-          </h2>
-          <p className="text-on-surface-variant font-body text-sm mt-1">
-            Recherche sémantique et verbatims à travers l'écosystème digital
-          </p>
-        </section>
+      <div className="mx-auto w-full max-w-[1600px] space-y-8 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+        <PageHeader
+          eyebrow="Comprendre"
+          tone="insight"
+          title="Explorer les avis clients"
+          description="Recherchez un sujet en langage naturel, puis consultez les verbatims, leurs sources et les éléments qui expliquent le résultat."
+        />
 
         <section className="space-y-4">
-          <div className="relative group">
-            <div className="absolute -inset-0.5 pulse-gradient rounded-xl blur opacity-10 group-focus-within:opacity-30 transition duration-1000"></div>
-            <div className="relative flex items-center bg-surface-container-high p-2 rounded-xl">
-              <span className="material-symbols-outlined ml-4 text-on-surface-variant">
-                psychology
+          <div className="relative">
+            <div className="relative flex min-w-0 items-center rounded-xl border border-insight/20 bg-insight-container/45 p-2 focus-within:border-insight/45">
+              <span className="material-symbols-outlined ml-4 text-insight">
+                search
               </span>
               <input
-                className="flex-1 bg-transparent border-none text-on-surface placeholder:text-gray-600 px-4 py-3 focus:ring-0 focus:outline-none text-base"
+                className="min-w-0 flex-1 border-none bg-transparent px-3 py-3 text-base text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-0 sm:px-4"
                 placeholder="Recherche en langage naturel (ex: 'Que pensent les clients du goût à Alger ?')"
                 type="text"
                 value={query}
@@ -368,11 +408,11 @@ export default function Explorateur() {
               />
               <button
                 onClick={() => setActiveSearch(query)}
-                className="pulse-gradient text-on-primary-fixed font-bold px-6 py-2.5 rounded-lg flex items-center gap-2 transition-transform active:scale-95 shadow-lg text-sm"
+                className="flex shrink-0 items-center gap-2 rounded-lg bg-insight px-3 py-2.5 text-sm font-bold text-white transition-colors hover:bg-insight/90 sm:px-6"
                 data-testid="btn-search"
               >
                 <span className="material-symbols-outlined text-lg">search</span>
-                Explorer
+                <span className="hidden sm:inline">Explorer</span>
               </button>
             </div>
           </div>
@@ -463,7 +503,7 @@ export default function Explorateur() {
 
         {(activeSearch || searchResults.length > 0) && (
           <>
-            {aiInsight ? (
+            {(ragLoading || aiInsight) && activeSearch && (
               <div
                 className="bg-surface-container rounded-xl border border-tertiary/15 overflow-hidden"
                 data-testid="explorer-ai-insight"
@@ -477,49 +517,61 @@ export default function Explorateur() {
                       Synthèse IA ancrée dans les résultats actuels
                     </p>
                   </div>
-                  <span className="text-[10px] font-bold uppercase tracking-wide text-on-surface-variant">
-                    {aiInsight.coverageLabel}
-                  </span>
+                  {aiInsight && (
+                    <span className="text-[10px] font-bold uppercase tracking-wide text-on-surface-variant">
+                      {aiInsight.coverageLabel}
+                    </span>
+                  )}
                 </div>
                 <div className="p-5 grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-5">
-                  <div>
-                    <p className="text-sm leading-relaxed text-on-surface">{aiInsight.summary}</p>
-                  </div>
-                  <div className="space-y-2">
-                    {aiInsight.evidence.map((evidence, index) => (
-                      <article
-                        key={`${evidence.source}-${index}-${evidence.relevanceScore}`}
-                        className="bg-surface-container-high rounded-lg px-3 py-3 border border-outline-variant/10"
-                      >
-                        <p className="text-sm leading-relaxed text-on-surface">
-                          “{evidence.text}”
-                        </p>
-                        <div className="mt-3 flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-wide text-on-surface-variant">
-                          <span>{evidence.sentiment}</span>
-                          <span>•</span>
-                          <span>{evidence.aspect}</span>
-                          <span>•</span>
-                          <span>{getSourceLabel(evidence.source)}</span>
-                          <span>•</span>
-                          <span>{evidence.relevanceScore}% de pertinence</span>
-                        </div>
-                        {evidence.sourceUrl ? (
-                          <a
-                            className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:text-primary/80 transition-colors"
-                            href={evidence.sourceUrl}
-                            rel="noreferrer"
-                            target="_blank"
+                  {ragLoading && !aiInsight ? (
+                    <div className="col-span-full space-y-3">
+                      <div className="h-4 bg-surface-container-high rounded animate-pulse w-3/4"></div>
+                      <div className="h-4 bg-surface-container-high rounded animate-pulse w-full"></div>
+                      <div className="h-4 bg-surface-container-high rounded animate-pulse w-1/2"></div>
+                    </div>
+                  ) : aiInsight ? (
+                    <>
+                      <div>
+                        <p className="text-sm leading-relaxed text-on-surface">{aiInsight.summary}</p>
+                      </div>
+                      <div className="space-y-2">
+                        {aiInsight.evidence.map((evidence, index) => (
+                          <article
+                            key={`${evidence.source}-${index}-${evidence.relevanceScore}`}
+                            className="bg-surface-container-high rounded-lg px-3 py-3 border border-outline-variant/10"
                           >
-                            Voir la source
-                            <span className="material-symbols-outlined text-sm">open_in_new</span>
-                          </a>
-                        ) : null}
-                      </article>
-                    ))}
-                  </div>
+                            <p className="text-sm leading-relaxed text-on-surface">
+                              "{evidence.text}"
+                            </p>
+                            <div className="mt-3 flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-wide text-on-surface-variant">
+                              <span>{evidence.sentiment}</span>
+                              <span>•</span>
+                              <span>{evidence.aspect}</span>
+                              <span>•</span>
+                              <span>{getSourceLabel(evidence.source)}</span>
+                              <span>•</span>
+                              <span>{evidence.relevanceScore}% de pertinence</span>
+                            </div>
+                            {evidence.sourceUrl ? (
+                              <a
+                                className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:text-primary/80 transition-colors"
+                                href={evidence.sourceUrl}
+                                rel="noreferrer"
+                                target="_blank"
+                              >
+                                Voir la source
+                                <span className="material-symbols-outlined text-sm">open_in_new</span>
+                              </a>
+                            ) : null}
+                          </article>
+                        ))}
+                      </div>
+                    </>
+                  ) : null}
                 </div>
               </div>
-            ) : null}
+            )}
 
           <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {searchLoading ? (

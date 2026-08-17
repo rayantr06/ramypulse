@@ -1,0 +1,1126 @@
+{
+  "gold_records": 100,
+  "prediction_records": 100,
+  "coverage": {
+    "aligned_valid": 100,
+    "missing": 0,
+    "unexpected": 0,
+    "duplicates": 0,
+    "schema_invalid": 0,
+    "semantic_invalid": 0,
+    "valid_output_rate": 1.0
+  },
+  "missing_record_ids": [],
+  "unexpected_record_ids": [],
+  "schema_errors": {},
+  "semantic_errors": {},
+  "valid_only": {
+    "records_scored": 100,
+    "categorical": {
+      "is_exploitable": {
+        "accuracy": 1.0,
+        "macro_f1": 1.0,
+        "per_label": {
+          "false": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 5
+          },
+          "true": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 95
+          }
+        },
+        "confusion": [
+          {
+            "gold": "false",
+            "predicted": "false",
+            "count": 5
+          },
+          {
+            "gold": "true",
+            "predicted": "true",
+            "count": 95
+          }
+        ]
+      },
+      "business_relevance": {
+        "accuracy": 1.0,
+        "macro_f1": 1.0,
+        "per_label": {
+          "aucune": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 5
+          },
+          "directe": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 68
+          },
+          "indirecte": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 27
+          }
+        },
+        "confusion": [
+          {
+            "gold": "aucune",
+            "predicted": "aucune",
+            "count": 5
+          },
+          {
+            "gold": "directe",
+            "predicted": "directe",
+            "count": 68
+          },
+          {
+            "gold": "indirecte",
+            "predicted": "indirecte",
+            "count": 27
+          }
+        ]
+      },
+      "sentiment": {
+        "accuracy": 1.0,
+        "macro_f1": 1.0,
+        "per_label": {
+          "mixte": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 2
+          },
+          "negatif": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 46
+          },
+          "neutre": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 31
+          },
+          "positif": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 21
+          }
+        },
+        "confusion": [
+          {
+            "gold": "mixte",
+            "predicted": "mixte",
+            "count": 2
+          },
+          {
+            "gold": "negatif",
+            "predicted": "negatif",
+            "count": 46
+          },
+          {
+            "gold": "neutre",
+            "predicted": "neutre",
+            "count": 31
+          },
+          {
+            "gold": "positif",
+            "predicted": "positif",
+            "count": 21
+          }
+        ]
+      },
+      "sentiment_intensity": {
+        "accuracy": 1.0,
+        "macro_f1": 1.0,
+        "per_label": {
+          "faible": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 28
+          },
+          "forte": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 51
+          },
+          "moyenne": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 21
+          }
+        },
+        "confusion": [
+          {
+            "gold": "faible",
+            "predicted": "faible",
+            "count": 28
+          },
+          {
+            "gold": "forte",
+            "predicted": "forte",
+            "count": 51
+          },
+          {
+            "gold": "moyenne",
+            "predicted": "moyenne",
+            "count": 21
+          }
+        ]
+      },
+      "sarcasm": {
+        "accuracy": 1.0,
+        "macro_f1": 1.0,
+        "per_label": {
+          "false": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 95
+          },
+          "true": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 5
+          }
+        },
+        "confusion": [
+          {
+            "gold": "false",
+            "predicted": "false",
+            "count": 95
+          },
+          {
+            "gold": "true",
+            "predicted": "true",
+            "count": 5
+          }
+        ]
+      },
+      "language": {
+        "accuracy": 1.0,
+        "macro_f1": 1.0,
+        "per_label": {
+          "anglais": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 1
+          },
+          "arabe_msa": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 35
+          },
+          "darija_arabe": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 47
+          },
+          "darija_arabizi": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 2
+          },
+          "francais": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 11
+          },
+          "mixte": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 4
+          }
+        },
+        "confusion": [
+          {
+            "gold": "anglais",
+            "predicted": "anglais",
+            "count": 1
+          },
+          {
+            "gold": "arabe_msa",
+            "predicted": "arabe_msa",
+            "count": 35
+          },
+          {
+            "gold": "darija_arabe",
+            "predicted": "darija_arabe",
+            "count": 47
+          },
+          {
+            "gold": "darija_arabizi",
+            "predicted": "darija_arabizi",
+            "count": 2
+          },
+          {
+            "gold": "francais",
+            "predicted": "francais",
+            "count": 11
+          },
+          {
+            "gold": "mixte",
+            "predicted": "mixte",
+            "count": 4
+          }
+        ]
+      },
+      "actionable": {
+        "accuracy": 1.0,
+        "macro_f1": 1.0,
+        "per_label": {
+          "false": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 43
+          },
+          "true": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 57
+          }
+        },
+        "confusion": [
+          {
+            "gold": "false",
+            "predicted": "false",
+            "count": 43
+          },
+          {
+            "gold": "true",
+            "predicted": "true",
+            "count": 57
+          }
+        ]
+      },
+      "action_queue": {
+        "accuracy": 1.0,
+        "macro_f1": 1.0,
+        "per_label": {
+          "aucune": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 43
+          },
+          "communication": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 5
+          },
+          "digital": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 6
+          },
+          "direction": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 6
+          },
+          "juridique_conformite": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 1
+          },
+          "logistique": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 4
+          },
+          "operations": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 9
+          },
+          "pricing": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 2
+          },
+          "produit": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 6
+          },
+          "rh": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 2
+          },
+          "securite_qualite": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 4
+          },
+          "service_client": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 10
+          },
+          "ventes": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 2
+          }
+        },
+        "confusion": [
+          {
+            "gold": "aucune",
+            "predicted": "aucune",
+            "count": 43
+          },
+          {
+            "gold": "communication",
+            "predicted": "communication",
+            "count": 5
+          },
+          {
+            "gold": "digital",
+            "predicted": "digital",
+            "count": 6
+          },
+          {
+            "gold": "direction",
+            "predicted": "direction",
+            "count": 6
+          },
+          {
+            "gold": "juridique_conformite",
+            "predicted": "juridique_conformite",
+            "count": 1
+          },
+          {
+            "gold": "logistique",
+            "predicted": "logistique",
+            "count": 4
+          },
+          {
+            "gold": "operations",
+            "predicted": "operations",
+            "count": 9
+          },
+          {
+            "gold": "pricing",
+            "predicted": "pricing",
+            "count": 2
+          },
+          {
+            "gold": "produit",
+            "predicted": "produit",
+            "count": 6
+          },
+          {
+            "gold": "rh",
+            "predicted": "rh",
+            "count": 2
+          },
+          {
+            "gold": "securite_qualite",
+            "predicted": "securite_qualite",
+            "count": 4
+          },
+          {
+            "gold": "service_client",
+            "predicted": "service_client",
+            "count": 10
+          },
+          {
+            "gold": "ventes",
+            "predicted": "ventes",
+            "count": 2
+          }
+        ]
+      },
+      "action_priority": {
+        "accuracy": 1.0,
+        "macro_f1": 1.0,
+        "per_label": {
+          "critique": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 2
+          },
+          "elevee": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 6
+          },
+          "faible": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 54
+          },
+          "moyenne": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 38
+          }
+        },
+        "confusion": [
+          {
+            "gold": "critique",
+            "predicted": "critique",
+            "count": 2
+          },
+          {
+            "gold": "elevee",
+            "predicted": "elevee",
+            "count": 6
+          },
+          {
+            "gold": "faible",
+            "predicted": "faible",
+            "count": 54
+          },
+          {
+            "gold": "moyenne",
+            "predicted": "moyenne",
+            "count": 38
+          }
+        ]
+      }
+    },
+    "multilabel": {
+      "intents": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "exact_match": 1.0,
+        "true_positive": 177,
+        "false_positive": 0,
+        "false_negative": 0,
+        "gold_labels": 177,
+        "predicted_labels": 177
+      },
+      "aspects_family_attribute_sentiment": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "exact_match": 1.0,
+        "true_positive": 101,
+        "false_positive": 0,
+        "false_negative": 0,
+        "gold_labels": 101,
+        "predicted_labels": 101
+      },
+      "alerts_type_severity": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "exact_match": 1.0,
+        "true_positive": 10,
+        "false_positive": 0,
+        "false_negative": 0,
+        "gold_labels": 10,
+        "predicted_labels": 10
+      },
+      "entities_type_name": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "exact_match": 1.0,
+        "true_positive": 74,
+        "false_positive": 0,
+        "false_negative": 0,
+        "gold_labels": 74,
+        "predicted_labels": 74
+      }
+    }
+  },
+  "end_to_end": {
+    "records_scored": 100,
+    "categorical": {
+      "is_exploitable": {
+        "accuracy": 1.0,
+        "macro_f1": 1.0,
+        "per_label": {
+          "false": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 5
+          },
+          "true": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 95
+          }
+        },
+        "confusion": [
+          {
+            "gold": "false",
+            "predicted": "false",
+            "count": 5
+          },
+          {
+            "gold": "true",
+            "predicted": "true",
+            "count": 95
+          }
+        ]
+      },
+      "business_relevance": {
+        "accuracy": 1.0,
+        "macro_f1": 1.0,
+        "per_label": {
+          "aucune": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 5
+          },
+          "directe": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 68
+          },
+          "indirecte": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 27
+          }
+        },
+        "confusion": [
+          {
+            "gold": "aucune",
+            "predicted": "aucune",
+            "count": 5
+          },
+          {
+            "gold": "directe",
+            "predicted": "directe",
+            "count": 68
+          },
+          {
+            "gold": "indirecte",
+            "predicted": "indirecte",
+            "count": 27
+          }
+        ]
+      },
+      "sentiment": {
+        "accuracy": 1.0,
+        "macro_f1": 1.0,
+        "per_label": {
+          "mixte": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 2
+          },
+          "negatif": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 46
+          },
+          "neutre": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 31
+          },
+          "positif": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 21
+          }
+        },
+        "confusion": [
+          {
+            "gold": "mixte",
+            "predicted": "mixte",
+            "count": 2
+          },
+          {
+            "gold": "negatif",
+            "predicted": "negatif",
+            "count": 46
+          },
+          {
+            "gold": "neutre",
+            "predicted": "neutre",
+            "count": 31
+          },
+          {
+            "gold": "positif",
+            "predicted": "positif",
+            "count": 21
+          }
+        ]
+      },
+      "sentiment_intensity": {
+        "accuracy": 1.0,
+        "macro_f1": 1.0,
+        "per_label": {
+          "faible": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 28
+          },
+          "forte": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 51
+          },
+          "moyenne": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 21
+          }
+        },
+        "confusion": [
+          {
+            "gold": "faible",
+            "predicted": "faible",
+            "count": 28
+          },
+          {
+            "gold": "forte",
+            "predicted": "forte",
+            "count": 51
+          },
+          {
+            "gold": "moyenne",
+            "predicted": "moyenne",
+            "count": 21
+          }
+        ]
+      },
+      "sarcasm": {
+        "accuracy": 1.0,
+        "macro_f1": 1.0,
+        "per_label": {
+          "false": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 95
+          },
+          "true": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 5
+          }
+        },
+        "confusion": [
+          {
+            "gold": "false",
+            "predicted": "false",
+            "count": 95
+          },
+          {
+            "gold": "true",
+            "predicted": "true",
+            "count": 5
+          }
+        ]
+      },
+      "language": {
+        "accuracy": 1.0,
+        "macro_f1": 1.0,
+        "per_label": {
+          "anglais": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 1
+          },
+          "arabe_msa": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 35
+          },
+          "darija_arabe": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 47
+          },
+          "darija_arabizi": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 2
+          },
+          "francais": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 11
+          },
+          "mixte": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 4
+          }
+        },
+        "confusion": [
+          {
+            "gold": "anglais",
+            "predicted": "anglais",
+            "count": 1
+          },
+          {
+            "gold": "arabe_msa",
+            "predicted": "arabe_msa",
+            "count": 35
+          },
+          {
+            "gold": "darija_arabe",
+            "predicted": "darija_arabe",
+            "count": 47
+          },
+          {
+            "gold": "darija_arabizi",
+            "predicted": "darija_arabizi",
+            "count": 2
+          },
+          {
+            "gold": "francais",
+            "predicted": "francais",
+            "count": 11
+          },
+          {
+            "gold": "mixte",
+            "predicted": "mixte",
+            "count": 4
+          }
+        ]
+      },
+      "actionable": {
+        "accuracy": 1.0,
+        "macro_f1": 1.0,
+        "per_label": {
+          "false": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 43
+          },
+          "true": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 57
+          }
+        },
+        "confusion": [
+          {
+            "gold": "false",
+            "predicted": "false",
+            "count": 43
+          },
+          {
+            "gold": "true",
+            "predicted": "true",
+            "count": 57
+          }
+        ]
+      },
+      "action_queue": {
+        "accuracy": 1.0,
+        "macro_f1": 1.0,
+        "per_label": {
+          "aucune": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 43
+          },
+          "communication": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 5
+          },
+          "digital": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 6
+          },
+          "direction": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 6
+          },
+          "juridique_conformite": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 1
+          },
+          "logistique": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 4
+          },
+          "operations": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 9
+          },
+          "pricing": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 2
+          },
+          "produit": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 6
+          },
+          "rh": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 2
+          },
+          "securite_qualite": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 4
+          },
+          "service_client": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 10
+          },
+          "ventes": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 2
+          }
+        },
+        "confusion": [
+          {
+            "gold": "aucune",
+            "predicted": "aucune",
+            "count": 43
+          },
+          {
+            "gold": "communication",
+            "predicted": "communication",
+            "count": 5
+          },
+          {
+            "gold": "digital",
+            "predicted": "digital",
+            "count": 6
+          },
+          {
+            "gold": "direction",
+            "predicted": "direction",
+            "count": 6
+          },
+          {
+            "gold": "juridique_conformite",
+            "predicted": "juridique_conformite",
+            "count": 1
+          },
+          {
+            "gold": "logistique",
+            "predicted": "logistique",
+            "count": 4
+          },
+          {
+            "gold": "operations",
+            "predicted": "operations",
+            "count": 9
+          },
+          {
+            "gold": "pricing",
+            "predicted": "pricing",
+            "count": 2
+          },
+          {
+            "gold": "produit",
+            "predicted": "produit",
+            "count": 6
+          },
+          {
+            "gold": "rh",
+            "predicted": "rh",
+            "count": 2
+          },
+          {
+            "gold": "securite_qualite",
+            "predicted": "securite_qualite",
+            "count": 4
+          },
+          {
+            "gold": "service_client",
+            "predicted": "service_client",
+            "count": 10
+          },
+          {
+            "gold": "ventes",
+            "predicted": "ventes",
+            "count": 2
+          }
+        ]
+      },
+      "action_priority": {
+        "accuracy": 1.0,
+        "macro_f1": 1.0,
+        "per_label": {
+          "critique": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 2
+          },
+          "elevee": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 6
+          },
+          "faible": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 54
+          },
+          "moyenne": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0,
+            "support": 38
+          }
+        },
+        "confusion": [
+          {
+            "gold": "critique",
+            "predicted": "critique",
+            "count": 2
+          },
+          {
+            "gold": "elevee",
+            "predicted": "elevee",
+            "count": 6
+          },
+          {
+            "gold": "faible",
+            "predicted": "faible",
+            "count": 54
+          },
+          {
+            "gold": "moyenne",
+            "predicted": "moyenne",
+            "count": 38
+          }
+        ]
+      }
+    },
+    "multilabel": {
+      "intents": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "exact_match": 1.0,
+        "true_positive": 177,
+        "false_positive": 0,
+        "false_negative": 0,
+        "gold_labels": 177,
+        "predicted_labels": 177
+      },
+      "aspects_family_attribute_sentiment": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "exact_match": 1.0,
+        "true_positive": 101,
+        "false_positive": 0,
+        "false_negative": 0,
+        "gold_labels": 101,
+        "predicted_labels": 101
+      },
+      "alerts_type_severity": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "exact_match": 1.0,
+        "true_positive": 10,
+        "false_positive": 0,
+        "false_negative": 0,
+        "gold_labels": 10,
+        "predicted_labels": 10
+      },
+      "entities_type_name": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "exact_match": 1.0,
+        "true_positive": 74,
+        "false_positive": 0,
+        "false_negative": 0,
+        "gold_labels": 74,
+        "predicted_labels": 74
+      }
+    }
+  },
+  "evidence_grounding_rate": 1.0,
+  "evidence_spans": {
+    "grounded": 215,
+    "total": 215
+  }
+}

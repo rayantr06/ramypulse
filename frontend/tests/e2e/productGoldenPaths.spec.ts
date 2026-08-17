@@ -77,6 +77,49 @@ const watchlistMetrics = {
   quick_insight: "La baisse est concentrée sur le goût à Oran.",
 };
 
+const smartWatchAnalysis = {
+  tenant_setup: { client_name: "Tenant Ready", client_slug: "tenant-ready", country: "DZ" },
+  suggested_sources: [
+    {
+      type: "public_page",
+      label: "Page Ramy",
+      url: "https://example.test/ramy",
+      channel: "public_url_seed",
+      confidence: 0.9,
+      status: "ready",
+      reason: "Page publique pertinente.",
+    },
+  ],
+  required_credentials: [],
+  recommended_channels: [
+    { channel: "web_search", enabled_by_default: true, reason: "Couverture web." },
+    { channel: "public_url_seed", enabled_by_default: true, reason: "Page indiquée." },
+    { channel: "google_maps", enabled_by_default: true, reason: "Avis locaux." },
+  ],
+  suggested_watchlists: [
+    {
+      name: "NSS Oran",
+      description: "Surveille le goût à Oran.",
+      scope_type: "watch_seed",
+      role: "seed",
+      filters: {
+        keywords: ["ramy citron", "avis ramy"],
+        excluded_keywords: ["emploi"],
+        languages: ["fr", "ar"],
+        regions: ["Oran"],
+        period_days: 7,
+        min_volume: 10,
+      },
+      enabled_by_default: true,
+      reason: "Périmètre principal.",
+    },
+  ],
+  suggested_alert_profiles: [],
+  deferred_agent_config: [],
+  warnings: [],
+  fallback_used: false,
+};
+
 const recommendationProviders = [
   {
     provider: "google_gemini",
@@ -105,6 +148,30 @@ const recommendationList = [
     status: "active",
   },
 ];
+
+async function seedReadyTenant(page: Page, clientId = "tenant-ready") {
+  await page.addInitScript((tenant) => {
+    localStorage.clear();
+    localStorage.setItem("ramypulse.activeTenantId", tenant);
+  }, clientId);
+
+  await page.route("**/api/dashboard/summary", async (route) => {
+    await route.fulfill({
+      json: {
+        nss_global: 24,
+        total_mentions: 41,
+        positive_mentions: 20,
+        neutral_mentions: 10,
+        negative_mentions: 11,
+        active_alerts: 2,
+        active_watchlists: 3,
+        recommendation_count: 1,
+        top_aspect: "gout",
+        top_channel: "facebook",
+      },
+    });
+  });
+}
 
 async function mockExplorerApi(page: Page) {
   await page.route("**/api/explorer/search**", async (route) => {
@@ -140,6 +207,7 @@ async function mockRecommendationsApi(page: Page) {
 }
 
 test("Explorer search shows consultable cited sources", async ({ page }) => {
+  await seedReadyTenant(page);
   await mockExplorerApi(page);
   await page.goto("/#/explorateur");
   await page.getByTestId("search-input").fill("Que pensent les clients du goût ?");
@@ -155,8 +223,13 @@ test("Explorer search shows consultable cited sources", async ({ page }) => {
 
 test("Watchlists create flow submits backend-aligned filters", async ({ page }) => {
   let postedPayload: unknown = null;
+  let postedRunPayload: unknown = null;
 
+  await seedReadyTenant(page);
   await mockWatchlistsApi(page);
+  await page.route("**/api/onboarding/analyze", async (route) => {
+    await route.fulfill({ json: smartWatchAnalysis });
+  });
   await page.route("**/api/watchlists", async (route) => {
     if (route.request().method() === "POST") {
       postedPayload = route.request().postDataJSON();
@@ -168,38 +241,50 @@ test("Watchlists create flow submits backend-aligned filters", async ({ page }) 
   await page.route("**/api/watchlists/watch_new_1/metrics", async (route) => {
     await route.fulfill({ json: watchlistMetrics });
   });
+  await page.route("**/api/watch-runs", async (route) => {
+    postedRunPayload = route.request().postDataJSON();
+    await route.fulfill({ status: 202, json: { run_id: "run_new_1" } });
+  });
 
   await page.goto("/#/watchlists");
   await page.getByTestId("btn-create-watchlist").click();
-  await page.getByTestId("input-watchlist-name").fill("NSS Oran");
-  await page.getByPlaceholder("Description (optionnel)").fill("Surveille Oran");
-  await page.locator("select").nth(0).selectOption("region");
-  await page.getByPlaceholder("Produit").fill("ramy_citron");
-  await page.getByPlaceholder("Wilaya").fill("oran");
-  await page.getByPlaceholder("Canal").fill("google_maps");
-  await page.getByPlaceholder("Aspect").fill("gout");
-  await page.getByPlaceholder("Jours").fill("7");
-  await page.getByPlaceholder("Volume min.").fill("10");
+  await page
+    .getByTestId("watch-intent-input")
+    .fill("Surveiller les avis sur le goût de Ramy à Oran");
+  await page.getByTestId("btn-prepare-watch").click();
+  await expect(page.getByTestId("smart-watch-review")).toBeVisible();
   await page.getByTestId("btn-submit-watchlist").click();
 
   await expect.poll(() => postedPayload).not.toBeNull();
   expect(postedPayload).toEqual({
     name: "NSS Oran",
-    description: "Surveille Oran",
-    scope_type: "region",
+    description: "Surveiller les avis sur le goût de Ramy à Oran",
+    scope_type: "watch_seed",
     filters: {
-      channel: "google_maps",
-      aspect: "gout",
-      wilaya: "oran",
-      product: "ramy_citron",
-      sentiment: null,
+      brand_name: "Tenant Ready",
+      product_name: "Surveiller les avis sur le goût de Ramy à Oran",
+      keywords: ["ramy citron", "avis ramy"],
+      seed_urls: ["https://example.test/ramy"],
+      competitors: [],
+      channels: ["web_search", "public_url_seed", "google_maps"],
+      languages: ["fr", "ar"],
+      hashtags: [],
+      subject_type: "keyword",
+      excluded_keywords: ["emploi"],
+      regions: ["Oran"],
       period_days: 7,
       min_volume: 10,
     },
   });
+  await expect.poll(() => postedRunPayload).not.toBeNull();
+  expect(postedRunPayload).toEqual({
+    watchlist_id: "watch_new_1",
+    requested_channels: ["web_search", "public_url_seed", "google_maps"],
+  });
 });
 
 test("Recommendations AI shortcut routes to Explorer", async ({ page }) => {
+  await seedReadyTenant(page);
   await mockRecommendationsApi(page);
   await page.goto("/#/recommandations");
   await page.getByTestId("recommendations-ai-shortcut").click();

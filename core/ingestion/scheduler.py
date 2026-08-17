@@ -2,16 +2,24 @@
 
 from __future__ import annotations
 
+import importlib
 import sqlite3
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 
-from config import DEFAULT_CLIENT_ID, SQLITE_DB_PATH
+import config
 from core.ingestion.orchestrator import IngestionOrchestrator
 
 
+def _config_module():
+    """Retourne le module config courant, même après reload dans les tests."""
+    return importlib.import_module("config")
+
+
 def _get_connection(db_path=None) -> sqlite3.Connection:
-    connection = sqlite3.connect(str(db_path or SQLITE_DB_PATH))
+    cfg = _config_module()
+    resolved_db_path = db_path or getattr(cfg, "SQLITE_DB_PATH", config.SQLITE_DB_PATH)
+    connection = sqlite3.connect(str(resolved_db_path))
     connection.row_factory = sqlite3.Row
     return connection
 
@@ -62,10 +70,16 @@ def _group_sources(rows: list[sqlite3.Row]) -> list[tuple[str, list[sqlite3.Row]
 def run_due_syncs(
     *,
     now: str | datetime | None = None,
-    client_id: str = DEFAULT_CLIENT_ID,
+    client_id: str | None = None,
     db_path=None,
 ) -> dict:
     """Exécute les synchronisations dues en respectant priorité et fallback."""
+    cfg = _config_module()
+    effective_client_id = (
+        str(client_id).strip()
+        if isinstance(client_id, str) and str(client_id).strip()
+        else getattr(cfg, "DEFAULT_CLIENT_ID", config.DEFAULT_CLIENT_ID)
+    )
     current_time = (
         _parse_iso_datetime(now)
         if isinstance(now, str)
@@ -82,7 +96,7 @@ def run_due_syncs(
             WHERE client_id = ? AND is_active = 1
             ORDER BY coverage_key, source_priority, updated_at
             """,
-            [client_id],
+            [effective_client_id],
         ).fetchall()
 
     due_rows = [row for row in rows if _is_due(row, current_time)]
@@ -100,7 +114,7 @@ def run_due_syncs(
                 result = orchestrator.run_source_sync(
                     source_id=row["source_id"],
                     run_mode="scheduled",
-                    client_id=client_id,
+                    client_id=effective_client_id,
                 )
                 attempt = {
                     "source_id": row["source_id"],

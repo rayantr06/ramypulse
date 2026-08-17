@@ -1,0 +1,62 @@
+{
+  "version": "0.2",
+  "seed": 20260730,
+  "total": 305,
+  "batches": 13,
+  "batch_size": 25,
+  "strates": {
+    "organisation_alerte_probable": 72,
+    "organisation_general": 57,
+    "organisation_arabizi": 11,
+    "controle_avant_apres": 100,
+    "espace_public_pool": 35,
+    "espace_public_arabizi": 30
+  },
+  "origines": {
+    "pool": 175,
+    "gold_v0.1": 100,
+    "mendeley_dev": 30
+  },
+  "scopes": {
+    "organisation": 181,
+    "espace_public": 124
+  },
+  "marques": {
+    "Hamoud Boualem": 94,
+    "Ramy": 52,
+    "YaghurtPlus": 35
+  },
+  "mendeley_dev_promus_en_gold": [
+    "dz_sentiment_mendeley_45k:a5c0df2920d8b749e6b0",
+    "dz_sentiment_mendeley_45k:cbb63d5a13cc59f6f4bc",
+    "dz_sentiment_mendeley_45k:b4cd655a0c27714311c3",
+    "dz_sentiment_mendeley_45k:c12fb0e19e9d57e3d842",
+    "dz_sentiment_mendeley_45k:12104bed9883ad3951bd",
+    "dz_sentiment_mendeley_45k:591ea76e1a7c46054475",
+    "dz_sentiment_mendeley_45k:dfcaa04f9b4e3a023ba9",
+    "dz_sentiment_mendeley_45k:15e6960f975c5a35fc00",
+    "dz_sentiment_mendeley_45k:633c9f750fee2fe1aa69",
+    "dz_sentiment_mendeley_45k:fbe11201e70a6092aa1a",
+    "dz_sentiment_mendeley_45k:75fe6806fa114a9206b4",
+    "dz_sentiment_mendeley_45k:96362e6a54630e74aa01",
+    "dz_sentiment_mendeley_45k:29e3ef3856204c640b3f",
+    "dz_sentiment_mendeley_45k:d2b4b8308df27bb43ffd",
+    "dz_sentiment_mendeley_45k:d1bca6a0ef76bc034296",
+    "dz_sentiment_mendeley_45k:1ed99c9970abf598afd5",
+    "dz_sentiment_mendeley_45k:86ca79d8f5f58de840ae",
+    "dz_sentiment_mendeley_45k:89996d340567e1fdc023",
+    "dz_sentiment_mendeley_45k:61b7045afb16c0b77219",
+    "dz_sentiment_mendeley_45k:dc7dc83f42e4f652a848",
+    "dz_sentiment_mendeley_45k:f6988bf3446661369a1a",
+    "dz_sentiment_mendeley_45k:7092c59230e25a3f5a3d",
+    "dz_sentiment_mendeley_45k:e4c43777ddb40aeb049f",
+    "dz_sentiment_mendeley_45k:3c052366716aea8e4aed",
+    "dz_sentiment_mendeley_45k:3221d3a746fa46293ad4",
+    "dz_sentiment_mendeley_45k:9a2f3db276fe051df8dc",
+    "dz_sentiment_mendeley_45k:6310b8c9fa8e64773333",
+    "dz_sentiment_mendeley_45k:a2010710696a9aea2314",
+    "dz_sentiment_mendeley_45k:a8ce5a49d13f61060f38",
+    "dz_sentiment_mendeley_45k:98d3395df499459e17c2"
+  ],
+  "note_fuite": "Les record_id Mendeley ci-dessus proviennent du split DEV et doivent etre retires de la vue DEV lors du prochain passage de prepare_slm_v2_corpora.py."
+}

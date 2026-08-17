@@ -24,6 +24,7 @@ class TestInstagramDedup:
             platform="instagram",
             account_id="17841400123456789",
             access_token="dedup_token",
+            client_id="test-instagram-dedup",
         )
 
         orchestrator = IngestionOrchestrator()

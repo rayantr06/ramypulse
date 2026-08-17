@@ -1,0 +1,36 @@
+{
+  "version": "0.3.0",
+  "date": "2026-07-30",
+  "contrat": "business_comment_annotation_v0.3.schema.json",
+  "total_campagne": 305,
+  "gold": 238,
+  "arbitrage_requis": 67,
+  "invalides": 0,
+  "paliers": {
+    "accord_A3_C": 147,
+    "repasse_R1": 61,
+    "valide_humain": 29,
+    "correction_humaine": 1
+  },
+  "langues": {
+    "arabe_msa": 73,
+    "darija_arabe": 102,
+    "darija_arabizi": 39,
+    "francais": 23,
+    "anglais": 1
+  },
+  "sentiment": {
+    "positif": 54,
+    "negatif": 82,
+    "neutre": 101,
+    "mixte": 1
+  },
+  "alertes": 13,
+  "sha256": "28249f77b839f54532254e7d0ff5a09f5eb72b5e1ec87523e070f20e0e73af12",
+  "avertissements": [
+    "Les paliers ne sont pas equivalents. accord_A3_C repose sur un accord machine-machine dont le taux d acceptation humain mesure est de 90 pourcent.",
+    "Les 41 items arabizi proviennent de la repasse R1, avec etape de traduction imposee.",
+    "harcelement_discrimination n est jamais exercee : ses seuls candidats sont en scope espace_public ou la regle D1 interdit toute alerte.",
+    "Les alertes restent statistiquement non evaluables : ~16 evenements distincts."
+  ]
+}

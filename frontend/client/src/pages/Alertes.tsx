@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
+import { PageHeader } from "@/components/PageHeader";
 import { EmptyTenantState } from "@/components/EmptyTenantState";
 import { apiRequest } from "@/lib/queryClient";
 import { mapAlert } from "@/lib/apiMappings";
@@ -139,17 +140,17 @@ function mapAlertView(value: unknown): AlertView {
 
 function StatusBadge({ status }: { status: StatusFilter }) {
   const map: Record<StatusFilter, string> = {
-    NOUVEAU: "bg-blue-500/10 text-blue-400",
-    RECONNU: "bg-yellow-500/10 text-yellow-400",
-    RESOLU: "bg-green-500/10 text-green-400",
-    ECARTE: "bg-gray-500/10 text-gray-400",
+    NOUVEAU: "bg-monitor-container text-monitor",
+    RECONNU: "bg-warning/10 text-warning",
+    RESOLU: "bg-action-container text-action",
+    ECARTE: "bg-surface-container-high text-on-surface-variant",
   };
   return (
     <span
       className={`text-[10px] font-bold px-2 py-1 rounded uppercase flex items-center gap-1.5 ${map[status]}`}
     >
       {status === "NOUVEAU" ? (
-        <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse"></span>
+        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-monitor"></span>
       ) : status === "RESOLU" ? (
         <span className="material-symbols-outlined text-[12px]">check</span>
       ) : (
@@ -162,29 +163,26 @@ function StatusBadge({ status }: { status: StatusFilter }) {
 
 function SeverityDot({ severity }: { severity: SeverityFilter }) {
   const map: Record<SeverityFilter, string> = {
-    CRITIQUE: "bg-error shadow-[0_0_8px_rgba(255,180,171,0.5)]",
-    HAUTE: "bg-primary-container",
-    MOYENNE: "bg-amber-500/20 text-amber-400 border border-amber-400/40",
-    BASSE: "bg-slate-500/20 text-slate-400 border border-slate-400/40",
+    CRITIQUE: "bg-error",
+    HAUTE: "bg-warning",
+    MOYENNE: "border border-warning/45 bg-warning/35",
+    BASSE: "border border-outline bg-surface-container-highest",
   };
   return <span className={`w-3 h-3 rounded-full ${map[severity]}`}></span>;
 }
 
-function severityBorderClass(severity: SeverityFilter): string {
-  const map: Record<SeverityFilter, string> = {
-    CRITIQUE: "border-error",
-    HAUTE: "border-primary-container",
-    MOYENNE: "border-amber-400",
-    BASSE: "border-slate-400",
-  };
-  return map[severity];
+function severityAccentClass(severity: SeverityFilter): string {
+  if (severity === "CRITIQUE") return "bg-error";
+  if (severity === "HAUTE") return "bg-warning";
+  if (severity === "MOYENNE") return "bg-warning/45";
+  return "bg-outline";
 }
 
-function severityGradient(severity: SeverityFilter): string {
-  if (severity === "CRITIQUE") return "from-error to-error-container";
-  if (severity === "HAUTE") return "from-primary-container to-primary";
-  if (severity === "MOYENNE") return "from-amber-500/80 to-amber-400/40";
-  return "from-slate-500/80 to-slate-400/40";
+function severityToneClass(severity: SeverityFilter): string {
+  if (severity === "CRITIQUE") return "bg-error-container text-error";
+  if (severity === "HAUTE") return "bg-warning/10 text-warning";
+  if (severity === "MOYENNE") return "bg-warning/10 text-warning";
+  return "bg-surface-container-high text-on-surface-variant";
 }
 
 export default function Alertes() {
@@ -279,28 +277,26 @@ export default function Alertes() {
       avatarSrc={STITCH_AVATARS.alertes.src}
       avatarAlt={STITCH_AVATARS.alertes.alt}
     >
-      <div className="p-8 min-h-[calc(100vh-64px)]">
-        <div className="flex justify-between items-end mb-8">
-          <div>
-            <span className="text-on-surface-variant text-[10px] uppercase tracking-[0.2em] mb-2 block font-bold">
-              Surveillance Active
-            </span>
-            <h1 className="text-3xl font-headline font-extrabold tracking-tight text-on-surface">
-              Console d'Alertes
-            </h1>
+      <div className="mx-auto min-h-[calc(100vh-64px)] w-full max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+        <PageHeader
+          eyebrow="Risque détecté"
+          tone="risk"
+          title="Alertes à traiter"
+          description="Chaque alerte signale un changement anormal dans les avis clients. Sélectionnez-la pour comprendre le problème, puis reconnaissez-la ou résolvez-la."
+          actions={
+            <div className="flex items-center gap-2 rounded-lg border border-outline-variant/60 bg-surface-container px-3 py-2 text-xs text-on-surface-variant">
+            <span className="h-2 w-2 animate-pulse rounded-full bg-error"></span>
+            {alertsList.filter((alert) => alert.status !== "RESOLU" && alert.status !== "ECARTE").length} alertes actives
           </div>
-          <div className="flex items-center gap-2 text-xs text-on-surface-variant">
-            <span className="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>
-            Système en ligne : {alertsList.filter((alert) => alert.status !== "RESOLU" && alert.status !== "ECARTE").length} alertes actives
-          </div>
-        </div>
+          }
+        />
 
-        <section className="bg-surface-container rounded-sm p-4 mb-8 flex flex-wrap items-center gap-6 border-l-2 border-primary">
-          <div className="flex items-center gap-3">
+        <section className="mt-8 mb-8 flex flex-wrap items-center gap-6 rounded-xl border border-outline-variant/60 bg-surface-container p-4">
+          <div className="flex w-full flex-col items-start gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-3">
             <span className="text-[10px] font-bold uppercase text-on-surface-variant tracking-wider">
               Statut
             </span>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {(["NOUVEAU", "RECONNU", "RESOLU", "ECARTE"] as StatusFilter[]).map((status) => (
                 <button
                   key={status}
@@ -317,17 +313,17 @@ export default function Alertes() {
               ))}
             </div>
           </div>
-          <div className="w-px h-6 bg-outline-variant/30"></div>
-          <div className="flex items-center gap-3">
+          <div className="hidden h-6 w-px bg-outline-variant/30 sm:block"></div>
+          <div className="flex w-full flex-col items-start gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-3">
             <span className="text-[10px] font-bold uppercase text-on-surface-variant tracking-wider">
               Sévérité
             </span>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {[
                 { value: "CRITIQUE" as SeverityFilter, dotClass: "bg-error" },
-                { value: "HAUTE" as SeverityFilter, dotClass: "bg-primary-container" },
-                { value: "MOYENNE" as SeverityFilter, dotClass: "bg-amber-400" },
-                { value: "BASSE" as SeverityFilter, dotClass: "bg-slate-400" },
+                { value: "HAUTE" as SeverityFilter, dotClass: "bg-warning" },
+                { value: "MOYENNE" as SeverityFilter, dotClass: "bg-warning/45" },
+                { value: "BASSE" as SeverityFilter, dotClass: "bg-outline" },
               ].map(({ value, dotClass }) => (
                 <button
                   key={value}
@@ -366,7 +362,7 @@ export default function Alertes() {
                   onClick={() => setSelectedId(alert.id)}
                   className={`p-5 rounded-sm cursor-pointer transition-all duration-200 ${
                     selectedAlert?.id === alert.id
-                      ? `bg-surface-container-high border-l-4 ${severityBorderClass(alert.severity)} ring-1 ring-white/10`
+                      ? "border border-monitor/35 bg-monitor-container/35 ring-1 ring-monitor/10"
                       : "bg-surface-container-low hover:bg-surface-container"
                   } ${alert.status === "RESOLU" || alert.status === "ECARTE" ? "opacity-60" : ""}`}
                   data-testid={`alert-item-${alert.id}`}
@@ -409,40 +405,36 @@ export default function Alertes() {
           <div className="lg:col-span-7">
             {selectedAlert ? (
               <section className="bg-surface-container-low rounded-sm sticky top-24 overflow-hidden">
-                <div className={`h-1 bg-gradient-to-r ${severityGradient(selectedAlert.severity)}`}></div>
+                <div className={`h-1 ${severityAccentClass(selectedAlert.severity)}`}></div>
                 <div className="p-8">
-                  <div className="flex items-center gap-4 mb-6">
+                  <div className="mb-6 flex items-start gap-4">
                     <div
-                      className={`w-12 h-12 rounded-sm flex items-center justify-center ${
-                        selectedAlert.severity === "CRITIQUE"
-                          ? "bg-error/10"
-                          : "bg-primary/10"
-                      }`}
+                      className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${severityToneClass(selectedAlert.severity)}`}
                     >
-                      <span
-                        className={`material-symbols-outlined text-2xl ${
-                          selectedAlert.severity === "CRITIQUE"
-                            ? "text-error"
-                            : "text-primary"
-                        }`}
-                      >
+                      <span className="material-symbols-outlined text-2xl">
                         warning
                       </span>
                     </div>
-                    <div>
-                      <h2 className="text-xl font-headline font-extrabold tracking-tight">
-                        Détails de l'Alerte
+                    <div className="min-w-0">
+                      <p className={`mb-2 inline-flex rounded-lg px-2.5 py-1 text-[10px] font-bold ${severityToneClass(selectedAlert.severity)}`}>
+                        Alerte {SEVERITY_LABELS[selectedAlert.severity].toLowerCase()}
+                      </p>
+                      <h2 className="font-headline text-xl font-extrabold tracking-tight">
+                        {selectedAlert.title}
                       </h2>
-                      <p className="text-on-surface-variant text-xs">
-                        ID: {selectedAlert.id} | Sévérité: {selectedAlert.severity}
+                      <p className="mt-1 text-xs text-on-surface-variant">
+                        Détectée le {selectedAlert.detected_at}
                       </p>
                     </div>
                   </div>
                   <div className="space-y-6">
                     <div>
-                      <h4 className="text-[10px] font-bold uppercase tracking-widest text-primary mb-3">
-                        Analyse Complète
-                      </h4>
+                      <h3 className="mb-2 font-headline text-sm font-bold text-on-surface">
+                        Ce qui a été détecté
+                      </h3>
+                      <p className="mb-3 text-[10px] text-on-surface-variant">
+                        Résumé du changement anormal observé dans les données.
+                      </p>
                       <p className="text-on-surface leading-relaxed text-sm">
                         {selectedAlert.description}
                       </p>
@@ -450,9 +442,10 @@ export default function Alertes() {
 
                     {selectedAlert.social_excerpts.length > 0 ? (
                       <div className="bg-surface-container-lowest p-5 rounded-sm border border-outline-variant/10">
-                        <h4 className="text-[10px] font-bold uppercase tracking-widest text-tertiary mb-4">
-                          Extraits Sociaux (Temps Réel)
+                        <h4 className="mb-1 font-headline text-sm font-bold text-on-surface">
+                          Avis à l’origine de l’alerte
                         </h4>
+                        <p className="mb-4 text-[10px] text-on-surface-variant">Extraits consultables pour vérifier l’interprétation.</p>
                         <div className="space-y-4">
                           {selectedAlert.social_excerpts.map((excerpt, index) => (
                             <div key={`${excerpt.author}-${index}`} className="flex gap-3">
@@ -490,14 +483,14 @@ export default function Alertes() {
                         <span className="text-[10px] text-on-surface-variant uppercase block mb-1">
                           Impact Estimé
                         </span>
-                        <span className="text-sm font-bold flex items-center gap-2 text-tertiary">
+                        <span className="flex items-center gap-2 text-sm font-bold text-insight">
                           <span className="material-symbols-outlined text-sm">analytics</span>
                           {selectedAlert.estimated_impact}
                         </span>
                       </div>
                     </div>
 
-                    <div className="flex gap-3 pt-6 border-t border-outline-variant/20">
+                    <div className="flex flex-col gap-3 border-t border-outline-variant/20 pt-6 sm:flex-row">
                       {selectedAlert.status !== "RECONNU" && (
                         <button
                           onClick={() =>
@@ -507,13 +500,13 @@ export default function Alertes() {
                             })
                           }
                           disabled={updateStatusMutation.isPending}
-                          className="flex-1 bg-surface-container-high hover:bg-surface-bright text-on-surface font-bold py-3 px-4 rounded-sm text-xs transition-colors border border-outline-variant/30 uppercase tracking-widest disabled:opacity-50"
+                          className="flex-1 rounded-lg border border-monitor/20 bg-monitor-container px-4 py-3 text-xs font-bold text-monitor transition-colors hover:bg-monitor-container/70 disabled:opacity-50"
                           data-testid="btn-acknowledge"
                         >
                           {updateStatusMutation.isPending ? (
                             <span className="material-symbols-outlined text-sm animate-spin">progress_activity</span>
                           ) : (
-                            "Reconnaître"
+                            "Marquer comme prise en charge"
                           )}
                         </button>
                       )}
@@ -526,13 +519,13 @@ export default function Alertes() {
                             })
                           }
                           disabled={updateStatusMutation.isPending}
-                          className="flex-1 bg-surface-container-high hover:bg-surface-bright text-primary font-bold py-3 px-4 rounded-sm text-xs transition-colors border border-primary/20 uppercase tracking-widest disabled:opacity-50"
+                          className="flex-1 rounded-lg border border-outline-variant bg-surface px-4 py-3 text-xs font-bold text-on-surface-variant transition-colors hover:bg-surface-container disabled:opacity-50"
                           data-testid="btn-dismiss"
                         >
                           {updateStatusMutation.isPending ? (
                             <span className="material-symbols-outlined text-sm animate-spin">progress_activity</span>
                           ) : (
-                            "Écarter"
+                            "Écarter cette alerte"
                           )}
                         </button>
                       )}
@@ -545,13 +538,13 @@ export default function Alertes() {
                             })
                           }
                           disabled={updateStatusMutation.isPending}
-                          className="flex-1 bg-gradient-to-r from-primary to-primary-container text-on-primary-fixed font-bold py-3 px-4 rounded-sm text-xs hover:opacity-90 transition-opacity uppercase tracking-widest disabled:opacity-50"
+                          className="flex-1 rounded-lg bg-action px-4 py-3 text-xs font-bold text-white transition-colors hover:bg-action/90 disabled:opacity-50"
                           data-testid="btn-resolve"
                         >
                           {updateStatusMutation.isPending ? (
                             <span className="material-symbols-outlined text-sm animate-spin">progress_activity</span>
                           ) : (
-                            "Résoudre"
+                            "Marquer comme résolue"
                           )}
                         </button>
                       )}

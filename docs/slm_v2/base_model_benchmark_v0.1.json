@@ -1,0 +1,133 @@
+{
+  "version": "0.1.0",
+  "date": "2026-07-29",
+  "objective": "Choisir le plus petit SLM qui satisfait toutes les portes metier et les SLO sur le materiel final.",
+  "strategy": "edge_first_cpu_only",
+  "primary_candidate": "Qwen/Qwen3.5-0.8B",
+  "candidates": [
+    {
+      "model": "Qwen/Qwen3.5-0.8B",
+      "role": "edge_primary",
+      "license": "Apache-2.0"
+    },
+    {
+      "model": "Qwen/Qwen3-0.6B",
+      "role": "edge_mature_control",
+      "license": "Apache-2.0"
+    },
+    {
+      "model": "LiquidAI/LFM2.5-350M",
+      "role": "extreme_edge_research",
+      "license": "LFM Open License v1.0",
+      "restriction": "commercial_license_review_required"
+    },
+    {
+      "model": "LiquidAI/LFM2-350M-Extract",
+      "role": "structured_extraction_control",
+      "license": "LFM Open License v1.0",
+      "restriction": "commercial_license_review_required"
+    },
+    {
+      "model": "Qwen/Qwen3.5-2B",
+      "role": "quality_fallback",
+      "license": "Apache-2.0"
+    },
+    {
+      "model": "PleIAs/Baguettotron",
+      "role": "hardware_and_method_control_only",
+      "license": "Apache-2.0",
+      "restriction": "no_arabic_darija_pretraining"
+    }
+  ],
+  "training": {
+    "compute_policy": "ephemeral_cloud_gpu; training hardware does not define product requirements",
+    "suggested_vram_gib": "16-24 for 0.35B-2B pilot runs",
+    "checkpoint_type": "post_trained",
+    "stage": "sft",
+    "finetuning_type": "qlora",
+    "thinking": false,
+    "output": "compact_wire_format_only",
+    "lora_rank": 8,
+    "lora_alpha": 16,
+    "quantization_bits": 4,
+    "cutoff_len_initial": 1024,
+    "cutoff_len_max": 2048,
+    "per_device_train_batch_size": 1,
+    "gradient_accumulation_steps": [
+      8,
+      16
+    ],
+    "epochs_search": [
+      3,
+      4,
+      6
+    ],
+    "minimum_finalist_seeds": 2
+  },
+  "inference": {
+    "temperature": 0,
+    "max_model_len": 2048,
+    "max_output_tokens": 256,
+    "primary_runtime": "llama.cpp",
+    "optional_gpu_hub_runtime": "vllm",
+    "structured_decoding": true,
+    "benchmark_concurrency": [
+      1,
+      2,
+      4
+    ]
+  },
+  "target_hardware": {
+    "minimum": {
+      "device": "x86-64 AVX2 CPU, no GPU",
+      "physical_cores_min": 4,
+      "system_ram_gib_min": 8,
+      "quantization": "GGUF Q4 or Q5"
+    },
+    "recommended": {
+      "device": "modern x86-64 CPU, no GPU",
+      "physical_cores": "6-8",
+      "system_ram_gib": 16,
+      "storage": "NVMe SSD"
+    },
+    "demonstration": {
+      "device": "Raspberry Pi 5",
+      "system_ram_gib": 8,
+      "scope": "certification target for 350M class; 0.8B requires measurement"
+    }
+  },
+  "online_slo_cpu_minimum": {
+    "e2e_p95_ms_max": 8000,
+    "minimum_comments_per_second": 0.2,
+    "daily_capacity_at_minimum_rate": 17280,
+    "timeout_rate_max": 0.001
+  },
+  "online_slo_cpu_recommended": {
+    "e2e_p95_ms_max": 5000,
+    "minimum_comments_per_second": 0.3
+  },
+  "measured_reference": {
+    "model": "PleIAs/Baguettotron-GGUF Q4_K_M",
+    "parameters": 320960000,
+    "hardware": "Intel Core i5-10300H, 4 CPU threads, 8 GiB RAM, no GPU",
+    "prompt_tokens_per_second": "120.51-122.87",
+    "generation_tokens_per_second": "29.24-44.72",
+    "compact_output_tokens_mean": 127.1,
+    "compact_output_tokens_p95": 175
+  },
+  "selection_policy": {
+    "critical_gates_first": true,
+    "weighted_score_only_after_all_critical_gates_pass": true,
+    "weights": {
+      "business_quality": 0.6,
+      "online_latency": 0.15,
+      "batch_throughput": 0.1,
+      "memory": 0.1,
+      "license_and_runtime_maturity": 0.05
+    },
+    "tie_breaker": "smallest_model"
+  },
+  "minimum_gold_before_final_decision": 500,
+  "preferred_gold_before_final_decision": 1000,
+  "locked_test_single_use": true
+}

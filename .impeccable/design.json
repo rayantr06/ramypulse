@@ -1,0 +1,169 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-16T19:14:21.8081936-04:00",
+  "title": "Design System: LIDAL Pulse",
+  "extensions": {
+    "colorMeta": {
+      "electric-violet": { "role": "primary", "displayName": "Violet électrique LIDAL", "canonical": "hsl(253 100% 58%)", "tonalRamp": ["oklch(0.20 0.10 285)", "oklch(0.30 0.16 285)", "oklch(0.42 0.22 285)", "oklch(0.55 0.27 285)", "oklch(0.66 0.24 285)", "oklch(0.76 0.18 285)", "oklch(0.87 0.10 285)", "oklch(0.95 0.04 285)"] },
+      "violet-wash": { "role": "primary", "displayName": "Brume violette", "canonical": "hsl(253 100% 94%)", "tonalRamp": ["oklch(0.20 0.10 285)", "oklch(0.30 0.16 285)", "oklch(0.42 0.22 285)", "oklch(0.55 0.27 285)", "oklch(0.66 0.24 285)", "oklch(0.76 0.18 285)", "oklch(0.87 0.10 285)", "oklch(0.95 0.04 285)"] },
+      "risk-red": { "role": "secondary", "displayName": "Rouge risque", "canonical": "hsl(353 67% 42%)", "tonalRamp": ["oklch(0.20 0.08 20)", "oklch(0.30 0.13 20)", "oklch(0.42 0.18 20)", "oklch(0.54 0.20 20)", "oklch(0.65 0.17 20)", "oklch(0.76 0.12 20)", "oklch(0.87 0.07 20)", "oklch(0.95 0.03 20)"] },
+      "risk-wash": { "role": "secondary", "displayName": "Voile risque", "canonical": "hsl(352 82% 96%)", "tonalRamp": ["oklch(0.20 0.08 20)", "oklch(0.30 0.13 20)", "oklch(0.42 0.18 20)", "oklch(0.54 0.20 20)", "oklch(0.65 0.17 20)", "oklch(0.76 0.12 20)", "oklch(0.87 0.07 20)", "oklch(0.95 0.03 20)"] },
+      "insight-purple": { "role": "secondary", "displayName": "Violet interprétation", "canonical": "hsl(275 84% 52%)", "tonalRamp": ["oklch(0.20 0.08 310)", "oklch(0.30 0.13 310)", "oklch(0.42 0.19 310)", "oklch(0.54 0.23 310)", "oklch(0.65 0.20 310)", "oklch(0.76 0.15 310)", "oklch(0.87 0.09 310)", "oklch(0.95 0.03 310)"] },
+      "insight-wash": { "role": "secondary", "displayName": "Voile interprétation", "canonical": "hsl(275 90% 96%)", "tonalRamp": ["oklch(0.20 0.08 310)", "oklch(0.30 0.13 310)", "oklch(0.42 0.19 310)", "oklch(0.54 0.23 310)", "oklch(0.65 0.20 310)", "oklch(0.76 0.15 310)", "oklch(0.87 0.09 310)", "oklch(0.95 0.03 310)"] },
+      "action-green": { "role": "secondary", "displayName": "Vert action", "canonical": "hsl(151 67% 31%)", "tonalRamp": ["oklch(0.20 0.05 155)", "oklch(0.30 0.08 155)", "oklch(0.42 0.12 155)", "oklch(0.54 0.15 155)", "oklch(0.65 0.14 155)", "oklch(0.76 0.11 155)", "oklch(0.87 0.07 155)", "oklch(0.95 0.03 155)"] },
+      "action-wash": { "role": "secondary", "displayName": "Voile action", "canonical": "hsl(150 50% 94%)", "tonalRamp": ["oklch(0.20 0.05 155)", "oklch(0.30 0.08 155)", "oklch(0.42 0.12 155)", "oklch(0.54 0.15 155)", "oklch(0.65 0.14 155)", "oklch(0.76 0.11 155)", "oklch(0.87 0.07 155)", "oklch(0.95 0.03 155)"] },
+      "warning-amber": { "role": "tertiary", "displayName": "Ambre vigilance", "canonical": "hsl(36 72% 42%)", "tonalRamp": ["oklch(0.20 0.05 75)", "oklch(0.30 0.08 75)", "oklch(0.42 0.12 75)", "oklch(0.54 0.15 75)", "oklch(0.65 0.14 75)", "oklch(0.76 0.11 75)", "oklch(0.87 0.07 75)", "oklch(0.95 0.03 75)"] },
+      "pearl-ground": { "role": "neutral", "displayName": "Perle de travail", "canonical": "hsl(0 0% 94%)", "tonalRamp": ["oklch(0.15 0.004 285)", "oklch(0.27 0.004 285)", "oklch(0.39 0.004 285)", "oklch(0.52 0.004 285)", "oklch(0.64 0.004 285)", "oklch(0.76 0.004 285)", "oklch(0.88 0.004 285)", "oklch(0.95 0.004 285)"] },
+      "surface-white": { "role": "neutral", "displayName": "Blanc panneau", "canonical": "hsl(0 0% 100%)", "tonalRamp": ["oklch(0.15 0 0)", "oklch(0.27 0 0)", "oklch(0.39 0 0)", "oklch(0.52 0 0)", "oklch(0.64 0 0)", "oklch(0.76 0 0)", "oklch(0.88 0 0)", "oklch(1 0 0)"] },
+      "surface-soft": { "role": "neutral", "displayName": "Blanc doux", "canonical": "hsl(0 0% 97%)", "tonalRamp": ["oklch(0.15 0 0)", "oklch(0.27 0 0)", "oklch(0.39 0 0)", "oklch(0.52 0 0)", "oklch(0.64 0 0)", "oklch(0.76 0 0)", "oklch(0.88 0 0)", "oklch(0.97 0 0)"] },
+      "surface-neutral": { "role": "neutral", "displayName": "Gris module", "canonical": "hsl(0 0% 93%)", "tonalRamp": ["oklch(0.15 0 0)", "oklch(0.27 0 0)", "oklch(0.39 0 0)", "oklch(0.52 0 0)", "oklch(0.64 0 0)", "oklch(0.76 0 0)", "oklch(0.86 0 0)", "oklch(0.93 0 0)"] },
+      "surface-pressed": { "role": "neutral", "displayName": "Gris pressé", "canonical": "hsl(0 0% 90%)", "tonalRamp": ["oklch(0.15 0 0)", "oklch(0.27 0 0)", "oklch(0.39 0 0)", "oklch(0.52 0 0)", "oklch(0.64 0 0)", "oklch(0.76 0 0)", "oklch(0.84 0 0)", "oklch(0.90 0 0)"] },
+      "ink": { "role": "neutral", "displayName": "Encre", "canonical": "hsl(240 8% 9%)", "tonalRamp": ["oklch(0.15 0.01 285)", "oklch(0.27 0.01 285)", "oklch(0.39 0.01 285)", "oklch(0.52 0.01 285)", "oklch(0.64 0.01 285)", "oklch(0.76 0.01 285)", "oklch(0.88 0.01 285)", "oklch(0.95 0.01 285)"] },
+      "ink-muted": { "role": "neutral", "displayName": "Encre atténuée", "canonical": "hsl(240 4% 42%)", "tonalRamp": ["oklch(0.15 0.006 285)", "oklch(0.27 0.006 285)", "oklch(0.39 0.006 285)", "oklch(0.52 0.006 285)", "oklch(0.64 0.006 285)", "oklch(0.76 0.006 285)", "oklch(0.88 0.006 285)", "oklch(0.95 0.006 285)"] },
+      "outline-soft": { "role": "neutral", "displayName": "Contour doux", "canonical": "hsl(0 0% 86%)", "tonalRamp": ["oklch(0.15 0 0)", "oklch(0.27 0 0)", "oklch(0.39 0 0)", "oklch(0.52 0 0)", "oklch(0.64 0 0)", "oklch(0.76 0 0)", "oklch(0.86 0 0)", "oklch(0.95 0 0)"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Titre de page court et décisif." },
+      "headline": { "displayName": "Headline", "purpose": "Titre des panneaux opérationnels." },
+      "title": { "displayName": "Title", "purpose": "Valeurs KPI compactes et tabulaires." },
+      "body": { "displayName": "Body", "purpose": "Alertes, analyses, preuves et contenus multilingues." },
+      "label": { "displayName": "Label", "purpose": "Intitulés KPI, dates, périodes, confiance et provenance." }
+    },
+    "shadows": [
+      { "name": "stat", "value": "0 10px 28px hsl(var(--shadow-color) / 0.055)", "purpose": "KPI compact." },
+      { "name": "panel", "value": "0 14px 38px hsl(var(--shadow-color) / 0.07)", "purpose": "File, analyse et résumé de décision." },
+      { "name": "ambient", "value": "0 18px 48px hsl(var(--shadow-color) / 0.09)", "purpose": "Navigation mobile, menus et cartes flottantes." },
+      { "name": "pulse-glow", "value": "0 10px 24px hsl(var(--primary) / 0.22)", "purpose": "Actions primaires et états actifs." }
+    ],
+    "motion": [
+      { "name": "ease-expressive", "value": "cubic-bezier(0.22, 1, 0.36, 1)", "purpose": "Entrée de page et réponse des boutons." },
+      { "name": "state-fast", "value": "150ms ease-out", "purpose": "Survol stable des lignes d’alerte." },
+      { "name": "control", "value": "200ms ease", "purpose": "Couleur, bordure et pression des contrôles." },
+      { "name": "page-enter", "value": "220ms cubic-bezier(0.22, 1, 0.36, 1)", "purpose": "Opacité et translation verticale de 4 px." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Action principale violette, compacte et nettement interactive.",
+      "html": "<button class=\"ds-btn-primary\">Créer une surveillance</button>",
+      "css": ".ds-btn-primary { min-height: 36px; padding: 8px 16px; border: 1px solid hsl(var(--primary)); border-radius: 9999px; background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); font: 700 12px/1.2 Urbanist, sans-serif; box-shadow: 0 10px 24px hsl(var(--primary) / 0.22); transition: transform 200ms ease, background-color 160ms ease; } .ds-btn-primary:hover { transform: translateY(-2px); background: hsl(var(--primary) / 0.92); } .ds-btn-primary:active { transform: scale(0.98); } .ds-btn-primary:focus-visible { outline: 2px solid hsl(var(--ring) / 0.78); outline-offset: 2px; }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Action secondaire calme, portée par une bordure douce.",
+      "html": "<button class=\"ds-btn-outline\">Voir les preuves</button>",
+      "css": ".ds-btn-outline { min-height: 36px; padding: 8px 16px; border: 1px solid hsl(var(--outline-variant)); border-radius: 9999px; background: transparent; color: hsl(var(--on-surface)); font: 600 12px/1.2 Inter, sans-serif; transition: transform 200ms ease, background-color 160ms ease, border-color 160ms ease; } .ds-btn-outline:hover { background: hsl(var(--surface-container-high)); border-color: hsl(var(--primary) / 0.3); } .ds-btn-outline:active { transform: scale(0.98); } .ds-btn-outline:focus-visible { outline: 2px solid hsl(var(--ring) / 0.78); outline-offset: 2px; }"
+    },
+    {
+      "name": "Global Search Field",
+      "kind": "input",
+      "refersTo": "search-field",
+      "description": "Recherche globale en pilule, centrée dans l’en-tête.",
+      "html": "<label class=\"ds-search\"><svg aria-hidden=\"true\" viewBox=\"0 0 24 24\"><circle cx=\"11\" cy=\"11\" r=\"7\"></circle><path d=\"m20 20-3.5-3.5\"></path></svg><input type=\"search\" placeholder=\"Rechercher un avis, un produit ou un sujet…\"><kbd>/</kbd></label>",
+      "css": ".ds-search { position: relative; display: block; width: min(32rem, 100%); color: hsl(var(--on-surface-variant)); } .ds-search svg { position: absolute; left: 14px; top: 13px; width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; } .ds-search input { width: 100%; height: 44px; padding: 0 48px 0 40px; border: 1px solid transparent; border-radius: 9999px; background: hsl(var(--surface-container)); color: hsl(var(--on-surface)); font: 400 12px/1.4 Inter, sans-serif; transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease; } .ds-search input:hover { background: hsl(var(--surface-container-high)); } .ds-search input:focus { outline: none; border-color: hsl(var(--primary) / 0.25); box-shadow: 0 0 0 2px hsl(var(--primary) / 0.1); } .ds-search kbd { position: absolute; right: 12px; top: 11px; padding: 2px 6px; border: 1px solid hsl(var(--outline-variant)); border-radius: 6px; background: hsl(var(--surface)); font: 500 9px/1.2 ui-monospace, monospace; }"
+    },
+    {
+      "name": "Top Stage Pills",
+      "kind": "nav",
+      "refersTo": "top-stage-active",
+      "description": "Les trois étapes métier principales, avec une seule pilule active.",
+      "html": "<nav class=\"ds-stage-pills\" aria-label=\"Étapes du parcours\"><a class=\"ds-stage-pill ds-is-active\">Surveiller</a><a class=\"ds-stage-pill\">Comprendre</a><a class=\"ds-stage-pill\">Agir</a></nav>",
+      "css": ".ds-stage-pills { display: flex; align-items: center; gap: 6px; font-family: Inter, sans-serif; } .ds-stage-pill { padding: 8px 16px; border-radius: 9999px; background: hsl(var(--surface-container)); color: hsl(var(--on-surface-variant)); font-size: 12px; font-weight: 600; text-decoration: none; transition: background-color 160ms ease, color 160ms ease; } .ds-stage-pill:hover { background: hsl(var(--surface-container-high)); color: hsl(var(--on-surface)); } .ds-stage-pill.ds-is-active { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); box-shadow: 0 10px 24px hsl(var(--primary) / 0.22); } .ds-stage-pill:focus-visible { outline: 2px solid hsl(var(--ring) / 0.78); outline-offset: 2px; }"
+    },
+    {
+      "name": "Compact Rail Item",
+      "kind": "nav",
+      "refersTo": "rail-item-active",
+      "description": "Cible carrée de 44 px pour le rail desktop compact.",
+      "html": "<a class=\"ds-rail-item ds-is-active\" aria-label=\"Situation du jour\"><svg aria-hidden=\"true\" viewBox=\"0 0 24 24\"><rect x=\"4\" y=\"4\" width=\"6\" height=\"6\" rx=\"1\"></rect><rect x=\"14\" y=\"4\" width=\"6\" height=\"6\" rx=\"1\"></rect><rect x=\"4\" y=\"14\" width=\"6\" height=\"6\" rx=\"1\"></rect><rect x=\"14\" y=\"14\" width=\"6\" height=\"6\" rx=\"1\"></rect></svg></a>",
+      "css": ".ds-rail-item { display: inline-flex; width: 44px; height: 44px; align-items: center; justify-content: center; border-radius: 16px; color: hsl(var(--on-surface-variant)); background: transparent; transition: background-color 160ms ease, color 160ms ease, transform 160ms ease; } .ds-rail-item svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; } .ds-rail-item:hover { background: hsl(var(--surface-container)); color: hsl(var(--on-surface)); } .ds-rail-item.ds-is-active { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); box-shadow: 0 10px 24px hsl(var(--primary) / 0.22); } .ds-rail-item:active { transform: scale(0.98); } .ds-rail-item:focus-visible { outline: 2px solid hsl(var(--ring) / 0.78); outline-offset: 2px; }"
+    },
+    {
+      "name": "Dashboard Stat",
+      "kind": "card",
+      "refersTo": "dashboard-stat",
+      "description": "KPI compact avec icône sémantique, libellé et valeur Urbanist.",
+      "html": "<article class=\"ds-stat\"><span class=\"ds-stat-icon\"><svg aria-hidden=\"true\" viewBox=\"0 0 24 24\"><path d=\"M4 14l5-5 4 4 7-7\"></path><path d=\"M15 6h5v5\"></path></svg></span><div><p>Évolution</p><strong>+5 <small>pts</small></strong></div></article>",
+      "css": ".ds-stat { display: flex; min-width: 0; align-items: center; gap: 13px; padding: 15.2px; border: 1px solid hsl(var(--outline-variant) / 0.72); border-radius: 20px; background: hsl(var(--surface)); color: hsl(var(--on-surface)); box-shadow: 0 10px 28px hsl(var(--shadow-color) / 0.055); font-family: Inter, sans-serif; } .ds-stat-icon { display: flex; width: 38px; height: 38px; flex: 0 0 auto; align-items: center; justify-content: center; border-radius: 14.4px; color: hsl(var(--action)); background: hsl(var(--action-container)); } .ds-stat-icon svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; } .ds-stat p { margin: 0; color: hsl(var(--on-surface-variant)); font-size: 10px; font-weight: 600; } .ds-stat strong { display: block; margin-top: 2px; font: 800 23px/1 Urbanist, Inter, sans-serif; letter-spacing: -0.025em; } .ds-stat small { color: hsl(var(--on-surface-variant)); font: 500 9px/1 Inter, sans-serif; letter-spacing: 0; }"
+    },
+    {
+      "name": "Alert Queue Row",
+      "kind": "custom",
+      "refersTo": "alert-row",
+      "description": "Ligne de file stable avec gravité, fraîcheur et accès direct.",
+      "html": "<button class=\"ds-alert-row\"><span class=\"ds-alert-icon\"><svg aria-hidden=\"true\" viewBox=\"0 0 24 24\"><path d=\"M12 3 5 6v5c0 4.5 2.8 8 7 10 4.2-2 7-5.5 7-10V6l-7-3Z\"></path><path d=\"M12 8v5\"></path><path d=\"M12 16h.01\"></path></svg></span><span class=\"ds-alert-copy\"><strong>Volume de mentions négatives en explosion</strong><small>Surge de 45% de mentions très négatives sur Google Maps</small></span><span class=\"ds-alert-meta\"><b>Critique</b>08 avr., 16:32</span><span class=\"ds-alert-arrow\">→</span></button>",
+      "css": ".ds-alert-row { display: flex; width: 100%; min-height: 72px; align-items: center; gap: 14px; padding: 13.6px 20px; border: 0; border-bottom: 1px solid hsl(var(--outline-variant)); background: hsl(var(--surface)); color: hsl(var(--on-surface)); text-align: left; transition: background-color 150ms ease-out; } .ds-alert-row:hover { background: hsl(var(--surface-container-low)); } .ds-alert-row:focus-visible { outline: 2px solid hsl(var(--ring) / 0.78); outline-offset: -2px; } .ds-alert-icon { display: flex; width: 32px; height: 32px; flex: 0 0 auto; align-items: center; justify-content: center; border-radius: 12px; color: hsl(var(--error)); background: hsl(var(--error-container)); } .ds-alert-icon svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; } .ds-alert-copy { min-width: 0; flex: 1; font-family: Inter, sans-serif; } .ds-alert-copy strong { display: block; overflow: hidden; color: hsl(var(--on-surface)); font-size: 14px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; } .ds-alert-copy small { display: block; overflow: hidden; margin-top: 4px; color: hsl(var(--on-surface-variant)); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; } .ds-alert-meta { color: hsl(var(--on-surface-variant)); font: 600 9px/1.45 Inter, sans-serif; text-align: right; } .ds-alert-meta b { display: block; color: hsl(var(--error)); } .ds-alert-arrow { color: hsl(var(--on-surface-variant)); font-size: 18px; transition: transform 150ms ease-out; } .ds-alert-row:hover .ds-alert-arrow { transform: translateX(2px); }"
+    },
+    {
+      "name": "Status Chip",
+      "kind": "chip",
+      "refersTo": "status-chip",
+      "description": "Statut compact et explicite, notamment pour une confiance inconnue.",
+      "html": "<span class=\"ds-status-chip\">Confiance · à confirmer</span>",
+      "css": ".ds-status-chip { display: inline-flex; align-items: center; min-height: 22px; padding: 4px 10px; border-radius: 9999px; background: hsl(var(--surface-container)); color: hsl(var(--on-surface-variant)); font: 600 9px/1.2 Inter, sans-serif; white-space: nowrap; }"
+    },
+    {
+      "name": "Analysis Card",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "Synthèse du jour avec base analysée, confiance et accès aux preuves.",
+      "html": "<article class=\"ds-analysis\"><header><span class=\"ds-analysis-icon\">◎</span><h3>Analyse du jour</h3><span class=\"ds-period\">du 2026-02-10 au 2026-04-11</span></header><h4>La perception globale progresse de 5 points.</h4><div class=\"ds-analysis-evidence\"><small>Signal le mieux étayé</small><p>Surge de 45% de mentions très négatives sur Google Maps.</p></div><footer><span>Confiance à confirmer · 200 avis</span><button>Voir les preuves →</button></footer></article>",
+      "css": ".ds-analysis { padding: 20px; border: 1px solid hsl(var(--outline-variant) / 0.72); border-radius: 24px; background: hsl(var(--surface)); color: hsl(var(--on-surface)); box-shadow: 0 14px 38px hsl(var(--shadow-color) / 0.07); font-family: Inter, sans-serif; } .ds-analysis header { display: flex; align-items: center; gap: 10px; } .ds-analysis-icon { display: flex; width: 36px; height: 36px; align-items: center; justify-content: center; border-radius: 12px; color: hsl(var(--insight)); background: hsl(var(--insight-container)); } .ds-analysis h3 { margin: 0; font: 700 16px/1.25 Urbanist, sans-serif; letter-spacing: -0.035em; } .ds-period { margin-left: auto; padding: 4px 10px; border-radius: 9999px; background: hsl(var(--surface-container)); color: hsl(var(--on-surface-variant)); font-size: 9px; font-weight: 600; } .ds-analysis h4 { margin: 20px 0 16px; font: 700 16px/1.35 Urbanist, sans-serif; letter-spacing: -0.035em; } .ds-analysis-evidence { padding: 14px; border-radius: 12px; background: hsl(var(--surface-container-low)); } .ds-analysis-evidence small, .ds-analysis footer span { color: hsl(var(--on-surface-variant)); font-size: 9px; } .ds-analysis-evidence p { margin: 6px 0 0; font-size: 12px; line-height: 1.65; } .ds-analysis footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; padding-top: 16px; border-top: 1px solid hsl(var(--outline-variant)); } .ds-analysis button { padding: 7px 12px; border: 1px solid hsl(var(--outline-variant)); border-radius: 9999px; background: transparent; color: hsl(var(--on-surface)); font: 600 11px/1.2 Inter, sans-serif; } .ds-analysis button:hover { background: hsl(var(--surface-container-high)); } .ds-analysis button:focus-visible { outline: 2px solid hsl(var(--ring) / 0.78); outline-offset: 2px; }"
+    },
+    {
+      "name": "Decision Summary",
+      "kind": "custom",
+      "refersTo": "decision-summary-step",
+      "description": "Résumé linéaire du signal à la décision, avant validation humaine.",
+      "html": "<section class=\"ds-decision-summary\"><article><span class=\"ds-step-icon ds-risk\">!</span><div><small>1 · Signal détecté</small><strong>Volume de mentions négatives en explosion</strong><a>Voir les preuves</a></div></article><article><span class=\"ds-step-icon ds-insight\">◎</span><div><small>2 · Ce que cela signifie</small><p>La perception progresse de 5 points.</p></div></article><article><span class=\"ds-step-icon ds-action\">✓</span><div><small>3 · Décision proposée</small><strong>Recommandation en attente de validation</strong><button>Examiner l’analyse →</button></div></article></section>",
+      "css": ".ds-decision-summary { display: grid; grid-template-columns: 0.9fr 1.15fr 1fr; gap: 12px; font-family: Inter, sans-serif; } .ds-decision-summary article { display: flex; min-width: 0; gap: 12px; padding: 14.4px; border-radius: 16px; background: hsl(var(--surface-container-low)); color: hsl(var(--on-surface)); } .ds-step-icon { display: flex; width: 32px; height: 32px; flex: 0 0 auto; align-items: center; justify-content: center; border-radius: 12px; font-size: 12px; font-weight: 700; } .ds-risk { color: hsl(var(--error)); background: hsl(var(--error-container)); } .ds-insight { color: hsl(var(--insight)); background: hsl(var(--insight-container)); } .ds-action { color: hsl(var(--action)); background: hsl(var(--action-container)); } .ds-decision-summary small { display: block; color: hsl(var(--on-surface-variant)); font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; } .ds-decision-summary strong, .ds-decision-summary p { display: block; margin: 5px 0 0; font-size: 13px; line-height: 1.45; } .ds-decision-summary a { display: inline-block; margin-top: 8px; color: hsl(var(--primary)); font-size: 10px; font-weight: 600; } .ds-decision-summary button { width: 100%; margin-top: 8px; padding: 7px 12px; border: 1px solid hsl(var(--primary)); border-radius: 9999px; background: hsl(var(--action)); color: white; font: 700 11px/1.2 Inter, sans-serif; } .ds-decision-summary button:hover { background: hsl(var(--action) / 0.9); } .ds-decision-summary button:focus-visible { outline: 2px solid hsl(var(--ring) / 0.78); outline-offset: 2px; } @media (max-width: 700px) { .ds-decision-summary { grid-template-columns: 1fr; } }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Clarté modulaire",
+    "overview": "LIDAL Pulse est un espace de veille lumineux, dense et directement opératoire. Son expression « Operate UI » organise les signaux dans une succession de modules compacts : indicateurs essentiels, file d’alertes, analyse du jour, résumé de décision et détails de répartition. La toile perle crée du calme, les panneaux blancs structurent le travail et le violet électrique identifie la marque, l’état actif et l’action principale.\n\nLa hiérarchie repose sur l’alignement, la densité maîtrisée, les surfaces tonales et les libellés explicites. Aucun module spectaculaire ne doit dominer la preuve : chaque signal reste relié à sa fraîcheur, à sa confiance, à sa provenance et à une voie de vérification. Sur mobile, la même logique s’empile dans l’ordre de priorité sans changer de langage visuel.",
+    "keyCharacteristics": [
+      "Toile perle, panneaux blancs et subdivisions gris très clair.",
+      "Violet électrique réservé à l’identité, à l’actif, au focus et à l’action primaire.",
+      "Quatre KPI compacts en ouverture, lisibles en grille 4×1 ou 2×2.",
+      "File d’alertes dense et actionnable, associée à une analyse du jour distincte.",
+      "Résumé linéaire Signal → Interprétation → Décision avant validation humaine.",
+      "Rail desktop compact, étapes en pilules dans l’en-tête et navigation mobile arrimée.",
+      "Urbanist pour la hiérarchie et les chiffres, Inter pour la lecture, les preuves et les métadonnées."
+    ],
+    "rules": [
+      { "name": "The White Workspace Rule", "body": "Toutes les surfaces de travail restent claires ; la hiérarchie vient de la densité, des regroupements et des accents sémantiques, pas de grands aplats sombres.", "section": "colors" },
+      { "name": "The Semantic Accent Rule", "body": "Rouge, violet d’interprétation, vert et ambre gardent un sens stable et sont toujours doublés d’un texte, d’une icône ou d’un statut.", "section": "colors" },
+      { "name": "The Two-Voice Rule", "body": "Urbanist parle pour la hiérarchie et la décision ; Inter parle pour la preuve et l’interface.", "section": "typography" },
+      { "name": "The Honest Density Rule", "body": "Les tailles de 9–10 px sont réservées aux métadonnées courtes et ne portent jamais seules une information critique.", "section": "typography" },
+      { "name": "The Stable Rows Rule", "body": "Les files et synthèses restent immobiles au survol ; la profondeur s’exprime par le fond, la bordure ou la flèche d’action.", "section": "elevation" }
+    ],
+    "dos": [
+      "**Do** ouvrir la situation par quatre KPI compacts qui cadrent le volume, la tendance et l’urgence.",
+      "**Do** garder le fond général perle et réserver les surfaces blanches aux modules de travail.",
+      "**Do** montrer la source, la fraîcheur, la confiance ou « à confirmer », et un accès aux preuves au point où une conclusion est présentée.",
+      "**Do** utiliser le violet électrique pour l’identité, l’actif, le focus et l’action primaire.",
+      "**Do** conserver l’ordre Signal → Interprétation → Décision et la validation humaine.",
+      "**Do** préserver des cibles d’au moins 40 px, et 44 px sur mobile.",
+      "**Do** neutraliser les transitions et animations non essentielles avec `prefers-reduced-motion`."
+    ],
+    "donts": [
+      "**Don't** introduire de rupture visuelle spectaculaire dans le parcours décisionnel.",
+      "**Don't** désaligner les modules ou interrompre le flux régulier de la grille.",
+      "**Don't** agrandir un signal au point d’écraser la file, l’analyse ou la synthèse de décision.",
+      "**Don't** inventer une source, une fraîcheur, une confiance, une recommandation ou une certitude absente.",
+      "**Don't** faire dépendre un état de la couleur seule, ni mélanger des styles d’icônes dans une même surface.",
+      "**Don't** masquer le début du bloc suivant sous la navigation mobile fixe."
+    ]
+  }
+}

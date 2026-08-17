@@ -1,0 +1,141 @@
+{
+  "version": "0.2.0",
+  "measurement_scope": "end_to_end",
+  "purpose": "Autoriser ou refuser la generation du pilote d'entrainement SLM V2.",
+  "calibration_principle": "Aucune porte ne depasse l'accord inter-annotateurs MESURE sur le meme contrat. Plafonds A3 vs C, campagne V0.2, 304 paires. Marge de securite ~10 a 15 pourcent sous le plafond.",
+  "status": "MESURE — plafonds issus de l accord A3 vs C sur 304 items (2026-07-30)",
+  "evaluation_policy": {
+    "missing_or_invalid_output": "scored_as_wrong",
+    "maximum_controlled_retry": 1,
+    "test_split_policy": "locked_after_baseline; no prompt or ontology tuning from test errors",
+    "gold_training_policy": "gold_dev and gold_test are excluded from training",
+    "derived_fields_not_scored": [
+      "actionability.queue",
+      "actionability.priority"
+    ],
+    "aspect_scoring_level": "family+sentiment; l'attribut est un detail non evalue",
+    "neutral_aspects": "interdits par le schema V0.2, donc hors scoring"
+  },
+  "gates": {
+    "valid_output_rate": {
+      "operator": ">=",
+      "threshold": 1.0,
+      "critical": true,
+      "ceiling_observed": 1.0
+    },
+    "evidence_grounding_rate": {
+      "operator": ">=",
+      "threshold": 1.0,
+      "critical": true,
+      "ceiling_observed": 1.0
+    },
+    "is_exploitable.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.78,
+      "critical": true,
+      "ceiling_observed": 0.889,
+      "ceiling_source": "A3 vs C, campagne V0.2, 304 paires"
+    },
+    "business_relevance.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.85,
+      "critical": true,
+      "ceiling_observed": 0.95,
+      "ceiling_source": "A3 vs C, campagne V0.2, 304 paires"
+    },
+    "sentiment.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.75,
+      "critical": true,
+      "ceiling_observed": 0.855,
+      "ceiling_source": "A3 vs C, campagne V0.2, 304 paires"
+    },
+    "language.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.78,
+      "critical": false,
+      "ceiling_observed": 0.881,
+      "ceiling_source": "A3 vs C, campagne V0.2, 304 paires"
+    },
+    "intents.micro_f1": {
+      "operator": ">=",
+      "threshold": 0.68,
+      "critical": true,
+      "ceiling_observed": 0.777,
+      "ceiling_source": "A3 vs C, campagne V0.2, 304 paires"
+    },
+    "aspects_family_sentiment.micro_f1": {
+      "operator": ">=",
+      "threshold": 0.62,
+      "critical": true,
+      "ceiling_observed": 0.711,
+      "ceiling_source": "A3 vs C, campagne V0.2, 304 paires"
+    },
+    "entities_type_name.micro_f1": {
+      "operator": ">=",
+      "threshold": 0.55,
+      "critical": false,
+      "ceiling_observed": 0.627,
+      "ceiling_source": "A3 vs C, campagne V0.2, 304 paires"
+    },
+    "actionability.actionable.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.85,
+      "critical": false,
+      "ceiling_observed": 0.956,
+      "ceiling_source": "A3 vs C, campagne V0.2, 304 paires"
+    },
+    "alert_present.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.8,
+      "critical": true,
+      "ceiling_observed": 0.906,
+      "ceiling_source": "A3 vs C, detection binaire",
+      "note": "Y a-t-il une alerte, oui ou non. Champ fiable : 98,7 pourcent d'accord."
+    },
+    "alerts_type.micro_f1": {
+      "operator": ">=",
+      "threshold": 0.68,
+      "critical": true,
+      "ceiling_observed": 0.783,
+      "ceiling_source": "A3 vs C, type seul"
+    },
+    "alerts_type_severity.micro_f1": {
+      "operator": ">=",
+      "threshold": 0.3,
+      "critical": false,
+      "ceiling_observed": 0.304,
+      "ceiling_source": "A3 vs C, type et severite",
+      "note": "NON CRITIQUE tant que l'echelle de severite n'est pas ancree. Les annotateurs detectent les memes alertes mais divergent sur critique contre elevee."
+    },
+    "actionability.priority.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.6,
+      "critical": false,
+      "ceiling_observed": 0.706,
+      "ceiling_source": "A3 vs C, champ derive",
+      "note": "Derive : herite du desaccord sur la severite d'alerte, pas un defaut de la derivation."
+    },
+    "requires_parent_context.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.45,
+      "critical": false,
+      "ceiling_observed": 0.53,
+      "ceiling_source": "A3 vs C",
+      "note": "Champ neuf, definition encore floue. A resserrer en V0.3."
+    },
+    "author_role.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.85,
+      "critical": false,
+      "ceiling_observed": 1.0,
+      "ceiling_source": "A3 vs C, accord parfait"
+    }
+  },
+  "blocking_conditions": [
+    "Plafonds mesures sur un accord machine-machine (A3 et C sont deux LLM). Une validation humaine reste requise avant production.",
+    "L'echelle de severite d'alerte n'est pas ancree : 11 des 18 desaccords portent sur critique contre elevee sur un contenu identique.",
+    "22 a 24 alertes positives seulement. La cible de 30 n'est pas atteinte.",
+    "Le scope secteur n'est pas teste : le corpus ne contient aucune veille sectorielle reelle."
+  ]
+}
