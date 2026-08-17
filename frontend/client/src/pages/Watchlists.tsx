@@ -16,9 +16,9 @@ import {
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import {
-  WatchScopeForm,
   type WatchScopeSubmitValue,
 } from "@/components/watch/WatchScopeForm";
+import { SmartWatchComposer } from "@/components/watch/SmartWatchComposer";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -515,8 +515,7 @@ export default function Watchlists() {
             <SheetTitle>Nouvelle surveillance</SheetTitle>
             <SheetDescription>Définissez le signal et les sources à surveiller.</SheetDescription>
           </SheetHeader>
-          <WatchScopeForm
-            presentation="drawer"
+          <SmartWatchComposer
             isSubmitting={createMutation.isPending}
             onCancel={() => setCreateOpen(false)}
             onSubmit={(value) => createMutation.mutate(value)}

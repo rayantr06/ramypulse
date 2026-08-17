@@ -29,7 +29,7 @@ test("Explorer exposes consultable source links for cited and ranked results", (
 test("Campaigns page exposes create and impact flows", () => {
   const source = readPage("Campagnes.tsx");
   assert.ok(source.includes('"/api/campaigns"'));
-  assert.ok(source.includes("Lancer la Campagne"));
+  assert.ok(source.includes("Créer la campagne"));
   assert.ok(source.includes("/impact"));
 });
 

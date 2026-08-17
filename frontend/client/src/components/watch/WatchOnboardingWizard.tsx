@@ -580,8 +580,30 @@ export function WatchOnboardingWizard({ onRunCreated }: WatchOnboardingWizardPro
         </section>
       ) : (
         <section data-testid="smart-review-screen" className="space-y-6">
+          <div>
+            <h2 className="font-headline text-2xl font-extrabold tracking-tight text-on-surface">
+              Votre espace est prêt à être configuré
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-on-surface-variant">
+              Vérifiez le résumé. Les choix techniques restent modifiables avant l’activation.
+            </p>
+            <div className="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-outline-variant/60 bg-outline-variant/60 sm:grid-cols-4">
+              {[
+                [selectedChannels.length, "canaux"],
+                [selectedSourceUrls.length, "sources"],
+                [selectedWatchlists.length, "sujets suivis"],
+                [selectedAlertProfileNames.length, "profils d’alerte"],
+              ].map(([value, label]) => (
+                <div className="bg-surface px-4 py-4" key={label}>
+                  <p className="font-headline text-xl font-extrabold text-on-surface">{value}</p>
+                  <p className="mt-1 text-xs text-on-surface-variant">{label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {analysis.warnings.length > 0 ? (
-            <SmartReviewSection title="Warnings">
+            <SmartReviewSection title="Points à vérifier">
               <div className="space-y-3">
                 {analysis.warnings.map((warning: OnboardingWarning) => (
                   <div
@@ -598,15 +620,21 @@ export function WatchOnboardingWizard({ onRunCreated }: WatchOnboardingWizardPro
             </SmartReviewSection>
           ) : null}
 
-          {analysis.fallback_used ? (
-            <div className="rounded-2xl border border-primary/20 bg-primary/5 px-5 py-4 text-sm text-on-surface">
-              L'analyse a bascule en heuristique. Vous pouvez continuer cette revue ou revenir au
-              wizard manuel si vous preferez un parametrage explicite.
-            </div>
-          ) : null}
-
+          <details className="group rounded-2xl border border-outline-variant/60 bg-surface">
+            <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-4 text-sm font-semibold text-on-surface">
+              Voir et modifier les détails
+              <span className="material-symbols-outlined text-lg text-on-surface-variant transition-transform group-open:rotate-180">
+                expand_more
+              </span>
+            </summary>
+            <div className="space-y-6 border-t border-outline-variant/60 p-5">
+              {analysis.fallback_used ? (
+                <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-on-surface">
+                  La préparation automatique a utilisé les informations disponibles. Vérifiez les sources proposées si nécessaire.
+                </div>
+              ) : null}
           <div className="grid gap-6 lg:grid-cols-2">
-            <SmartReviewSection title="Channels">
+            <SmartReviewSection title="Canaux">
               <div className="space-y-3 text-sm">
                 {analysis.recommended_channels.map((channel: OnboardingRecommendedChannel) => (
                   <label key={channel.channel} className="flex items-start gap-3">
@@ -632,7 +660,7 @@ export function WatchOnboardingWizard({ onRunCreated }: WatchOnboardingWizardPro
               </div>
             </SmartReviewSection>
 
-            <SmartReviewSection title="Sources draft">
+            <SmartReviewSection title="Sources proposées">
               <div className="space-y-3 text-sm">
                 {analysis.suggested_sources.map((source: OnboardingSuggestedSource) => (
                   <label key={source.url} className="flex items-start gap-3">
@@ -661,7 +689,7 @@ export function WatchOnboardingWizard({ onRunCreated }: WatchOnboardingWizardPro
               </div>
             </SmartReviewSection>
 
-            <SmartReviewSection title="Watchlists">
+            <SmartReviewSection title="Sujets préparés">
               <div className="space-y-3 text-sm">
                 {analysis.suggested_watchlists.map((watchlist: OnboardingSuggestedWatchlist) => {
                   const locked = watchlist.role === "seed";
@@ -697,12 +725,12 @@ export function WatchOnboardingWizard({ onRunCreated }: WatchOnboardingWizardPro
               </div>
             </SmartReviewSection>
 
-            <SmartReviewSection title="Alertes et credentials">
+            <SmartReviewSection title="Alertes et accès">
               <div className="space-y-4 text-sm">
                 {analysis.required_credentials.length > 0 ? (
                   <div className="space-y-2">
                     <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-primary">
-                      Credentials requis
+                      Accès requis
                     </p>
                     {analysis.required_credentials.map((credential) => (
                       <div key={`${credential.platform}-${credential.credential_type}`}>
@@ -740,7 +768,7 @@ export function WatchOnboardingWizard({ onRunCreated }: WatchOnboardingWizardPro
                 {analysis.deferred_agent_config.length > 0 ? (
                   <div className="space-y-2">
                     <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-primary">
-                      Deferred agent config
+                      À configurer plus tard
                     </p>
                     {analysis.deferred_agent_config.map((item) => (
                       <div key={item.key}>
@@ -753,17 +781,17 @@ export function WatchOnboardingWizard({ onRunCreated }: WatchOnboardingWizardPro
               </div>
             </SmartReviewSection>
           </div>
+            </div>
+          </details>
 
           <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-high p-5 text-sm text-on-surface-variant">
             {selectedAnalysisWatchlistsCount < 2 || selectedAnalysisWatchlistsCount > 4 ? (
               <p>
-                Selection invalide: conservez exactement 1 watch_seed et entre 2 et 4 watchlists
-                d'analyse avant de confirmer.
+                Choisissez entre deux et quatre angles d’analyse dans les détails avant d’activer l’espace.
               </p>
             ) : (
               <p>
-                Revue complete. La confirmation va creer le tenant si necessaire, les objets V1,
-                puis lancer le premier run sur watch_seed.
+                Tout est prêt. L’activation crée l’espace de travail et lance la première collecte.
               </p>
             )}
           </div>
@@ -777,7 +805,7 @@ export function WatchOnboardingWizard({ onRunCreated }: WatchOnboardingWizardPro
               disabled={!canConfirm || confirmMutation.isPending}
               onClick={() => confirmMutation.mutate()}
             >
-              {confirmMutation.isPending ? "Confirmation..." : "Confirmer et lancer le premier run"}
+              {confirmMutation.isPending ? "Activation…" : "Activer mon espace"}
             </Button>
           </div>
         </section>

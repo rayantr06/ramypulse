@@ -501,7 +501,12 @@ export default function Campagnes() {
               className="bg-surface-container-low rounded-lg p-6 flex flex-col gap-5"
             >
               <div className="flex items-center justify-between border-b border-surface-container-highest pb-4">
-                <h3 className="font-headline font-bold text-lg">Nouvelle Campagne</h3>
+                <div>
+                  <h3 className="font-headline text-lg font-bold">Créer une campagne</h3>
+                  <p className="mt-1 text-xs text-on-surface-variant">
+                    Le nom suffit pour commencer. Les détails restent optionnels.
+                  </p>
+                </div>
                 <button
                   className="material-symbols-outlined text-primary cursor-pointer"
                   onClick={() => setIsComposerOpen((current) => !current)}
@@ -517,7 +522,7 @@ export default function Campagnes() {
               >
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">
-                    Nom de la Campagne
+                    Nom de la campagne
                   </label>
                   <input
                     ref={campaignNameInputRef}
@@ -530,6 +535,20 @@ export default function Campagnes() {
                     data-testid="input-campaign-name"
                   />
                 </div>
+                <div className="flex items-center justify-between rounded-xl bg-surface-container-high px-3 py-2.5 text-xs">
+                  <span className="text-on-surface-variant">Configuration utilisée</span>
+                  <span className="font-semibold text-on-surface">
+                    {form.platform === "instagram" ? "Instagram" : form.platform} · {form.campaign_type}
+                  </span>
+                </div>
+                <details className="group rounded-xl border border-outline-variant/60 bg-surface">
+                  <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-xs font-semibold text-on-surface">
+                    Ajouter des détails
+                    <span className="material-symbols-outlined text-base text-on-surface-variant transition-transform group-open:rotate-180">
+                      expand_more
+                    </span>
+                  </summary>
+                  <div className="space-y-4 border-t border-outline-variant/60 p-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">
@@ -658,13 +677,15 @@ export default function Campagnes() {
                     />
                   </div>
                 </div>
+                  </div>
+                </details>
                 <button
                   type="submit"
                   disabled={createMutation.isPending || !form.campaign_name.trim()}
                   className="w-full py-3 bg-primary text-on-primary-fixed font-bold text-xs uppercase tracking-widest hover:brightness-110 transition-all disabled:opacity-50 rounded-sm"
                   data-testid="btn-submit-campaign"
                 >
-                  {createMutation.isPending ? "Création..." : "Lancer la Campagne"}
+                  {createMutation.isPending ? "Création…" : "Créer la campagne"}
                 </button>
               </form>
               ) : (

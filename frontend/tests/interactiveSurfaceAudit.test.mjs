@@ -43,7 +43,7 @@ test("Recommendations routes the AI shortcut to Explorer without decorative card
 test("Campaigns exposes create and impact flows without demo-only export flags", () => {
   const source = readPage("Campagnes.tsx");
   assert.ok(!source.includes("demoDisabledProps"));
-  assert.ok(source.includes("Lancer la Campagne"));
+  assert.ok(source.includes("Créer la campagne"));
   assert.ok(source.includes("/impact"));
 });
 
