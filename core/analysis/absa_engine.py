@@ -2,17 +2,62 @@
 
 from __future__ import annotations
 
+import logging
+import os
 from pathlib import Path
 import re
-
 import pandas as pd
 
 from core.analysis.aspect_extractor import extract_aspects
 
-try:
-    from core.analysis.sentiment_classifier import classify_sentiment
-except ModuleNotFoundError:  # pragma: no cover - contrat temporaire jusqu'au merge du classifier
-    classify_sentiment = None
+logger = logging.getLogger(__name__)
+
+# ── Pipeline hybride DziriBERT (lazy init — chargé au premier appel) ─────────
+_pipeline = None
+
+
+def _get_pipeline():
+    """Retourne le pipeline de sentiment (lazy init singleton)."""
+    global _pipeline
+    if _pipeline is None:
+        try:
+            from inference.pipeline import SentimentPipeline
+            from config import DZIRIBERT_MODEL_PATH
+            gemini_key = os.getenv("GOOGLE_API_KEY", "") or None
+            _pipeline = SentimentPipeline(
+                model_dir=str(DZIRIBERT_MODEL_PATH),
+                gemini_api_key=gemini_key,
+            )
+            logger.info("SentimentPipeline chargé depuis %s", DZIRIBERT_MODEL_PATH)
+        except Exception as exc:
+            logger.error("Impossible de charger SentimentPipeline : %s", exc)
+            raise RuntimeError(
+                f"SentimentPipeline indisponible : {exc}. "
+                "Vérifier que models/dziribert-sentiment/ existe."
+            ) from exc
+    return _pipeline
+
+
+def _map_to_5_classes(label: str, confidence: float) -> str:
+    """Convertit les 3 labels DziriBERT (EN) vers les 5 classes RamyPulse (FR).
+
+    DziriBERT retourne : positive | negative | neutral
+    RamyPulse attend   : très_positif | positif | neutre | négatif | très_négatif
+
+    Seuil de confiance 0.75 pour distinguer le degré fort du degré modéré.
+    """
+    if label == "positive":
+        return "très_positif" if confidence >= 0.75 else "positif"
+    if label == "negative":
+        return "très_négatif" if confidence >= 0.75 else "négatif"
+    return "neutre"
+
+
+def _classify(text: str) -> dict:
+    """Classe un texte et retourne {'label': str, 'confidence': float}."""
+    result = _get_pipeline().predict(text)
+    label_5 = _map_to_5_classes(result.label, result.confidence)
+    return {"label": label_5, "confidence": result.confidence}
 
 
 def _default_output_path() -> Path:
@@ -21,12 +66,8 @@ def _default_output_path() -> Path:
 
 
 def _ensure_classifier_available() -> None:
-    """Vérifie que le classifieur de sentiment est disponible."""
-    if classify_sentiment is None:
-        raise RuntimeError(
-            "Le module core.analysis.sentiment_classifier est indisponible. "
-            "Injecte un mock dans les tests ou merge le classifier avant exécution réelle."
-        )
+    """Vérifie que le pipeline de sentiment est chargeable."""
+    _get_pipeline()  # lève RuntimeError si indisponible
 
 
 def _extract_sentence_for_span(text: str, start: int, end: int) -> str:
@@ -58,7 +99,7 @@ def _build_aspect_sentiments(text: str, aspect_mentions: list[dict[str, object]]
     annotations = []
     for mention in aspect_mentions:
         sentence = _extract_sentence_for_span(text, int(mention["start"]), int(mention["end"]))
-        classification = classify_sentiment(sentence)
+        classification = _classify(sentence)
         annotations.append(
             {
                 "aspect": mention["aspect"],
@@ -86,7 +127,7 @@ def run_absa_pipeline(
 
     for row in working.itertuples(index=False):
         text = getattr(row, "text", "")
-        global_classification = classify_sentiment(text)
+        global_classification = _classify(text)
         aspect_mentions = extract_aspects(text)
         aspect_sentiments = _build_aspect_sentiments(text, aspect_mentions)
 
@@ -128,7 +169,7 @@ def analyze_text(text: str, aspects: list[str] | None = None) -> dict[str, objec
     """
     _ensure_classifier_available()
     safe_text = str(text or "")
-    global_classification = classify_sentiment(safe_text)
+    global_classification = _classify(safe_text)
     aspect_mentions = extract_aspects(safe_text)
     unique_aspects = _deduplicate_aspects(aspect_mentions)
     aspect_sentiments = _build_aspect_sentiments(safe_text, aspect_mentions)

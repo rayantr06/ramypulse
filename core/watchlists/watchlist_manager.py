@@ -341,20 +341,26 @@ def list_watchlists(is_active: bool = True) -> list[dict]:
     return [_row_to_watchlist(row) for row in rows]
 
 
-def get_watchlist(watchlist_id: str) -> dict | None:
+def get_watchlist(watchlist_id: str, client_id: str | None = None) -> dict | None:
     """Retourne une watchlist complete ou None si absente."""
     with _get_connection() as connection:
         _ensure_watchlists_table(connection)
-        row = connection.execute(
-            "SELECT * FROM watchlists WHERE watchlist_id = ?",
-            (watchlist_id,),
-        ).fetchone()
+        sql = "SELECT * FROM watchlists WHERE watchlist_id = ?"
+        params: list[object] = [watchlist_id]
+        if client_id is not None and str(client_id).strip():
+            sql += " AND client_id = ?"
+            params.append(str(client_id).strip())
+        row = connection.execute(sql, tuple(params)).fetchone()
     return _row_to_watchlist(row)
 
 
-def update_watchlist(watchlist_id: str, updates: dict) -> bool:
+def update_watchlist(
+    watchlist_id: str,
+    updates: dict,
+    client_id: str | None = None,
+) -> bool:
     """Met a jour une watchlist avec un sous-ensemble arbitraire de champs."""
-    current = get_watchlist(watchlist_id)
+    current = get_watchlist(watchlist_id, client_id=client_id)
     if current is None:
         return False
 
@@ -415,12 +421,16 @@ def update_watchlist(watchlist_id: str, updates: dict) -> bool:
     payload["updated_at"] = _now()
     assignments = ", ".join(f"{column} = ?" for column in payload)
     params = list(payload.values()) + [watchlist_id]
+    where_clause = "watchlist_id = ?"
+    if client_id is not None and str(client_id).strip():
+        where_clause += " AND client_id = ?"
+        params.append(str(client_id).strip())
 
     with _get_connection() as connection:
         _ensure_watchlists_table(connection)
         cursor = connection.execute(
-            f"UPDATE watchlists SET {assignments} WHERE watchlist_id = ?",
-            params,
+            f"UPDATE watchlists SET {assignments} WHERE {where_clause}",
+            tuple(params),
         )
         connection.commit()
 
@@ -430,9 +440,12 @@ def update_watchlist(watchlist_id: str, updates: dict) -> bool:
     return updated
 
 
-def deactivate_watchlist(watchlist_id: str) -> bool:
+def deactivate_watchlist(
+    watchlist_id: str,
+    client_id: str | None = None,
+) -> bool:
     """Desactive une watchlist sans la supprimer."""
-    return update_watchlist(watchlist_id, {"is_active": 0})
+    return update_watchlist(watchlist_id, {"is_active": 0}, client_id=client_id)
 
 
 def suggest_watchlists(df_annotated: pd.DataFrame, limit: int = 5) -> list[dict]:

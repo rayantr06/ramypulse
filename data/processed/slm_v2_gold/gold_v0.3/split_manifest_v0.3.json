@@ -1,0 +1,49 @@
+{
+  "version": "0.3.0",
+  "seed": 20260731,
+  "dev": {
+    "n": 122,
+    "scope": {
+      "espace_public": 54,
+      "organisation": 68
+    },
+    "sentiment": {
+      "negatif": 42,
+      "neutre": 51,
+      "positif": 28,
+      "mixte": 1
+    },
+    "alertes": 7,
+    "arabizi": 21,
+    "paliers": {
+      "repasse_R1": 35,
+      "accord_A3_C": 71,
+      "valide_humain": 15,
+      "correction_humaine": 1
+    }
+  },
+  "test": {
+    "n": 116,
+    "scope": {
+      "espace_public": 53,
+      "organisation": 63
+    },
+    "sentiment": {
+      "negatif": 40,
+      "neutre": 50,
+      "positif": 26
+    },
+    "alertes": 6,
+    "arabizi": 18,
+    "paliers": {
+      "accord_A3_C": 76,
+      "valide_humain": 14,
+      "repasse_R1": 26
+    }
+  },
+  "chevauchement": 0,
+  "union_complete": true,
+  "sha256_dev": "05ef972df9784c76dd90dbfdf6e55658a5073c07aef2963991f4539b6c537b9f",
+  "sha256_test": "b5e57fe30708562ade8a940d5e815d11c243ca8920405c8797a0ac92d21ba3f7",
+  "regle": "gold_test ne doit jamais servir au reglage du prompt ni a l'entrainement"
+}

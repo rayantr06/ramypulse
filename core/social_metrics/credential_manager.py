@@ -32,9 +32,12 @@ def create_credential(
     app_id: str | None = None,
     app_secret: str | None = None,
     extra_config: dict | None = None,
-    client_id: str = "ramy_client_001",
+    client_id: str | None = None,
 ) -> str:
     """Crée un credential et stocke les secrets hors base."""
+    if not isinstance(client_id, str) or not str(client_id).strip():
+        raise ValueError("client_id is required for create_credential")
+    effective_client_id = str(client_id).strip()
     credential_id = f"cred-{uuid.uuid4().hex[:12]}"
     now = datetime.now().isoformat()
 
@@ -58,7 +61,7 @@ def create_credential(
             """,
             (
                 credential_id,
-                client_id,
+                effective_client_id,
                 entity_type,
                 entity_name,
                 platform,
@@ -81,11 +84,15 @@ def list_credentials(
     platform: str | None = None,
     entity_type: str | None = None,
     is_active: bool = True,
-    client_id: str = "ramy_client_001",
+    client_id: str | None = None,
 ) -> list[dict]:
     """Liste les credentials sans exposer les secrets."""
-    conditions = ["client_id = ?"]
-    params: list[object] = [client_id]
+    conditions: list[str] = []
+    params: list[object] = []
+
+    if isinstance(client_id, str) and str(client_id).strip():
+        conditions.append("client_id = ?")
+        params.append(str(client_id).strip())
 
     if is_active is not None:
         conditions.append("is_active = ?")
@@ -112,13 +119,19 @@ def list_credentials(
     return [dict(row) for row in rows]
 
 
-def get_credential(credential_id: str) -> dict | None:
-    """Récupère un credential avec résolution des secrets."""
+def get_credential(credential_id: str, client_id: str | None = None) -> dict | None:
+    """Récupère un credential avec résolution des secrets.
+
+    Si client_id est fourni, vérifie que le credential appartient à ce tenant.
+    Retourne None (→ 404) si le credential n'appartient pas au tenant demandeur.
+    """
+    query = "SELECT * FROM platform_credentials WHERE credential_id = ?"
+    params: list[object] = [credential_id]
+    if client_id:
+        query += " AND client_id = ?"
+        params.append(client_id)
     with _get_conn() as conn:
-        row = conn.execute(
-            "SELECT * FROM platform_credentials WHERE credential_id = ?",
-            [credential_id],
-        ).fetchone()
+        row = conn.execute(query, params).fetchone()
     if not row:
         return None
 
@@ -132,18 +145,28 @@ def get_credential(credential_id: str) -> dict | None:
     return record
 
 
-def deactivate_credential(credential_id: str) -> bool:
+def deactivate_credential(
+    credential_id: str,
+    client_id: str | None = None,
+) -> bool:
     """Désactive logiquement un credential."""
     now = datetime.now().isoformat()
+    effective_client_id = (
+        str(client_id).strip()
+        if isinstance(client_id, str) and str(client_id).strip()
+        else None
+    )
     with _get_conn() as conn:
-        cursor = conn.execute(
-            """
+        sql = """
             UPDATE platform_credentials
             SET is_active = 0, updated_at = ?
             WHERE credential_id = ?
-            """,
-            [now, credential_id],
-        )
+            """
+        params: list[object] = [now, credential_id]
+        if effective_client_id is not None:
+            sql += " AND client_id = ?"
+            params.append(effective_client_id)
+        cursor = conn.execute(sql, params)
         conn.commit()
     return cursor.rowcount > 0
 

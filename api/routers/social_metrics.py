@@ -7,15 +7,17 @@ import sqlite3
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 
 import config
+from api.deps.tenant import resolve_client_id
 from api.schemas import (
     CampaignPostAdd,
     CampaignRevenuePatch,
     CredentialCreate,
     ManualMetricsInput,
 )
+from core.campaigns.campaign_manager import get_campaign
 from core.social_metrics import credential_manager, metrics_aggregator
 from core.social_metrics.instagram_graph_collector import collect_and_save, save_metrics
 from core.social_metrics.screenshot_parser import save_screenshot
@@ -32,7 +34,10 @@ def _get_db() -> sqlite3.Connection:
 
 
 @router.post("/credentials", status_code=201)
-def create_credential(data: CredentialCreate):
+def create_credential(
+    data: CredentialCreate,
+    client_id: str = Depends(resolve_client_id),
+):
     """Enregistre un credential plateforme."""
     try:
         credential_id = credential_manager.create_credential(
@@ -44,6 +49,7 @@ def create_credential(data: CredentialCreate):
             app_id=data.app_id,
             app_secret=data.app_secret,
             extra_config=data.extra_config,
+            client_id=client_id,
         )
         return {"credential_id": credential_id, "status": "created"}
     except Exception as exc:
@@ -56,6 +62,7 @@ def list_credentials(
     platform: str | None = None,
     entity_type: str | None = None,
     is_active: bool = True,
+    client_id: str = Depends(resolve_client_id),
 ):
     """Liste les credentials enregistrés."""
     try:
@@ -63,6 +70,7 @@ def list_credentials(
             platform=platform,
             entity_type=entity_type,
             is_active=is_active,
+            client_id=client_id,
         )
     except Exception as exc:
         logger.error("Erreur list_credentials : %s", exc)
@@ -70,10 +78,13 @@ def list_credentials(
 
 
 @router.delete("/credentials/{credential_id}", status_code=204)
-def deactivate_credential(credential_id: str):
+def deactivate_credential(
+    credential_id: str,
+    client_id: str = Depends(resolve_client_id),
+):
     """Désactive logiquement un credential."""
     try:
-        ok = credential_manager.deactivate_credential(credential_id)
+        ok = credential_manager.deactivate_credential(credential_id, client_id=client_id)
         if not ok:
             raise HTTPException(status_code=404, detail="Credential not found")
     except HTTPException:
@@ -84,8 +95,14 @@ def deactivate_credential(credential_id: str):
 
 
 @router.post("/campaigns/{campaign_id}/posts", status_code=201)
-def add_campaign_post(campaign_id: str, data: CampaignPostAdd):
+def add_campaign_post(
+    campaign_id: str,
+    data: CampaignPostAdd,
+    client_id: str = Depends(resolve_client_id),
+):
     """Lie un post social à une campagne."""
+    if not get_campaign(campaign_id, client_id=client_id):
+        raise HTTPException(status_code=404, detail="Campaign not found")
     try:
         post_id = f"post-{uuid.uuid4().hex[:12]}"
         now = datetime.now().isoformat()
@@ -117,8 +134,13 @@ def add_campaign_post(campaign_id: str, data: CampaignPostAdd):
 
 
 @router.get("/campaigns/{campaign_id}/posts")
-def list_campaign_posts(campaign_id: str):
+def list_campaign_posts(
+    campaign_id: str,
+    client_id: str = Depends(resolve_client_id),
+):
     """Liste les posts rattachés à une campagne."""
+    if not get_campaign(campaign_id, client_id=client_id):
+        raise HTTPException(status_code=404, detail="Campaign not found")
     try:
         with _get_db() as conn:
             rows = conn.execute(
@@ -132,21 +154,29 @@ def list_campaign_posts(campaign_id: str):
 
 
 @router.delete("/posts/{post_id}", status_code=204)
-def delete_campaign_post(post_id: str):
+def delete_campaign_post(
+    post_id: str,
+    client_id: str = Depends(resolve_client_id),
+):
     """Supprime un post de campagne et ses métriques associées."""
     try:
         with _get_db() as conn:
+            post_row = conn.execute(
+                "SELECT campaign_id FROM campaign_posts WHERE post_id = ?",
+                [post_id],
+            ).fetchone()
+            if not post_row:
+                raise HTTPException(status_code=404, detail="Campaign post not found")
+            if not get_campaign(post_row["campaign_id"], client_id=client_id):
+                raise HTTPException(status_code=404, detail="Campaign post not found")
             conn.execute(
                 "DELETE FROM post_engagement_metrics WHERE post_id = ?",
                 [post_id],
             )
-            post_cursor = conn.execute(
+            conn.execute(
                 "DELETE FROM campaign_posts WHERE post_id = ?",
                 [post_id],
             )
-            if post_cursor.rowcount == 0:
-                conn.rollback()
-                raise HTTPException(status_code=404, detail="Campaign post not found")
             conn.commit()
     except HTTPException:
         raise
@@ -156,8 +186,13 @@ def delete_campaign_post(post_id: str):
 
 
 @router.post("/campaigns/{campaign_id}/collect")
-def collect_campaign_metrics(campaign_id: str):
+def collect_campaign_metrics(
+    campaign_id: str,
+    client_id: str = Depends(resolve_client_id),
+):
     """Déclenche une collecte Graph API pour les posts liés."""
+    if not get_campaign(campaign_id, client_id=client_id):
+        raise HTTPException(status_code=404, detail="Campaign not found")
     try:
         with _get_db() as conn:
             posts = conn.execute(
@@ -271,8 +306,13 @@ async def upload_screenshot(
 
 
 @router.get("/campaigns/{campaign_id}")
-def get_campaign_engagement(campaign_id: str):
+def get_campaign_engagement(
+    campaign_id: str,
+    client_id: str = Depends(resolve_client_id),
+):
     """Retourne les métriques agrégées d'une campagne."""
+    if not get_campaign(campaign_id, client_id=client_id):
+        raise HTTPException(status_code=404, detail="Campaign not found")
     try:
         result = metrics_aggregator.get_campaign_engagement(campaign_id)
         if "error" in result:
@@ -286,8 +326,14 @@ def get_campaign_engagement(campaign_id: str):
 
 
 @router.patch("/campaigns/{campaign_id}/revenue")
-def set_campaign_revenue(campaign_id: str, data: CampaignRevenuePatch):
+def set_campaign_revenue(
+    campaign_id: str,
+    data: CampaignRevenuePatch,
+    client_id: str = Depends(resolve_client_id),
+):
     """Met à jour le revenu attribué à une campagne."""
+    if not get_campaign(campaign_id, client_id=client_id):
+        raise HTTPException(status_code=404, detail="Campaign not found")
     try:
         now = datetime.now().isoformat()
         with _get_db() as conn:

@@ -1,4 +1,38 @@
+import fs from "node:fs";
+import path from "node:path";
+
 import { expect, test, type Page } from "@playwright/test";
+
+const explorerAnnotationV04 = {
+  schema_version: "0.4.0",
+  is_exploitable: true,
+  non_exploitable_reason: null,
+  business_relevance: "directe",
+  author_role: "consommateur",
+  requires_parent_context: false,
+  language: { dominant: "francais", detected: ["francais"], code_switching: false, scripts: ["latin"] },
+  entities: [{ id: "ent_1", type: "produit", name: "YaghurtPlus", mention: null, source: "contexte" }],
+  sentiment: {
+    label: "negatif",
+    intensity: "forte",
+    emotion: "deception",
+    sarcasm: false,
+    target_entity_ids: ["ent_1"],
+    evidence: [{ text: "goût est mauvais", start: 3, end: 19 }],
+  },
+  intents: ["plainte", "partage_experience"],
+  aspects: [{
+    family: "produit_service",
+    attribute: "gout",
+    target_entity_id: "ent_1",
+    sentiment: "negatif",
+    intensity: "forte",
+    implicit: false,
+    evidence: [{ text: "goût est mauvais", start: 3, end: 19 }],
+  }],
+  alerts: [],
+  actionability: { actionable: true, queue: "produit", priority: "moyenne" },
+};
 
 const explorerSearchPayload = {
   query: "Que pensent les clients du goût ?",
@@ -12,6 +46,10 @@ const explorerSearchPayload = {
       aspect: "gout",
       sentiment_label: "negatif",
       score: 0.01639344,
+      annotation: explorerAnnotationV04,
+      model_version: "lidal-slm-search-s1",
+      compiler_version: "compiler-v0.4",
+      validation_status: "valid",
     },
     {
       text: "Le goût manque de fraîcheur",
@@ -25,6 +63,21 @@ const explorerSearchPayload = {
   ],
 };
 
+const explorerRagPayload = {
+  query: "Que pensent les clients du goût ?",
+  answer: "Les signaux cités indiquent une perception négative du goût et de la fraîcheur.",
+  confidence: "high",
+  chunks: explorerSearchPayload.results.map((result) => ({
+    text: result.text,
+    channel: result.channel,
+    source_url: result.source_url,
+    url: result.source_url,
+    sentiment_label: result.sentiment_label,
+    aspect: result.aspect,
+    score: result.score,
+  })),
+};
+
 const explorerVerbatimsPayload = {
   results: [
     {
@@ -35,6 +88,9 @@ const explorerVerbatimsPayload = {
       aspect: "gout",
       sentiment_label: "negatif",
       wilaya: "alger",
+      annotation: explorerAnnotationV04,
+      model_version: "lidal-slm-0.8b-s1",
+      validation_status: "valid",
     },
     {
       text: "Le prix est trop élevé",
@@ -106,9 +162,58 @@ const watchlistMetrics = {
   quick_insight: "La baisse est concentrée sur le goût à Oran.",
 };
 
+const smartWatchAnalysis = {
+  tenant_setup: { client_name: "Tenant Ready", client_slug: "tenant-ready", country: "DZ" },
+  suggested_sources: [],
+  required_credentials: [],
+  recommended_channels: [
+    { channel: "web_search", enabled_by_default: true, reason: "Couverture web." },
+    { channel: "public_url_seed", enabled_by_default: true, reason: "Pages publiques." },
+    { channel: "google_maps", enabled_by_default: true, reason: "Avis locaux." },
+  ],
+  suggested_watchlists: [
+    {
+      name: "NSS Oran",
+      description: "Surveille Oran.",
+      scope_type: "watch_seed",
+      role: "seed",
+      filters: {
+        keywords: ["ramy citron", "avis ramy"],
+        languages: ["fr", "ar"],
+        regions: ["Oran"],
+        period_days: 7,
+        min_volume: 10,
+      },
+      enabled_by_default: true,
+      reason: "Périmètre principal.",
+    },
+  ],
+  suggested_alert_profiles: [],
+  deferred_agent_config: [],
+  warnings: [],
+  fallback_used: false,
+};
+
 async function mockExplorerApi(page: Page) {
+  await page.addInitScript(() => {
+    localStorage.clear();
+    localStorage.setItem("ramypulse.activeTenantId", "tenant-ready");
+  });
+  await page.route("**/api/dashboard/summary", async (route) => {
+    await route.fulfill({
+      json: {
+        nss_global: 24,
+        total_mentions: 41,
+        active_alerts: 2,
+        active_watchlists: 3,
+      },
+    });
+  });
   await page.route("**/api/explorer/search**", async (route) => {
     await route.fulfill({ json: explorerSearchPayload });
+  });
+  await page.route("**/api/explorer/rag**", async (route) => {
+    await route.fulfill({ json: explorerRagPayload });
   });
   await page.route("**/api/explorer/verbatims**", async (route) => {
     await route.fulfill({ json: explorerVerbatimsPayload });
@@ -138,14 +243,43 @@ test("explorer golden path shows consultable RAG evidence and real source links"
     "href",
     "https://facebook.com/posts/1",
   );
-  await expect(page.locator('[data-demo-disabled="explorer-filter"]')).toBeVisible();
+  await expect(page.getByRole("button", { name: "Filtrer" })).toBeVisible();
   await expect(page.getByTestId("search-result-facebook-0-0.01639344")).toBeVisible();
   await expect(page.getByTestId("verbatim-row-facebook-0-2026-04-04T09:00:00Z")).toBeVisible();
+
+  if (process.env.CAPTURE_V3_REVIEW === "1") {
+    const reviewDirectory = path.resolve(process.cwd(), "../.impeccable/review");
+    fs.mkdirSync(reviewDirectory, { recursive: true });
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.screenshot({ path: path.join(reviewDirectory, "explorer-v3-desktop.png"), fullPage: true });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.reload();
+    await expect(page.getByTestId("signal-analysis-panel")).toBeVisible();
+    await page.screenshot({ path: path.join(reviewDirectory, "explorer-v3-mobile.png"), fullPage: true });
+  }
 });
 
 test("watchlists golden path submits backend-aligned filters", async ({ page }) => {
   let postedPayload: unknown = null;
+  let postedRunPayload: unknown = null;
+  await page.addInitScript(() => {
+    localStorage.clear();
+    localStorage.setItem("ramypulse.activeTenantId", "tenant-ready");
+  });
+  await page.route("**/api/dashboard/summary", async (route) => {
+    await route.fulfill({
+      json: {
+        nss_global: 24,
+        total_mentions: 41,
+        active_alerts: 2,
+        active_watchlists: 3,
+      },
+    });
+  });
   await mockWatchlistsApi(page);
+  await page.route("**/api/onboarding/analyze", async (route) => {
+    await route.fulfill({ json: smartWatchAnalysis });
+  });
   await page.route("**/api/watchlists", async (route) => {
     if (route.request().method() === "POST") {
       postedPayload = route.request().postDataJSON();
@@ -157,42 +291,40 @@ test("watchlists golden path submits backend-aligned filters", async ({ page }) 
   await page.route("**/api/watchlists/watch_new_1/metrics", async (route) => {
     await route.fulfill({ json: watchlistMetrics });
   });
+  await page.route("**/api/watch-runs", async (route) => {
+    postedRunPayload = route.request().postDataJSON();
+    await route.fulfill({ status: 202, json: { run_id: "run_new_1" } });
+  });
 
   await page.goto("/#/watchlists");
   await page.getByTestId("btn-create-watchlist").click();
-
-  await expect(page.getByPlaceholder("Produit")).toBeVisible();
-  await expect(page.getByPlaceholder("Wilaya")).toBeVisible();
-  await expect(page.getByPlaceholder("Canal")).toBeVisible();
-  await expect(page.getByPlaceholder("Aspect")).toBeVisible();
-  await expect(page.getByPlaceholder("Sentiment")).toBeVisible();
-  await expect(page.getByPlaceholder("Jours")).toBeVisible();
-  await expect(page.getByPlaceholder("Volume min.")).toBeVisible();
-
-  await page.getByTestId("input-watchlist-name").fill("NSS Oran");
-  await page.getByPlaceholder("Description (optionnel)").fill("Surveille Oran");
-  await page.locator("select").nth(0).selectOption("region");
-  await page.getByPlaceholder("Produit").fill("ramy_citron");
-  await page.getByPlaceholder("Wilaya").fill("oran");
-  await page.getByPlaceholder("Canal").fill("google_maps");
-  await page.getByPlaceholder("Aspect").fill("gout");
-  await page.getByPlaceholder("Jours").fill("7");
-  await page.getByPlaceholder("Volume min.").fill("10");
+  await page
+    .getByTestId("watch-intent-input")
+    .fill("Surveiller les avis sur le goût de Ramy à Oran");
+  await page.getByTestId("btn-prepare-watch").click();
+  await expect(page.getByTestId("smart-watch-review")).toBeVisible();
   await page.getByTestId("btn-submit-watchlist").click();
 
   await expect.poll(() => postedPayload).not.toBeNull();
   expect(postedPayload).toEqual({
     name: "NSS Oran",
-    description: "Surveille Oran",
-    scope_type: "region",
+    description: "Surveiller les avis sur le goût de Ramy à Oran",
+    scope_type: "watch_seed",
     filters: {
-      channel: "google_maps",
-      aspect: "gout",
-      wilaya: "oran",
-      product: "ramy_citron",
-      sentiment: null,
+      brand_name: "Tenant Ready",
+      product_name: "Surveiller les avis sur le goût de Ramy à Oran",
+      keywords: ["ramy citron", "avis ramy"],
+      seed_urls: [],
+      competitors: [],
+      channels: ["web_search", "public_url_seed", "google_maps"],
+      languages: ["fr", "ar"],
+      hashtags: [],
+      subject_type: "keyword",
+      excluded_keywords: [],
+      regions: ["Oran"],
       period_days: 7,
       min_volume: 10,
     },
   });
+  await expect.poll(() => postedRunPayload).not.toBeNull();
 });

@@ -1,0 +1,84 @@
+Total processed samples: 34
+
+==================== EXEMPLE #1 (Source: massinissa_algerian_corpus) ====================
+<|im_start|>user
+Analyse ce commentaire consommateur algérien et extrais les informations structurées :
+
+"نريد تعديل الاجور"
+<|im_end|>
+<|im_start|>assistant
+<think>
+### 1. Décomposition Linguistique
+- Langue dominante : Arabe
+- Mots-clés & Expressions :
+    - "نريد" (narīd) : "Nous voulons", exprime une demande ou un désir.
+    - "تعديل" (taʿdīl) : "modification", "ajustement".
+    - "الاجور" (al-ujūr) : "les salaires".
+- Code-switching / Emprunts : Aucun.
+
+### 2. Analyse Sentimentale & Intensité
+- Signal : ● NÉGATIF (La demande d'ajustement implique une insatisfaction vis-à-vis de la situation actuelle des salaires).
+- Tonalité : Revendication, insatisfaction, demande.
+
+### 3. Extraction d'Entités (Marque & Produit)
+- Marque : Non mentionnée
+- Produit : Non mentionné (concerne plutôt une condition de travail ou un service/rémunération)
+
+### 4. Extraction d'Aspects (Qualité, Prix, SAV, Goût, Emballage, etc.)
+- Salaires : "نريد
+
+======================================================================
+
+==================== EXEMPLE #2 (Source: massinissa_algerian_corpus) ====================
+<|im_start|>user
+Analyse ce commentaire consommateur algérien et extrais les informations structurées :
+
+"معناها لا مجال لتوظيف الشباب في هذه المناصب"
+<|im_end|>
+<|im_start|>assistant
+<think>
+### 1. Décomposition Linguistique
+- Langue dominante : Arabe
+- Mots-clés & Expressions : "لا مجال" (pas de place/possibilité), "توظيف" (emploi/recrutement), "الشباب" (les jeunes), "المناصب" (les postes). Le mot "معناها" (ce qui signifie) introduit une conclusion ou une constatation.
+- Code-switching / Emprunts : Aucun.
+
+### 2. Analyse Sentimentale & Intensité
+- Signal : ● NÉGATIF
+- Tonalité : Constatation amère, déception, frustration face au manque d'opportunités.
+
+### 3. Extraction d'Entités (Marque & Produit)
+- Marque : Non mentionnée
+- Produit : Non mentionné (le sujet est l'emploi/recrutement)
+
+### 4. Extraction d'Aspects (Qualité, Prix, SAV, Goût, Emballage, etc.)
+- Opportunités d'emploi : "لا مجال لتوظيف الشباب في هذه المناصب" -> NÉGATIF
+
+### 5. Évaluation de Criticité
+- Alerte Qualité / Sanitaire : NON
+- Niveau de sévérité : Moyen (concerne un problème socio-économique général, pas une alerte produit/service immédiate, mais un sujet de préoccupation important).
+</think>
+
+{
+  "sentiment": "negatif",
+  "confiance_sentiment": 0.95,
+  "est_sarcastique": false,
+  "marque": null,
+  "produit": null,
+  "aspects": [
+    {"aspect": "opportunites_emploi", "sentiment": "negatif", "extrait": "لا مجال لتوظيف الشباب في هذه المناصب"}
+  ],
+  "alerte_qualite": false,
+  "langue_dominante": "arabe_msa",
+  "resume": "Le commentaire exprime qu'il n'y a aucune opportunité d'emploi pour les jeunes dans les postes mentionnés."
+}
+<|im_end|>
+
+======================================================================
+
+==================== EXEMPLE #3 (Source: massinissa_algerian_corpus) ====================
+<|im_start|>user
+Analyse ce commentaire consommateur algérien et extrais les informations structurées :
+
+"انا ولد* + كيفاه شعب طورو يشرو من مواقع وفلمعيشة كلش غالي ؟ تحبي تاكلي باطل ؟
+
+======================================================================

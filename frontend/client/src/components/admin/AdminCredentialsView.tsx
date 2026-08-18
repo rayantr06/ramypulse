@@ -184,7 +184,7 @@ export function AdminCredentialsView() {
           </div>
           <input className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" type="password" placeholder="Access Token" value={credentialForm.access_token} onChange={(event) => setCredentialForm({ ...credentialForm, access_token: event.target.value })} />
           <input className="w-full bg-surface-container-highest rounded-lg py-2 px-3 text-sm" type="password" placeholder="App Secret" value={credentialForm.app_secret} onChange={(event) => setCredentialForm({ ...credentialForm, app_secret: event.target.value })} />
-          <textarea className="w-full bg-[#0d0e10] p-3 rounded-lg font-mono text-[11px] text-primary/80 h-24 overflow-y-auto border border-white/5" value={credentialForm.extra_config_text} onChange={(event) => setCredentialForm({ ...credentialForm, extra_config_text: event.target.value })} />
+          <textarea className="h-24 w-full overflow-y-auto rounded-lg border border-outline-variant/60 bg-surface-container-lowest p-3 font-mono text-[11px] text-primary/80" value={credentialForm.extra_config_text} onChange={(event) => setCredentialForm({ ...credentialForm, extra_config_text: event.target.value })} />
           {credentialError ? <p className="text-xs text-error">{credentialError}</p> : null}
           <button type="submit" disabled={createCredentialMutation.isPending} className="w-full py-3 bg-primary text-on-primary font-bold rounded-lg disabled:opacity-50">
             {createCredentialMutation.isPending ? "Création..." : "Créer le credential"}

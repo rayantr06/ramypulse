@@ -60,10 +60,14 @@ def get_alert_detail(alert_id: str, client_id: str = Depends(resolve_client_id))
 
 
 @router.put("/{alert_id}/status")
-def update_status(alert_id: str, payload: AlertStatusUpdate):
+def update_status(
+    alert_id: str,
+    payload: AlertStatusUpdate,
+    client_id: str = Depends(resolve_client_id),
+):
     """Met à jour le statut (ex: resolved, acknowledged) d'une alerte."""
     try:
-        success = update_alert_status(alert_id, payload.status)
+        success = update_alert_status(alert_id, payload.status, client_id=client_id)
         if not success:
             raise HTTPException(status_code=404, detail="Alert not found")
         return {"result": "success", "alert_id": alert_id, "status": payload.status}

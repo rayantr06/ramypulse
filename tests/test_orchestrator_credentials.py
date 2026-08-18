@@ -26,6 +26,7 @@ def _create_test_credential(access_token: str = "test_token_123") -> str:
         access_token=access_token,
         app_id="app_123",
         app_secret="secret_456",
+        client_id="test-orchestrator-creds",
     )
 
 

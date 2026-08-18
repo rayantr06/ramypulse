@@ -1,0 +1,79 @@
+{
+  "version": "0.1.0",
+  "measurement_scope": "end_to_end",
+  "purpose": "Autoriser ou refuser la génération du pilote d'entraînement SLM V2.",
+  "evaluation_policy": {
+    "missing_or_invalid_output": "scored_as_wrong",
+    "maximum_controlled_retry": 1,
+    "test_split_policy": "locked_after_baseline; no prompt or ontology tuning from test errors",
+    "gold_training_policy": "gold_dev and gold_test are excluded from training"
+  },
+  "gates": {
+    "valid_output_rate": {
+      "operator": ">=",
+      "threshold": 1.0,
+      "critical": true
+    },
+    "evidence_grounding_rate": {
+      "operator": ">=",
+      "threshold": 1.0,
+      "critical": true
+    },
+    "is_exploitable.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.9,
+      "critical": true
+    },
+    "is_exploitable.false_recall": {
+      "operator": ">=",
+      "threshold": 0.8,
+      "critical": true
+    },
+    "business_relevance.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.85,
+      "critical": true
+    },
+    "sentiment.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.8,
+      "critical": true
+    },
+    "sarcasm.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.8,
+      "critical": false
+    },
+    "language.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.9,
+      "critical": false
+    },
+    "intents.micro_f1": {
+      "operator": ">=",
+      "threshold": 0.85,
+      "critical": true
+    },
+    "aspects_family_attribute_sentiment.micro_f1": {
+      "operator": ">=",
+      "threshold": 0.8,
+      "critical": true
+    },
+    "alerts_type_severity.precision": {
+      "operator": ">=",
+      "threshold": 0.95,
+      "critical": true
+    },
+    "alerts_type_severity.recall": {
+      "operator": ">=",
+      "threshold": 0.8,
+      "critical": true
+    },
+    "entities_type_name.micro_f1": {
+      "operator": ">=",
+      "threshold": 0.9,
+      "critical": false
+    }
+  },
+  "safety_note": "Les scores d'alertes doivent aussi être confirmés sur un jeu élargi contenant au moins 30 alertes positives avant une mise en production."
+}

@@ -150,7 +150,7 @@ def test_start_watch_run_rejects_unsupported_channels_before_creating_run(
         run_service.start_watch_run(
             client_id="client-a",
             watchlist_id="watchlist-001",
-            requested_channels=["facebook"],
+            requested_channels=["tiktok"],
             run_async=False,
             db_path=db_path,
         )
@@ -526,7 +526,7 @@ def test_watch_runs_api_rejects_unsupported_channels(monkeypatch, tmp_path: Path
         "/api/watch-runs",
         json={
             "watchlist_id": "watchlist-001",
-            "requested_channels": ["facebook"],
+            "requested_channels": ["tiktok"],
         },
         headers=headers,
     )

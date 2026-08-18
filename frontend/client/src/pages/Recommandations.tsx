@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { AppShell } from "@/components/AppShell";
+import { PageHeader } from "@/components/PageHeader";
 import { EmptyTenantState } from "@/components/EmptyTenantState";
 import { apiRequest } from "@/lib/queryClient";
 import {
@@ -97,7 +98,7 @@ function formatRelativeRunLabel(value: string | undefined | null): string {
 
 function normalizePriority(value: string | undefined | null, confidence: number): string {
   const raw = (value || "").toUpperCase();
-  if (raw.includes("HIGH") || raw.includes("URGENT")) return "URGENT";
+  if (raw.includes("HIGH") || raw.includes("HAUT") || raw.includes("URGENT")) return "URGENT";
   if (raw.includes("LOW") || raw.includes("BAS")) return "BAS";
   if (raw.includes("MED") || raw.includes("MOYEN")) return "MOYEN";
   if (confidence >= 85) return "URGENT";
@@ -328,6 +329,17 @@ export default function Recommandations() {
     activeRecos[0]?.provider || latestRecommendation?.provider || "",
     activeRecos[0]?.model || latestRecommendation?.model || "",
   );
+  const runHistory = useMemo(() => {
+    return recos.map((recommendation) => ({
+      date: recommendation.created_at,
+      trigger: recommendation.trigger,
+      count: recommendation.count,
+      confidence: recommendation.confidence,
+      provider: recommendation.provider,
+      model: recommendation.model,
+      ...statusLabel(recommendation.status),
+    }));
+  }, [recos]);
 
   const invalidateRecommendations = async () => {
     await queryClientHook.invalidateQueries({ queryKey: ["/api/recommendations"] });
@@ -389,18 +401,6 @@ export default function Recommandations() {
     );
   }
 
-  const runHistory = useMemo(() => {
-    return recos.map((recommendation) => ({
-      date: recommendation.created_at,
-      trigger: recommendation.trigger,
-      count: recommendation.count,
-      confidence: recommendation.confidence,
-      provider: recommendation.provider,
-      model: recommendation.model,
-      ...statusLabel(recommendation.status),
-    }));
-  }, [recos]);
-
   return (
     <AppShell
       headerSearchPlaceholder="Rechercher une recommandation..."
@@ -408,18 +408,16 @@ export default function Recommandations() {
       avatarSrc={STITCH_AVATARS.recommandations.src}
       avatarAlt={STITCH_AVATARS.recommandations.alt}
     >
-      <div className="p-8 max-w-7xl mx-auto space-y-10">
+      <div className="mx-auto w-full max-w-[1600px] space-y-10 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
         <section>
-          <header className="mb-6">
-            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/60">
-              Module IA
-            </span>
-            <h2 className="font-headline font-extrabold text-3xl tracking-tight">
-              Générer des recommandations
-            </h2>
-          </header>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 bg-surface-container rounded-lg p-6 space-y-5">
+          <PageHeader
+            eyebrow="Agir"
+            tone="action"
+            title="Actions recommandées"
+            description="Examinez les actions proposées, les preuves qui les justifient et leur niveau de confiance avant de décider."
+          />
+          <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <div className="signal-panel space-y-5 rounded-xl p-6 lg:col-span-2">
               <div className="grid grid-cols-2 gap-5">
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold uppercase text-gray-500">

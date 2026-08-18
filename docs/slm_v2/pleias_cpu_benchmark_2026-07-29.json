@@ -1,0 +1,46 @@
+{
+  "date": "2026-07-29",
+  "purpose": "Controle materiel local d'un SLM PleIAs de taille comparable a la cible ultra-edge.",
+  "model": {
+    "repository": "PleIAs/Baguettotron-GGUF",
+    "quantization": "Q4_K_M",
+    "parameters": 320960000,
+    "file_size_mib": 228.6,
+    "license": "Apache-2.0"
+  },
+  "hardware": {
+    "cpu": "Intel Core i5-10300H",
+    "physical_cores": 4,
+    "logical_threads": 8,
+    "benchmark_threads": 4,
+    "system_ram_gib": 8,
+    "gpu_used": false
+  },
+  "runtime": {
+    "engine": "llama.cpp",
+    "backend": "CPU"
+  },
+  "measurements": {
+    "prompt_processing_128_tokens_per_second": {
+      "mean": 120.51,
+      "standard_deviation": 5.22
+    },
+    "prompt_processing_512_tokens_per_second": {
+      "mean": 122.87,
+      "standard_deviation": 2.97
+    },
+    "generation_128_tokens_per_second": {
+      "mean": 29.24,
+      "standard_deviation": 8.88
+    },
+    "generation_256_tokens_per_second": {
+      "mean": 44.72,
+      "standard_deviation": 2.03
+    }
+  },
+  "interpretation": [
+    "La classe 300-350M est exploitable sur un CPU ancien avec 8 Go de RAM.",
+    "Cette mesure ne constitue pas une evaluation de qualite sur la Darija.",
+    "Les candidats RamyPulse fine-tunes doivent etre re-evalues avec le format filaire compact et le runtime final."
+  ]
+}

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib
 from pathlib import Path
 
 import pandas as pd
@@ -21,10 +22,14 @@ def _prepare_isolated_db(monkeypatch, tmp_path: Path) -> dict[str, object]:
     db_path = tmp_path / "tenant-scope.sqlite"
     operator_client_id = "ramy-demo"
     other_client_id = "client-other"
+    current_config = importlib.import_module("config")
 
     monkeypatch.setattr(config, "SQLITE_DB_PATH", db_path, raising=False)
+    monkeypatch.setattr(current_config, "SQLITE_DB_PATH", db_path, raising=False)
     monkeypatch.setattr(config, "SAFE_EXPO_CLIENT_ID", operator_client_id, raising=False)
+    monkeypatch.setattr(current_config, "SAFE_EXPO_CLIENT_ID", operator_client_id, raising=False)
     monkeypatch.setattr(config, "DATA_DIR", tmp_path, raising=False)
+    monkeypatch.setattr(current_config, "DATA_DIR", tmp_path, raising=False)
 
     DatabaseManager(str(db_path)).create_tables()
     create_client(client_name="Safe Expo", client_id=operator_client_id)

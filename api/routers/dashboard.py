@@ -78,8 +78,9 @@ def _sentiment_score(values) -> float:
     if len(values) == 0:
         return 0.0
 
-    positive = {"tres_positif", "très_positif", "positif"}
-    negative = {"tres_negatif", "très_négatif", "tres_négatif", "très_negatif", "negatif", "négatif"}
+    # Labels FR 5 classes + fallback EN 3 classes DziriBERT (données pré-fix pipeline)
+    positive = {"tres_positif", "très_positif", "positif", "positive"}
+    negative = {"tres_negatif", "très_négatif", "tres_négatif", "très_negatif", "negatif", "négatif", "negative"}
 
     pos = 0
     neg = 0

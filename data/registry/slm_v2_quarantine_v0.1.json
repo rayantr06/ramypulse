@@ -1,0 +1,75 @@
+{
+  "quarantine_version": "slm_v2_quarantine_v0.1",
+  "created_at": "2026-07-29T00:00:00Z",
+  "policy": {
+    "training_allowed": false,
+    "evaluation_allowed": false,
+    "deletion_requested": false,
+    "rules": [
+      "These artifacts remain available only for lineage and offline error analysis.",
+      "They must not be concatenated with any SLM V2 training or evaluation view.",
+      "A future migration requires explicit schema conversion, validation, deduplication, and a new registry version.",
+      "Free-form think traces from the legacy pipeline are not accepted as SLM V2 targets."
+    ]
+  },
+  "artifacts": [
+    {
+      "path": "data/processed/openai_synth_lot1_0000_2999.batch.jsonl",
+      "size": 9597879,
+      "rows": 3000,
+      "sha256": "63206a400d6a36b97dbbe7fce29982b3433c8e128fef149d8f6fb2202f77acb1",
+      "status": "quarantined_raw_teacher_output",
+      "reasons": [
+        "Generated with the superseded annotation contract.",
+        "Contains legacy free-form reasoning traces.",
+        "Not validated against business_comment_annotation_v0.1."
+      ]
+    },
+    {
+      "path": "data/processed/openai_synth_training_data.jsonl",
+      "size": 9627601,
+      "rows": 2997,
+      "sha256": "f4706aea8b087a5deeedff8b08d87508a829622fa467c971e5d8231d826d8550",
+      "status": "quarantined_legacy_training_view",
+      "reasons": [
+        "Generated with the superseded annotation contract.",
+        "Contains legacy free-form reasoning traces.",
+        "Derived row count is 2997 while the raw batch artifact contains 3000 rows.",
+        "Not validated against business_comment_annotation_v0.1."
+      ]
+    },
+    {
+      "path": "data/processed/scraped_comments_synth_gemini.jsonl",
+      "size": 106128,
+      "rows": 48,
+      "sha256": "bafa3cd0a88c90bc7ba6ff60fdbbab1620cdd2030af13edaf3e18158acf8073a",
+      "status": "quarantined_incomplete_teacher_output",
+      "reasons": [
+        "Incomplete legacy generation run.",
+        "Not validated against business_comment_annotation_v0.1."
+      ]
+    },
+    {
+      "path": "data/processed/synth_training_data.jsonl",
+      "size": 49091,
+      "rows": 37,
+      "sha256": "a24ead8b86e935297ab292d72bedd6ff2278aa79f38e816544850ece607d1d76",
+      "status": "quarantined_legacy_training_view",
+      "reasons": [
+        "Predates the SLM V2 schema and data governance policy.",
+        "Not validated against business_comment_annotation_v0.1."
+      ]
+    },
+    {
+      "path": "data/processed/openai_batch_requests.jsonl",
+      "size": 3257023,
+      "rows": 1426,
+      "sha256": "0a49fa83d8ea5b34daca8df6f0a7f71367b2c20283f9ef1374a11514dc80f2c6",
+      "status": "quarantined_unsent_or_legacy_request_payload",
+      "reasons": [
+        "Request payload targets the superseded annotation contract.",
+        "Must never be resubmitted without explicit migration."
+      ]
+    }
+  ]
+}

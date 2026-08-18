@@ -35,6 +35,11 @@ from api.main import app
 from core.security.auth import create_api_key as _create_test_key
 _test_key_id, _test_raw_key = _create_test_key(client_id="ramy_client_001", label="test_suite")
 _AUTH_HEADERS = {"X-API-Key": _test_raw_key}
+_operator_key_id, _operator_raw_key = _create_test_key(
+    client_id=config.SAFE_EXPO_CLIENT_ID,
+    label="test_suite_operator",
+)
+_OPERATOR_HEADERS = {"X-API-Key": _operator_raw_key}
 
 _raw_client = TestClient(app)
 
@@ -1195,8 +1200,8 @@ class TestAdmin:
     def test_scheduler_tick_runs_due_priority_source_only(self):
         client_id = f"client-{uuid.uuid4().hex[:8]}"
         coverage_key = f"owned:facebook:scheduler-priority-{uuid.uuid4().hex[:8]}"
+        tenant_headers = {**_OPERATOR_HEADERS, "X-Ramy-Client-Id": client_id}
         r_primary = client.post("/api/admin/sources", json={
-            "client_id": client_id,
             "source_name": "Scheduler Primary",
             "platform": "facebook",
             "source_type": "managed_page",
@@ -1204,9 +1209,8 @@ class TestAdmin:
             "source_purpose": "owned_content",
             "source_priority": 1,
             "coverage_key": coverage_key,
-        })
+        }, headers=tenant_headers)
         r_fallback = client.post("/api/admin/sources", json={
-            "client_id": client_id,
             "source_name": "Scheduler Fallback",
             "platform": "facebook",
             "source_type": "managed_page",
@@ -1214,7 +1218,7 @@ class TestAdmin:
             "source_purpose": "owned_content",
             "source_priority": 2,
             "coverage_key": coverage_key,
-        })
+        }, headers=tenant_headers)
         primary_id = r_primary.json()["source_id"]
         fallback_id = r_fallback.json()["source_id"]
 
@@ -1227,7 +1231,7 @@ class TestAdmin:
                 "records_failed": 0,
             },
         ) as mocked_run:
-            r = client.post(f"/api/admin/scheduler/tick?client_id={client_id}")
+            r = client.post("/api/admin/scheduler/tick", headers=tenant_headers)
 
         assert r.status_code == 200
         data = r.json()
@@ -1241,8 +1245,8 @@ class TestAdmin:
     def test_scheduler_tick_falls_back_when_primary_fails(self):
         client_id = f"client-{uuid.uuid4().hex[:8]}"
         coverage_key = f"owned:facebook:scheduler-fallback-{uuid.uuid4().hex[:8]}"
+        tenant_headers = {**_OPERATOR_HEADERS, "X-Ramy-Client-Id": client_id}
         r_primary = client.post("/api/admin/sources", json={
-            "client_id": client_id,
             "source_name": "Fallback Primary",
             "platform": "facebook",
             "source_type": "managed_page",
@@ -1250,9 +1254,8 @@ class TestAdmin:
             "source_purpose": "owned_content",
             "source_priority": 1,
             "coverage_key": coverage_key,
-        })
+        }, headers=tenant_headers)
         r_fallback = client.post("/api/admin/sources", json={
-            "client_id": client_id,
             "source_name": "Fallback Secondary",
             "platform": "facebook",
             "source_type": "managed_page",
@@ -1260,7 +1263,7 @@ class TestAdmin:
             "source_purpose": "owned_content",
             "source_priority": 2,
             "coverage_key": coverage_key,
-        })
+        }, headers=tenant_headers)
         primary_id = r_primary.json()["source_id"]
         fallback_id = r_fallback.json()["source_id"]
 
@@ -1278,7 +1281,7 @@ class TestAdmin:
             "core.ingestion.scheduler.IngestionOrchestrator.run_source_sync",
             side_effect=_run_source_sync,
         ) as mocked_run:
-            r = client.post(f"/api/admin/scheduler/tick?client_id={client_id}")
+            r = client.post("/api/admin/scheduler/tick", headers=tenant_headers)
 
         assert r.status_code == 200
         data = r.json()
@@ -1291,8 +1294,8 @@ class TestAdmin:
     def test_scheduler_tick_skips_not_due_sources(self):
         client_id = f"client-{uuid.uuid4().hex[:8]}"
         coverage_key = f"owned:facebook:scheduler-fresh-{uuid.uuid4().hex[:8]}"
+        tenant_headers = {**_OPERATOR_HEADERS, "X-Ramy-Client-Id": client_id}
         r_source = client.post("/api/admin/sources", json={
-            "client_id": client_id,
             "source_name": "Fresh Source",
             "platform": "facebook",
             "source_type": "managed_page",
@@ -1301,7 +1304,7 @@ class TestAdmin:
             "source_priority": 1,
             "coverage_key": coverage_key,
             "sync_frequency_minutes": 120,
-        })
+        }, headers=tenant_headers)
         source_id = r_source.json()["source_id"]
         with _get_connection() as conn:
             conn.execute(
@@ -1311,7 +1314,10 @@ class TestAdmin:
             conn.commit()
 
         with patch("core.ingestion.scheduler.IngestionOrchestrator.run_source_sync") as mocked_run:
-            r = client.post(f"/api/admin/scheduler/tick?client_id={client_id}&now=2026-04-03T12:00:00%2B00:00")
+            r = client.post(
+                "/api/admin/scheduler/tick?now=2026-04-03T12:00:00%2B00:00",
+                headers=tenant_headers,
+            )
 
         assert r.status_code == 200
         data = r.json()

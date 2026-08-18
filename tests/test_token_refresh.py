@@ -25,6 +25,7 @@ class TestUpdateCredentialToken:
             platform="instagram",
             access_token="old_token",
             extra_config={"expires_at": "2026-04-01T00:00:00Z"},
+            client_id="test-token-refresh",
         )
 
         update_credential_token(
@@ -57,6 +58,7 @@ class TestRefreshIfNeeded:
             app_id="app1",
             app_secret="secret1",
             extra_config={"expires_at": "2026-06-01T00:00:00Z"},
+            client_id="test-token-refresh",
         )
         # Token expires in ~57 days — no refresh needed
         result = refresh_if_needed(cred_id)
@@ -71,6 +73,7 @@ class TestRefreshIfNeeded:
             app_id="app1",
             app_secret="secret1",
             extra_config={"expires_at": "2026-04-07T00:00:00Z"},  # ~2 days from now (2026-04-05)
+            client_id="test-token-refresh",
         )
 
         new_token_response = {
@@ -93,6 +96,7 @@ class TestRefreshIfNeeded:
             platform="instagram",
             access_token="token_no_expiry",
             extra_config={},
+            client_id="test-token-refresh",
         )
         result = refresh_if_needed(cred_id)
         assert result is False
@@ -107,6 +111,7 @@ class TestRefreshIfNeeded:
             app_id="app1",
             app_secret="secret1",
             extra_config={"expires_at": "2026-04-07T00:00:00Z"},
+            client_id="test-token-refresh",
         )
 
         with patch("core.connectors.token_refresh.meta_graph_get") as mock_get:

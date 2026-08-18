@@ -3,21 +3,29 @@
 from __future__ import annotations
 
 import inspect
+import logging
 import threading
 from pathlib import Path
 from typing import Callable
 
+import config
 from core.normalization.normalizer_pipeline import run_normalization_job
 from core.tenancy.artifact_refresh import refresh_tenant_artifacts
+from core.watch_runs.collectors.facebook_apify import collect_facebook_comments_apify
+from core.watch_runs.collectors.google_maps_apify import collect_google_maps_reviews_apify
 from core.watch_runs.collectors.google_maps_reviews import collect_google_maps_reviews
+from core.watch_runs.collectors.instagram_apify import collect_instagram_comments_apify
 from core.watch_runs.collectors.perplexity_discovery import (
     collect_perplexity_discovery,
     collect_perplexity_press,
     collect_perplexity_reddit,
 )
 from core.watch_runs.collectors.public_url_seed import collect_public_url_seed
+from core.watch_runs.collectors.web_keyword import collect_web_keyword_results
 from core.watch_runs.collectors.youtube_search import collect_youtube_search_results
 from core.watch_runs.raw_ingestion import insert_watch_documents
+
+logger = logging.getLogger(__name__)
 from core.watch_runs.run_manager import (
     create_watch_run,
     finish_run,
@@ -27,15 +35,64 @@ from core.watch_runs.run_manager import (
     start_step,
 )
 
-CollectorFn = Callable[..., list[dict[str, object]]]
+CollectorFn = Callable[..., list[dict[str, object]] | dict[str, object]]
+
+
+def collect_web_search_adaptive(
+    *,
+    client_id: str,
+    watchlist_id: str | None = None,
+    **kwargs,
+) -> list[dict[str, object]] | dict[str, object]:
+    """Use Perplexity Discovery Brain if PERPLEXITY_API_KEY is configured, else fall back to Tavily."""
+    if config.PERPLEXITY_API_KEY:
+        return collect_perplexity_discovery(client_id=client_id, watchlist_id=watchlist_id, **kwargs)
+    return collect_web_keyword_results(client_id=client_id, watchlist_id=watchlist_id, **kwargs)
+
+
+def collect_google_maps_adaptive(
+    *,
+    client_id: str,
+    watchlist_id: str | None = None,
+    **kwargs,
+) -> list[dict[str, object]] | dict[str, object]:
+    """Préfère Apify pour les avis complets, puis replie sur Places officiel."""
+
+    if config.APIFY_API_KEY:
+        try:
+            result = collect_google_maps_reviews_apify(
+                client_id=client_id,
+                watchlist_id=watchlist_id,
+                country_code="dz",
+                **kwargs,
+            )
+            status, documents, reason = _normalize_collector_result(result)
+            if documents or status == "success":
+                return result
+            logger_message = reason or "unknown"
+        except Exception as exc:
+            logger_message = str(exc)
+        # Le repli conserve une collecte minimale si l'acteur est indisponible.
+        logger.warning(
+            "Apify Google Maps unavailable (%s), falling back to Places API",
+            logger_message,
+        )
+    return collect_google_maps_reviews(
+        client_id=client_id,
+        watchlist_id=watchlist_id,
+        **kwargs,
+    )
+
 
 DEFAULT_COLLECTORS: dict[str, CollectorFn] = {
     "public_url_seed": collect_public_url_seed,
-    "web_search": collect_perplexity_discovery,
+    "web_search": collect_web_search_adaptive,
     "press": collect_perplexity_press,
     "reddit": collect_perplexity_reddit,
     "youtube": collect_youtube_search_results,
-    "google_maps": collect_google_maps_reviews,
+    "google_maps": collect_google_maps_adaptive,
+    "facebook": collect_facebook_comments_apify,
+    "instagram": collect_instagram_comments_apify,
 }
 
 

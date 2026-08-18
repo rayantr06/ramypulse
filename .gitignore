@@ -1,14 +1,64 @@
+# Python
 __pycache__/
 *.py[cod]
 *.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+*.so
+
+# Environnement virtuel
+.venv/
+venv/
+env/
+
+# Variables d'environnement
 .env
+.env.local
+
+# Données
 *.parquet
 data/raw/
 data/processed/
 data/embeddings/
 data/secrets/
 data/*.db
+data/*.sqlite3
+
+# Modèles ML
 models/dziribert/
 models/dziribert-sentiment/model.safetensors
 models/whisper/
+
+# Tests
 .pytest_cache/
+test-results/
+playwright-report/
+.playwright-cli/
+.impeccable/review/
+
+# Node / Frontend
+frontend/node_modules/
+node_modules/
+frontend/dist/
+frontend/.vite/
+*.tsbuildinfo
+
+# Logs et backups locaux
+.local-backups/
+.local-runlogs/
+
+# Éditeur / IDE
+.claude/
+.vscode/settings.json
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Divers
+*.log

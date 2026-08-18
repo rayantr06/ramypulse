@@ -6,11 +6,15 @@ import {
   shouldResetTenantCache,
 } from "../client/src/lib/routeAccess";
 
-test("product routes gate when no tenant is stored, while admin-sources stays outside the gate", () => {
-  assert.equal(shouldGateProductRoute("/explorateur", null), true);
-  assert.equal(shouldGateProductRoute("/campagnes", null), true);
-  assert.equal(shouldGateProductRoute("/admin-sources", null), false);
-  assert.equal(shouldGateProductRoute("/nouveau-client", null), false);
+test("product routes gate until readiness is ready, while admin-sources stays outside the gate", () => {
+  assert.equal(shouldGateProductRoute("/explorateur", "run_in_progress"), true);
+  assert.equal(shouldGateProductRoute("/campagnes", "run_failed"), true);
+  assert.equal(shouldGateProductRoute("/recommandations", "run_completed_no_data"), true);
+  assert.equal(shouldGateProductRoute("/watchlists/new", "needs_onboarding"), true);
+  assert.equal(shouldGateProductRoute("/explorateur", "checking"), false);
+  assert.equal(shouldGateProductRoute("/admin-sources", "run_in_progress"), false);
+  assert.equal(shouldGateProductRoute("/nouveau-client", "run_in_progress"), false);
+  assert.equal(shouldGateProductRoute("/explorateur", "ready"), false);
 });
 
 test("tenant cache resets only when the stored tenant changes", () => {

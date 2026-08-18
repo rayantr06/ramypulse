@@ -1,0 +1,423 @@
+{
+  "registry_version": "slm_v2_sources_v0.1",
+  "created_at": "2026-07-29T00:00:00Z",
+  "policy": {
+    "raw_root": "data/raw/slm_v2",
+    "processed_root": "data/processed/slm_v2_corpora/v0.1",
+    "default_status": "blocked",
+    "rules": [
+      "Raw files are immutable and never committed to Git.",
+      "Every remote file must pass its publisher checksum before use.",
+      "Every acquired file receives a local SHA-256 in the acquisition lock.",
+      "Datasets with different licences remain physically separated.",
+      "No row enters TRAIN before PII filtering and cross-corpus deduplication.",
+      "Published DEV and TEST splits remain evaluation-only unless explicitly superseded."
+    ]
+  },
+  "datasets": [
+    {
+      "dataset_id": "dz_sentiment_mendeley_45k",
+      "version": "2",
+      "priority": "P0",
+      "title": "Algerian Dialect",
+      "publisher": "Mendeley Data",
+      "homepage": "https://data.mendeley.com/datasets/zzwg3nnhsz/2",
+      "doi": "10.17632/zzwg3nnhsz.2",
+      "citation": "Benmounah, Zakaria; Boulesnane, Abdennour (2023), Algerian Dialect, Mendeley Data, V2",
+      "declared_rows": 45000,
+      "tasks": [
+        "sentiment_5_class",
+        "language_adaptation"
+      ],
+      "source_kind": "human_annotated_social_comments",
+      "platforms": [
+        "youtube"
+      ],
+      "licence": {
+        "spdx": "CC-BY-4.0",
+        "name": "Creative Commons Attribution 4.0 International",
+        "url": "https://creativecommons.org/licenses/by/4.0/",
+        "evidence_url": "https://data.mendeley.com/datasets/zzwg3nnhsz/2",
+        "verified": true,
+        "attribution_required": true,
+        "share_alike": false
+      },
+      "usage": {
+        "status": "train_candidate",
+        "commercial": true,
+        "conditions": [
+          "Preserve dataset and author attribution.",
+          "Remove URLs and direct identifiers before training.",
+          "Resolve the original 45k/5-class versus mirror 50k/3-class discrepancy."
+        ]
+      },
+      "files": [
+        {
+          "filename": "ADArabic-cla-GE-t-l-lu-lc-vu-ad-45000.csv",
+          "url": "https://prod-dcd-datasets-public-files-eu-west-1.s3.eu-west-1.amazonaws.com/5df4d7d0-b31d-4e0f-9bbc-32dc7a59c6ba",
+          "publisher_download_url": "https://data.mendeley.com/public-files/datasets/zzwg3nnhsz/files/2c9cb953-635e-4b82-9d28-01828a1254b9/file_downloaded",
+          "expected_size": 11846882,
+          "source_checksum": {
+            "algorithm": "sha256",
+            "value": "281276ce76bea67d9cd5d32bd5f63fa223605bc59bf71b0b9a9631c29d4f4ac5"
+          },
+          "intended_use": "train_candidate"
+        }
+      ]
+    },
+    {
+      "dataset_id": "algd_toxicity_speech",
+      "version": "10937445",
+      "priority": "P0",
+      "title": "Algerian Dialect Dataset Targeted Hate Speech, Offensive Language and Cyberbullying",
+      "publisher": "Zenodo",
+      "homepage": "https://zenodo.org/records/10937445",
+      "doi": "10.5281/zenodo.10937445",
+      "citation": "Messaoudi et al., Algerian Dialect Dataset Targeted Hate Speech, Offensive Language and Cyberbullying, Zenodo record 10937445",
+      "declared_rows": 14150,
+      "tasks": [
+        "hate_speech",
+        "cyberbullying",
+        "offensive_language",
+        "alert_auxiliary"
+      ],
+      "source_kind": "human_annotated_social_comments",
+      "platforms": [
+        "youtube",
+        "facebook",
+        "twitter"
+      ],
+      "licence": {
+        "spdx": "CC-BY-4.0",
+        "name": "Creative Commons Attribution 4.0 International",
+        "url": "https://creativecommons.org/licenses/by/4.0/",
+        "evidence_url": "https://zenodo.org/records/10937445",
+        "verified": true,
+        "attribution_required": true,
+        "share_alike": false
+      },
+      "usage": {
+        "status": "train_candidate",
+        "commercial": true,
+        "conditions": [
+          "Use labels as auxiliary tasks, not as direct RamyPulse alert truth.",
+          "Apply PII and quoted-identity filtering.",
+          "Stratify review across platform and topic."
+        ]
+      },
+      "files": [
+        {
+          "filename": "AlgD_Toxicity_Speech_Dataset.xlsx",
+          "url": "https://zenodo.org/api/records/10937445/files/AlgD_Toxicity_Speech_Dataset.xlsx/content",
+          "expected_size": 1956096,
+          "source_checksum": {
+            "algorithm": "md5",
+            "value": "ebb3b7caf16fb8860e6bbc978af5676f"
+          },
+          "intended_use": "train_candidate"
+        }
+      ]
+    },
+    {
+      "dataset_id": "dz_sentiment_hirak_11760",
+      "version": "10937412",
+      "priority": "P0",
+      "title": "Sentiment dataset of Algerian dialect",
+      "publisher": "Zenodo",
+      "homepage": "https://zenodo.org/records/10937412",
+      "doi": "10.5281/zenodo.10937412",
+      "citation": "Sentiment dataset of Algerian dialect, Zenodo record 10937412",
+      "declared_rows": 11760,
+      "tasks": [
+        "sentiment_binary",
+        "arabizi",
+        "language_adaptation"
+      ],
+      "source_kind": "human_annotated_social_comments",
+      "platforms": [
+        "facebook",
+        "youtube",
+        "twitter"
+      ],
+      "licence": {
+        "spdx": "CC-BY-4.0",
+        "name": "Creative Commons Attribution 4.0 International",
+        "url": "https://creativecommons.org/licenses/by/4.0/",
+        "evidence_url": "https://zenodo.org/records/10937412",
+        "verified": true,
+        "attribution_required": true,
+        "share_alike": false
+      },
+      "usage": {
+        "status": "train_candidate",
+        "commercial": true,
+        "conditions": [
+          "Treat political-domain sentiment as an auxiliary task.",
+          "Reject malformed rows and preserve their rejection reasons.",
+          "Do not infer business aspects absent from the source labels."
+        ]
+      },
+      "files": [
+        {
+          "filename": "Sentiment_dataset_of_Algerian_dialect (11760).xlsx",
+          "url": "https://zenodo.org/api/records/10937412/files/Sentiment_dataset_of_Algerian_dialect%20(11760).xlsx/content",
+          "expected_size": 912765,
+          "source_checksum": {
+            "algorithm": "md5",
+            "value": "6ab2738b3d18f8a657e610760d67b753"
+          },
+          "intended_use": "train_candidate"
+        }
+      ]
+    },
+    {
+      "dataset_id": "narabizi_ud",
+      "version": "89fddb4adedb65beac28f56e548dba0b9ceec8d0",
+      "priority": "P0",
+      "title": "UD Maghrebi Arabic French Arabizi",
+      "publisher": "Universal Dependencies",
+      "homepage": "https://universaldependencies.org/treebanks/qaf_arabizi/index.html",
+      "repository": "https://github.com/UniversalDependencies/UD_Maghrebi_Arabic_French-Arabizi",
+      "citation": "Seddah et al., NArabizi; UD_Maghrebi_Arabic_French-Arabizi",
+      "declared_rows": 1287,
+      "tasks": [
+        "arabizi",
+        "code_switching",
+        "morphosyntax",
+        "language_benchmark"
+      ],
+      "source_kind": "human_annotated_treebank",
+      "platforms": [
+        "web_ugc"
+      ],
+      "licence": {
+        "spdx": "CC-BY-SA-4.0",
+        "name": "Creative Commons Attribution-ShareAlike 4.0 International",
+        "url": "https://creativecommons.org/licenses/by-sa/4.0/",
+        "evidence_url": "https://raw.githubusercontent.com/UniversalDependencies/UD_Maghrebi_Arabic_French-Arabizi/89fddb4adedb65beac28f56e548dba0b9ceec8d0/LICENSE.txt",
+        "verified": true,
+        "attribution_required": true,
+        "share_alike": true
+      },
+      "usage": {
+        "status": "split_specific",
+        "commercial": true,
+        "conditions": [
+          "Keep CC-BY-SA derived data physically separate.",
+          "Preserve the published DEV and TEST splits as evaluation-only.",
+          "Do not use DEV or TEST for prompt selection or training."
+        ]
+      },
+      "files": [
+        {
+          "filename": "LICENSE.txt",
+          "url": "https://raw.githubusercontent.com/UniversalDependencies/UD_Maghrebi_Arabic_French-Arabizi/89fddb4adedb65beac28f56e548dba0b9ceec8d0/LICENSE.txt",
+          "expected_size": 202,
+          "source_checksum": {
+            "algorithm": "git_blob_sha1",
+            "value": "9af2e0b2f73cf29fe1f60cb6376b176d9c2ba846"
+          },
+          "intended_use": "licence_evidence"
+        },
+        {
+          "filename": "README.md",
+          "url": "https://raw.githubusercontent.com/UniversalDependencies/UD_Maghrebi_Arabic_French-Arabizi/89fddb4adedb65beac28f56e548dba0b9ceec8d0/README.md",
+          "expected_size": 3909,
+          "source_checksum": {
+            "algorithm": "git_blob_sha1",
+            "value": "2ec5d6922e99c1ccaed808b7442ff08fb2c598ab"
+          },
+          "intended_use": "documentation"
+        },
+        {
+          "filename": "qaf_arabizi-ud-train.conllu",
+          "url": "https://raw.githubusercontent.com/UniversalDependencies/UD_Maghrebi_Arabic_French-Arabizi/89fddb4adedb65beac28f56e548dba0b9ceec8d0/qaf_arabizi-ud-train.conllu",
+          "expected_size": 1577577,
+          "source_checksum": {
+            "algorithm": "git_blob_sha1",
+            "value": "61ddd128558fe7c03052ace70ce2859cb139b229"
+          },
+          "intended_use": "train_candidate",
+          "published_split": "train"
+        },
+        {
+          "filename": "qaf_arabizi-ud-dev.conllu",
+          "url": "https://raw.githubusercontent.com/UniversalDependencies/UD_Maghrebi_Arabic_French-Arabizi/89fddb4adedb65beac28f56e548dba0b9ceec8d0/qaf_arabizi-ud-dev.conllu",
+          "expected_size": 228173,
+          "source_checksum": {
+            "algorithm": "git_blob_sha1",
+            "value": "83517bfcb745240dc9f09743dd3e77672e6b68ab"
+          },
+          "intended_use": "eval_only",
+          "published_split": "dev"
+        },
+        {
+          "filename": "qaf_arabizi-ud-test.conllu",
+          "url": "https://raw.githubusercontent.com/UniversalDependencies/UD_Maghrebi_Arabic_French-Arabizi/89fddb4adedb65beac28f56e548dba0b9ceec8d0/qaf_arabizi-ud-test.conllu",
+          "expected_size": 226271,
+          "source_checksum": {
+            "algorithm": "git_blob_sha1",
+            "value": "635bc7bdedeaf576f95a64ac8c94d6ba0df85bbc"
+          },
+          "intended_use": "eval_only",
+          "published_split": "test"
+        }
+      ]
+    },
+    {
+      "dataset_id": "ramypulse_business_seed_pool",
+      "version": "0.1",
+      "priority": "P0",
+      "title": "RamyPulse business annotation seed pool V0.1",
+      "publisher": "RamyPulse",
+      "homepage": null,
+      "doi": null,
+      "citation": "RamyPulse internal mixed-source business annotation seed pool V0.1",
+      "declared_rows": 7426,
+      "tasks": [
+        "business_annotation_candidate",
+        "weak_label_sampling"
+      ],
+      "source_kind": "mixed_source_comments_with_legacy_weak_labels",
+      "platforms": [
+        "mixed"
+      ],
+      "licence": {
+        "spdx": "NOASSERTION",
+        "name": "Per-source usage rights pending verification",
+        "url": null,
+        "evidence_url": null,
+        "verified": false,
+        "attribution_required": null,
+        "share_alike": null
+      },
+      "usage": {
+        "status": "partial_rights_cleared",
+        "commercial": false,
+        "conditions": [
+          "Massinissa (5 658 lignes) : entrainement autorise sur declaration du proprietaire du 2026-07-30.",
+          "Facebook (1 566), client (2) : annotation et revue uniquement, decision de droits en attente.",
+          "Treat sentiment_label and aspect as legacy weak labels for sampling only, never as training truth.",
+          "Redact direct identifiers before annotation.",
+          "Deduplicate against every protected evaluation set."
+        ]
+      },
+      "files": [
+        {
+          "filename": "master_seed_7k.jsonl",
+          "local_path": "data/processed/master_seed_7k.jsonl",
+          "expected_size": 1717726,
+          "source_checksum": {
+            "algorithm": "sha256",
+            "value": "c7a4b039e49578a61df528e264daffd10f72f8c907ec7b8b8fe829a0d17f79f8"
+          },
+          "intended_use": "annotation_pool_only"
+        }
+      ],
+      "rights_decisions": {
+        "decision_log_version": "0.1",
+        "per_provenance": {
+          "massinissa_algerian_corpus": {
+            "rows": 5658,
+            "status": "owner_declared_clear",
+            "declared_by": "RamyPulse project owner",
+            "declared_at": "2026-07-30",
+            "declaration": "Corpus constitue par un etudiant. Aucune donnee sensible ni contrainte contractuelle connue selon le proprietaire du projet.",
+            "evidence_url": null,
+            "verified_by_document": false,
+            "training_allowed": true,
+            "note": "Declaration verbale du proprietaire, non appuyee par une licence ecrite. Suffisant pour annotation et entrainement interne. A documenter avant toute redistribution publique du corpus derive."
+          },
+          "ramypulse_v1_facebook": {
+            "rows": 1566,
+            "status": "pending_owner_decision",
+            "training_allowed": null,
+            "note": "Commentaires collectes sur Facebook. Question distincte de Massinissa : conditions d'utilisation de la plateforme et donnees personnelles. Non couvert par la declaration du 2026-07-30."
+          },
+          "tenant_demo_expo": {
+            "rows": 200,
+            "status": "internal_demo_data",
+            "training_allowed": true,
+            "note": "Donnees de demonstration produites en interne."
+          },
+          "tenant_ramy_client": {
+            "rows": 2,
+            "status": "pending_owner_decision",
+            "training_allowed": null,
+            "note": "Donnees client. Necessite un accord contractuel explicite."
+          }
+        }
+      }
+    },
+    {
+      "dataset_id": "ramypulse_business_gold_candidate",
+      "version": "0.1",
+      "priority": "P0",
+      "title": "RamyPulse business comments gold candidate V0.1",
+      "publisher": "RamyPulse",
+      "homepage": null,
+      "doi": null,
+      "citation": "RamyPulse internal annotation candidate V0.1",
+      "declared_rows": 100,
+      "tasks": [
+        "business_annotation_full"
+      ],
+      "source_kind": "teacher_annotated_gold_candidate",
+      "platforms": [
+        "mixed"
+      ],
+      "licence": {
+        "spdx": "LicenseRef-RamyPulse-Proprietary",
+        "name": "RamyPulse proprietary",
+        "url": null,
+        "evidence_url": null,
+        "verified": true,
+        "attribution_required": false,
+        "share_alike": false
+      },
+      "usage": {
+        "status": "human_review_required",
+        "commercial": true,
+        "conditions": [
+          "Do not call these rows gold until human review is complete.",
+          "Keep locked DEV and TEST rows out of training.",
+          "Verify source-comment usage rights independently from annotation ownership."
+        ]
+      },
+      "files": [
+        {
+          "filename": "business_comments_gold_candidate_v0.1.jsonl",
+          "local_path": "data/processed/slm_v2_gold/business_comments_gold_candidate_v0.1.jsonl",
+          "expected_size": 182958,
+          "source_checksum": {
+            "algorithm": "sha256",
+            "value": "fae878f5ec1f36db412f1bd5bf7837d63ff650e14cfd049ade7f96d5a6d8fed9"
+          },
+          "intended_use": "review_only"
+        },
+        {
+          "filename": "business_comments_gold_dev_v0.1.jsonl",
+          "local_path": "data/processed/slm_v2_gold/business_comments_gold_dev_v0.1.jsonl",
+          "expected_size": 92169,
+          "source_checksum": {
+            "algorithm": "sha256",
+            "value": "02f16f09bfbe7b392c7ca5e988aeef80d9ef17dc29a941efba8f0265b0d6ee38"
+          },
+          "intended_use": "partition_index",
+          "published_split": "gold_dev"
+        },
+        {
+          "filename": "business_comments_gold_test_v0.1.jsonl",
+          "local_path": "data/processed/slm_v2_gold/business_comments_gold_test_v0.1.jsonl",
+          "expected_size": 90139,
+          "source_checksum": {
+            "algorithm": "sha256",
+            "value": "8f9e84f5a3561a0fe23a0e41d0f3522d084a0bfe72ec637df696d195ceeb42e5"
+          },
+          "intended_use": "partition_index",
+          "published_split": "gold_test"
+        }
+      ]
+    }
+  ]
+}

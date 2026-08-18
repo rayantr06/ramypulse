@@ -30,76 +30,83 @@ function lacks(source, text) {
   assert.ok(!source.includes(text), `Expected source not to contain: ${text}`);
 }
 
-test("Dashboard keeps Stitch headline copy without hardcoded fake monitoring values", () => {
+test("Dashboard exposes transparent KPIs and the signal-to-action flow", () => {
   const source = readPage("Dashboard.tsx");
-  contains(source, "Direct Temps Réel");
-  contains(source, "Algérie (Toutes régions)");
-  contains(source, "ACTIONS RECOMMANDÉES PAR L'IA");
-  contains(source, "VENTES PAR PRODUIT (7 JOURS)");
-  contains(source, "DISTRIBUTION RÉGIONALE");
-  contains(source, "/api/status");
-  contains(source, "API Status:");
-  contains(source, "Latency:");
-  contains(source, "© 2024 RamyPulse Intelligence Unit");
-  lacks(source, "API Status: Normal");
-  lacks(source, "Latency: 42ms");
-  lacks(source, "Direct Temps Reel");
-  lacks(source, "Algerie (Toutes regions)");
+  contains(source, 'title="Aujourd’hui"');
+  contains(source, "Mentions qualifiées");
+  contains(source, "Sentiment net");
+  contains(source, "Taux négatif");
+  contains(source, "Couverture analytique");
+  contains(source, "Signaux qui demandent une décision");
+  contains(source, "Moteurs de l’évolution");
+  contains(source, "Actions à faire avancer");
+  contains(source, "Santé des sources");
+  contains(source, "Échantillon insuffisant");
+  lacks(source, "/api/status");
+  lacks(source, "API Status:");
+  lacks(source, "Latency:");
+  lacks(source, "Perception 62/100");
 });
 
-test("Recommandations keeps Stitch form labels and stats copy", () => {
+test("Recommandations keeps professional form labels and stats copy", () => {
   const source = readPage("Recommandations.tsx");
-  contains(source, "Générer des recommandations");
+  contains(source, 'eyebrow="Agir"');
+  contains(source, 'title="Actions recommandées"');
   contains(source, "Type de Déclencheur");
   contains(source, "Nom du Modèle / Endpoint");
   contains(source, "Coût est.");
   contains(source, "Historique des runs");
-  lacks(source, "Generer des recommandations");
+  lacks(source, "Generer");
   lacks(source, "Type de Declencheur");
   lacks(source, "Provider actif");
 });
 
-test("Recommandations keeps Stitch active analysis cards and actions", () => {
+test("Recommandations keeps active analysis cards and actions", () => {
   const source = readPage("Recommandations.tsx");
-  contains(source, "Volume (m³)");
+  contains(source, "Volume mentions");
   contains(source, "Dernière run");
   contains(source, "Tout Archiver");
   contains(source, "Actions recommandées");
 });
 
-test("Watchlists keeps Stitch CTA copy", () => {
+test("Watchlists keeps surveillance CTA copy", () => {
   const source = readPage("Watchlists.tsx");
-  contains(source, "Créer une watchlist");
-  contains(source, "SÉLECTION");
-  contains(source, "Répartition par Aspect");
-  contains(source, "Voir les détails analytiques");
+  contains(source, "Créer une surveillance");
+  contains(source, "Périmètre confirmé");
+  contains(source, "Collecte et limites");
+  contains(source, "Couverture analytique");
+  contains(source, "Documents / mois max.");
   lacks(source, "Création via back-office");
+  lacks(source, "NSS");
 });
 
-test("Alertes keeps Stitch real-time excerpt label", () => {
+test("Alertes names evidence in plain language", () => {
   const source = readPage("Alertes.tsx");
-  contains(source, "Extraits Sociaux (Temps Réel)");
-  lacks(source, "Extraits Sociaux (Temps Reel)");
+  contains(source, "Avis à l’origine de l’alerte");
+  contains(source, "Extraits consultables pour vérifier l’interprétation");
+  lacks(source, "Extraits Sociaux (Temps Réel)");
 });
 
-test("Alertes keeps Stitch console labels and actions", () => {
+test("Alertes keeps explicit labels and actions", () => {
   const source = readPage("Alertes.tsx");
-  contains(source, "Système en ligne");
+  contains(source, "alertes actives");
+  contains(source, 'title="Alertes à traiter"');
   contains(source, "Sévérité");
-  contains(source, "Détails de l'Alerte");
+  contains(source, "Ce qui a été détecté");
   contains(source, "Impact Estimé");
-  contains(source, "Reconnaître");
-  contains(source, "Résoudre");
+  contains(source, "Marquer comme prise en charge");
+  contains(source, "Marquer comme résolue");
 });
 
-test("Campagnes keeps Stitch capitalization and accents", () => {
+test("Campagnes keeps professional capitalization and accents", () => {
   const source = readPage("Campagnes.tsx");
-  contains(source, "Gestion Opérationnelle");
-  contains(source, "CRÉER UNE CAMPAGNE");
+  contains(source, 'eyebrow="Comprendre"');
+  contains(source, 'title="Impact des campagnes"');
+  contains(source, "Créer une campagne");
   contains(source, "Début");
   contains(source, "Mots-clés");
   lacks(source, "Gestion Operationnelle");
-  lacks(source, "CREER UNE CAMPAGNE");
+  lacks(source, "Creer une campagne");
 });
 
 test("Campagnes keeps Stitch structure while dropping fake performance numbers", () => {
@@ -109,7 +116,7 @@ test("Campagnes keeps Stitch structure while dropping fake performance numbers",
   contains(source, "Campagne / Influenceur");
   contains(source, "Impact NSS");
   contains(source, "Page ${safeCurrentPage} de ${totalPages}");
-  contains(source, "Ramy Pulse Pro");
+  contains(source, "LIDAL Pulse Pro");
   contains(source, "Influenceur Algerien");
   contains(source, "allocation trimestrielle");
   contains(source, "/api/campaigns/overview");
@@ -118,11 +125,13 @@ test("Campagnes keeps Stitch structure while dropping fake performance numbers",
   lacks(source, "+18% Engagement");
 });
 
-test("Explorateur keeps Stitch search copy", () => {
+test("Explorateur keeps evidence-oriented search copy", () => {
   const source = readPage("Explorateur.tsx");
-  contains(source, "Recherche sémantique et verbatims à travers l'écosystème digital");
+  contains(source, 'title="Explorer les avis clients"');
+  contains(source, "consultez les verbatims, leurs sources");
   contains(source, "Que pensent les clients du goût à Alger ?");
-  contains(source, "Base de données complète des interactions clients");
+  contains(source, "Sélectionnez un verbatim pour ouvrir son dossier d’analyse");
+  contains(source, "intentions et ses preuves");
 });
 
 test("Explorateur keeps Stitch relative date and sentiment labels", () => {
@@ -133,25 +142,28 @@ test("Explorateur keeps Stitch relative date and sentiment labels", () => {
   contains(source, "Négatif");
 });
 
-test("AdminSources keeps Stitch labels and dedicated admin shell", () => {
+test("AdminSources uses the shared product shell and keeps operations labels", () => {
   const page = readPage("AdminSources.tsx");
   const ops = readAdminComponent("AdminSourcesOps.tsx");
-  contains(page, "function AdminShell");
-  contains(page, "RamyPulse Admin");
+  const sources = readAdminComponent("AdminSourcesView.tsx");
+  const scheduler = readAdminComponent("AdminSchedulerView.tsx");
+  const campaignOps = readAdminComponent("AdminCampaignOpsView.tsx");
+  contains(page, "import { AppShell }");
   contains(page, "STITCH_AVATARS.admin.alt");
-  contains(page, "COMMAND CENTER");
-  contains(page, "New Pipeline");
-  lacks(page, "import { AppShell }");
-  contains(ops, "Gouvernance source");
+  contains(page, 'data-testid="admin-shell-canvas"');
+  contains(page, "sidebarFooterSubtitle");
+  contains(sources, "Gouvernance source");
   contains(ops, "Credentials");
   contains(ops, "Campaign Ops");
   contains(ops, "Scheduler");
-  contains(ops, "Run due syncs");
-  contains(ops, "Retirer le post");
-  contains(ops, "SOURCES DE DONNÉES");
-  contains(ops, "PIPELINE TRACE & DÉBIT");
-  lacks(ops, "SOURCES DE DONNEES");
-  lacks(ops, "PIPELINE TRACE & DEBIT");
+  contains(ops, "Centre de contrôle des sources");
+  contains(ops, "Opérations & qualité des données");
+  contains(sources, "SOURCES DE DONNÉES");
+  contains(sources, "PIPELINE TRACE & DÉBIT");
+  contains(scheduler, "Run due syncs");
+  contains(campaignOps, "Retirer le post");
+  lacks(sources, "SOURCES DE DONNEES");
+  lacks(sources, "PIPELINE TRACE & DEBIT");
 });
 
 test("AdminSources page no longer carries legacy admin logic", () => {
@@ -163,20 +175,41 @@ test("AdminSources page no longer carries legacy admin logic", () => {
   contains(page, "<AdminSourcesOps />");
 });
 
-test("Shared product shell keeps Stitch branding and avatar", () => {
+test("Shared product shell exposes clear navigation and a persistent create action", () => {
   const appShell = readComponent("AppShell.tsx");
   const sidebar = readComponent("Sidebar.tsx");
-  contains(appShell, "avatarSrc = STITCH_AVATARS.dashboard.src");
-  contains(appShell, "avatarAlt = STITCH_AVATARS.dashboard.alt");
-  contains(sidebar, "Marketing Intelligence");
-  contains(sidebar, "Ammar, Brand Manager");
+  const navigation = readFileSync(
+    path.resolve(__dirname, "../client/src/lib/productNavigation.ts"),
+    "utf8",
+  );
+  lacks(appShell, "PRODUCT_STAGES");
+  contains(appShell, 'data-testid="header-new-watch"');
+  contains(appShell, "MobileNavigation");
+  contains(sidebar, "BrandMark");
+  contains(sidebar, "PRODUCT_NAV_GROUPS");
+  contains(navigation, "Surveiller");
+  contains(navigation, "Comprendre");
+  contains(navigation, "Agir");
+  contains(navigation, 'label: "Sources"');
+  contains(navigation, 'label: "Signaux"');
+  contains(navigation, 'label: "Rapports"');
 });
 
-test("Pages wire Stitch-specific header avatars", () => {
-  contains(readPage("Watchlists.tsx"), "STITCH_AVATARS.watchlists.src");
-  contains(readPage("Explorateur.tsx"), "STITCH_AVATARS.explorateur.src");
-  contains(readPage("Recommandations.tsx"), "STITCH_AVATARS.recommandations.src");
-  contains(readPage("Alertes.tsx"), "STITCH_AVATARS.alertes.src");
-  contains(readPage("Campagnes.tsx"), "STITCH_AVATARS.campagnes.src");
-  contains(readPage("AdminSources.tsx"), "STITCH_AVATARS.admin.src");
+test("Core product pages use the shared shell and surveillance uses a focused drawer", () => {
+  contains(readPage("Watchlists.tsx"), "<AppShell");
+  contains(readPage("Watchlists.tsx"), "<SheetContent");
+  contains(readPage("Explorateur.tsx"), "<AppShell");
+  contains(readPage("Recommandations.tsx"), "<AppShell");
+  contains(readPage("Alertes.tsx"), "<AppShell");
+  contains(readPage("Campagnes.tsx"), "<AppShell");
+  contains(readPage("AdminSources.tsx"), "<AppShell");
+});
+
+test("Recommandations keeps hook declarations before any early empty-state return", () => {
+  const source = readPage("Recommandations.tsx");
+  assert.ok(
+    source.indexOf("const runHistory = useMemo") <
+      source.indexOf("if (!recoLoading && (recommendations ?? []).length === 0)"),
+    "Recommandations declares hooks after an early return and can blank the route",
+  );
 });

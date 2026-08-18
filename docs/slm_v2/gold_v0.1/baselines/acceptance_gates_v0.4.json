@@ -1,0 +1,257 @@
+{
+  "version": "0.4.0",
+  "measurement_scope": "end_to_end",
+  "purpose": "Autoriser ou refuser la generation du pilote d'entrainement SLM V2.",
+  "calibration_principle": "Aucune porte ne depasse l accord inter-annotateurs MESURE sur le meme contrat. Plafonds A3 vs C apres migration V0.3. Marge ~10 a 15 pourcent sous le plafond. Les portes d alerte ne sont pas recalibrees a la hausse : seule leur EVALUABILITE change. Le volume d evenements ne justifie pas de relever un seuil.",
+  "status": "MESURE — plafonds A3 vs C sur contrat V0.3 (2026-07-30). Portes d alerte recalibrees sur le holdout Maps (2026-08-11, 594 items).",
+  "evaluation_policy": {
+    "missing_or_invalid_output": "scored_as_wrong",
+    "maximum_controlled_retry": 1,
+    "test_split_policy": "locked_after_baseline; no prompt or ontology tuning from test errors",
+    "gold_training_policy": "gold_dev and gold_test are excluded from training",
+    "derived_fields_not_scored": [
+      "actionability.queue",
+      "actionability.priority"
+    ],
+    "aspect_scoring_level": "family+sentiment; l'attribut est un detail non evalue",
+    "neutral_aspects": "interdits par le schema V0.2, donc hors scoring"
+  },
+  "gates": {
+    "valid_output_rate": {
+      "operator": ">=",
+      "threshold": 1.0,
+      "critical": true,
+      "ceiling_observed": 1.0
+    },
+    "evidence_grounding_rate": {
+      "operator": ">=",
+      "threshold": 1.0,
+      "critical": true,
+      "ceiling_observed": 1.0
+    },
+    "is_exploitable.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.78,
+      "critical": true,
+      "ceiling_observed": 0.879,
+      "ceiling_source": "A3 vs C, contrat V0.3, 305 paires"
+    },
+    "business_relevance.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.85,
+      "critical": true,
+      "ceiling_observed": 0.945,
+      "ceiling_source": "A3 vs C, contrat V0.3, 305 paires"
+    },
+    "sentiment.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.75,
+      "critical": true,
+      "ceiling_observed": 0.851,
+      "ceiling_source": "A3 vs C, contrat V0.3, 305 paires",
+      "note": "Plafond global. OPTIMISTE sur darija_arabizi : voir gates_par_langue. Validation humaine du 2026-07-30."
+    },
+    "language.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.78,
+      "critical": false,
+      "ceiling_observed": 0.881,
+      "ceiling_source": "A3 vs C, contrat V0.3, 305 paires"
+    },
+    "intents.micro_f1": {
+      "operator": ">=",
+      "threshold": 0.68,
+      "critical": true,
+      "ceiling_observed": 0.776,
+      "ceiling_source": "A3 vs C, contrat V0.3, 305 paires"
+    },
+    "aspects_family_sentiment.micro_f1": {
+      "operator": ">=",
+      "threshold": 0.62,
+      "critical": true,
+      "ceiling_observed": 0.71,
+      "ceiling_source": "A3 vs C, contrat V0.3, 305 paires",
+      "note": "Plafond global. OPTIMISTE sur darija_arabizi : voir gates_par_langue. Validation humaine du 2026-07-30."
+    },
+    "entities_type_name.micro_f1": {
+      "operator": ">=",
+      "threshold": 0.55,
+      "critical": false,
+      "ceiling_observed": 0.627,
+      "ceiling_source": "A3 vs C, campagne V0.2, 304 paires"
+    },
+    "actionability.actionable.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.85,
+      "critical": false,
+      "ceiling_observed": 0.956,
+      "ceiling_source": "A3 vs C, contrat V0.3, 305 paires"
+    },
+    "alert_present.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.8,
+      "critical": false,
+      "ceiling_observed": 0.906,
+      "ceiling_source": "A3 vs C, contrat V0.3, 305 paires",
+      "note": "NON EVALUABLE. 16 evenements d alerte distincts seulement (le cluster eaux usees compte pour 1, pas 10). IC 95 pourcent bootstrap par evenement : [0,444 ; 0,931], largeur 0,486. Le seuil se situe a l interieur de l intervalle : cette porte ne distingue pas un bon modele d un mauvais. ~158 evenements seraient necessaires pour un IC de largeur 0,15. Rendue NON CRITIQUE jusqu a nouvelle collecte.",
+      "status": "non_evaluable",
+      "distinct_events": 16,
+      "ci95_by_event": [
+        0.444,
+        0.931
+      ]
+    },
+    "alerts_type.micro_f1": {
+      "operator": ">=",
+      "threshold": 0.68,
+      "critical": false,
+      "ceiling_observed": 0.783,
+      "ceiling_source": "A3 vs C, contrat V0.3, 305 paires",
+      "status": "non_evaluable",
+      "note": "NON EVALUABLE. 16 evenements d alerte distincts seulement (le cluster eaux usees compte pour 1, pas 10). IC 95 pourcent bootstrap par evenement : [0,444 ; 0,931], largeur 0,486. Le seuil se situe a l interieur de l intervalle : cette porte ne distingue pas un bon modele d un mauvais. ~158 evenements seraient necessaires pour un IC de largeur 0,15. Rendue NON CRITIQUE jusqu a nouvelle collecte.",
+      "distinct_events": 16,
+      "ci95_by_event": [
+        0.444,
+        0.931
+      ]
+    },
+    "alerts_type_severity.micro_f1": {
+      "operator": ">=",
+      "threshold": 0.68,
+      "critical": false,
+      "ceiling_observed": 0.783,
+      "ceiling_source": "A3 vs C, contrat V0.3",
+      "note": "NON EVALUABLE. 16 evenements d alerte distincts seulement (le cluster eaux usees compte pour 1, pas 10). IC 95 pourcent bootstrap par evenement : [0,444 ; 0,931], largeur 0,486. Le seuil se situe a l interieur de l intervalle : cette porte ne distingue pas un bon modele d un mauvais. ~158 evenements seraient necessaires pour un IC de largeur 0,15. Rendue NON CRITIQUE jusqu a nouvelle collecte.",
+      "status": "non_evaluable",
+      "distinct_events": 16,
+      "ci95_by_event": [
+        0.444,
+        0.931
+      ]
+    },
+    "actionability.priority.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.8,
+      "critical": false,
+      "ceiling_observed": 0.907,
+      "ceiling_source": "A3 vs C, contrat V0.3, champ derive",
+      "note": "Derive. Gain de +0,201 apporte par l echelle de severite a 3 niveaux."
+    },
+    "requires_parent_context.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.45,
+      "critical": false,
+      "ceiling_observed": 0.53,
+      "ceiling_source": "A3 vs C, contrat V0.3, 305 paires",
+      "note": "Champ neuf, definition encore floue. A resserrer en V0.3."
+    },
+    "author_role.macro_f1": {
+      "operator": ">=",
+      "threshold": 0.85,
+      "critical": false,
+      "ceiling_observed": 1.0,
+      "ceiling_source": "A3 vs C, contrat V0.3, 305 paires"
+    },
+    "harcelement_discrimination.exercice": {
+      "operator": ">",
+      "threshold": 0,
+      "critical": true,
+      "status": "non_exercee",
+      "ceiling_observed": 0,
+      "note": "0 alerte harcelement_discrimination sur 305 items, 0 detection sur 2 items candidats, tous deux en arabizi. Categorie jamais exercee. Toute campagne doit signaler explicitement si elle n en pose aucune."
+    }
+  },
+  "blocking_conditions": [
+    "Scope `secteur` toujours non teste. Le corpus Maps est integralement en scope `organisation` par construction ; aucune porte ne couvre `secteur`.",
+    "requires_parent_context plafonne a 0,530, non derivable. Correctif en amont : capturer le post parent.",
+    "Le professeur n est pas deterministe : 88 % d identite sur le sentiment entre deux passes des memes 122 items, temperature 0. Les seuils ne chiffrent pas cette incertitude ; une porte mesuree sur une seule passe ne prouve rien de serre.",
+    "La macro-F1 n est pas interpretable quand une classe compte moins de 5 items : 121 accords sur 122 donnaient 0,498 sur `is_exploitable`. Lire l accord brut et le support a cote du score.",
+    "Le holdout Maps n est valide humainement qu a 50 items sur 71 selectionnes : les accords tires au hasard, qui detectent le biais partage, ne sont couverts qu a 52 %.",
+    "D13 (accusation circulante contre incident rapporte) non validee par la mesure."
+  ],
+  "human_validation": {
+    "date": "2026-07-30",
+    "sample": 60,
+    "design": "30 accords tires au hasard + 30 desaccords, melanges, presentation uniforme",
+    "accord_group_acceptable": 0.9,
+    "disagreement_group_acceptable": 0.97,
+    "shared_bias_global": "non detecte au seuil de 0,85",
+    "shared_bias_localise": "OUI sur darija_arabizi : 3 des 4 erreurs franches. Repli partage sur neutre et aucun aspect. Accord le PLUS eleve du corpus (k 0,919) la ou la validite est la plus basse : l accord y mesure une convention, pas une lecture correcte."
+  },
+  "gates_par_langue": {
+    "motif": "L accord global surestime la qualite sur l arabizi. Le modele doit etre evalue separement par langue, et l accord ne peut pas servir de plafond sur l arabizi.",
+    "darija_arabizi": {
+      "sentiment.macro_f1": {
+        "operator": ">=",
+        "threshold": 0.6,
+        "critical": true,
+        "note": "Seuil fixe a la main, PAS derive de l accord (k 0,919 non valide). 41 items."
+      },
+      "neutral_rate_max": {
+        "operator": "<=",
+        "threshold": 0.45,
+        "critical": true,
+        "note": "Garde-fou anti-repli. Les annotateurs sont a 54 pourcent de neutre sur l arabizi contre 41 ailleurs."
+      }
+    },
+    "autres_langues": {
+      "reference": "voir gates principales"
+    }
+  },
+  "alert_evaluability": {
+    "date": "2026-08-11",
+    "source": "holdout Maps V0.4, 594 items annotes en aveugle",
+    "evenements_distincts": 112,
+    "definition_evenement": "(entite surveillee, type d alerte)",
+    "entites": 98,
+    "secteurs_activite": 99,
+    "ic95_largeur": 0.143,
+    "seuil_acceptable": 0.2,
+    "methode": "reechantillonnage PAR EVENEMENT, jamais par instance : deux avis signalant la meme rupture chez le meme operateur ne sont pas deux observations independantes.",
+    "types_exerces": {
+      "qualite_produit": 41,
+      "rupture_service": 24,
+      "fraude_arnaque": 15,
+      "securite_sante": 14,
+      "juridique_conformite": 7,
+      "rupture_stock": 5,
+      "harcelement_discrimination": 5,
+      "reputation_virale": 1
+    },
+    "jamais_exerce": [
+      "donnees_confidentialite"
+    ],
+    "verdict": "EVALUABLES. La condition bloquante de juillet est levee.",
+    "corpus_complet": {
+      "date": "2026-08-12",
+      "items": 14133,
+      "evenements_distincts": 1431,
+      "secteurs": 187,
+      "types_exerces": 9,
+      "jamais_exerce": [],
+      "note": "Les neuf types d alerte du contrat sont desormais exerces."
+    }
+  },
+  "lifted_conditions": [
+    "Portes d alerte non evaluables — levee : 112 evenements, IC 95 % de largeur 0,143.",
+    "harcelement_discrimination jamais exercee — levee : 5 evenements distincts.",
+    "Gold arabizi inutilisable pour cause de biais partage — levee : socle de 286 items annotes avec etape de lecture obligatoire, taux de neutre 5 %, accord 82,9 % avec les etiquettes de corpus tenues cachees.",
+    "Diversite des marques — levee : 98 entites sur 99 secteurs d activite, contre trois marques agroalimentaires.",
+    "donnees_confidentialite jamais exercee — levee : 8 evenements sur le corpus complet. Les neuf types du contrat sont exerces."
+  ],
+  "controle_par_les_etoiles": {
+    "date": "2026-08-12",
+    "comparables": 12478,
+    "accord": 0.952,
+    "inversions_polarite": 0.0151,
+    "note": "La note vient de l auteur du commentaire, pas d un annotateur : c est le seul signal du corpus qui ne partage aucun biais avec le professeur.",
+    "test_des_trois_etoiles": {
+      "principe": "Un avis a 3 etoiles n est ni positif ni negatif POUR SON AUTEUR. Si l annotateur forcait la polarite, la part d ambivalence y serait la meme qu ailleurs.",
+      "mixte_a_3_etoiles": 0.42,
+      "mixte_a_1_ou_5_etoiles": 0.03,
+      "neutre_a_3_etoiles": 0.09,
+      "neutre_a_1_ou_5_etoiles": 0.03,
+      "verdict": "L ambivalence est quatorze fois plus frequente la ou l auteur lui-meme etait ambivalent. L annotateur ne force pas la polarite."
+    }
+  }
+}

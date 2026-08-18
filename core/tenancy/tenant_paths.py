@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -9,6 +10,11 @@ from pathlib import Path
 import config
 
 _TENANT_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
+
+
+def _config_module():
+    """Retourne le module config courant, même après reload dans les tests."""
+    return importlib.import_module("config")
 
 
 def _validate_client_id(client_id: str) -> None:
@@ -32,7 +38,7 @@ class TenantPaths:
 def get_tenant_paths(client_id: str) -> TenantPaths:
     """Build tenant-scoped paths from a client identifier."""
     _validate_client_id(client_id)
-    tenant_root = Path(config.DATA_DIR) / "tenants" / client_id
+    tenant_root = Path(getattr(_config_module(), "DATA_DIR", config.DATA_DIR)) / "tenants" / client_id
     processed_dir = tenant_root / "processed"
     embeddings_dir = tenant_root / "embeddings"
     return TenantPaths(

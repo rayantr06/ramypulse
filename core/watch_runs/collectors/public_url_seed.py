@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Iterable
 
 import requests
+import urllib3
 from bs4 import BeautifulSoup
+from requests.exceptions import SSLError
 from tenacity import retry, stop_after_attempt, wait_fixed
+
+logger = logging.getLogger(__name__)
 
 try:
     import trafilatura
@@ -41,11 +46,21 @@ def _extract_text(html: str) -> str:
 
 @retry(stop=stop_after_attempt(2), wait=wait_fixed(1), reraise=True)
 def _fetch_html(url: str) -> str:
-    response = requests.get(
-        url,
-        timeout=20,
-        headers={"User-Agent": "RamyPulse/1.0 (+watch-first-expo)"},
-    )
+    try:
+        response = requests.get(
+            url,
+            timeout=20,
+            headers={"User-Agent": "RamyPulse/1.0 (+watch-first-expo)"},
+        )
+    except SSLError:
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+        logger.warning("SSL handshake failed for %s — retrying without certificate verification", url)
+        response = requests.get(
+            url,
+            timeout=20,
+            headers={"User-Agent": "RamyPulse/1.0 (+watch-first-expo)"},
+            verify=False,
+        )
     response.raise_for_status()
     return response.text
 

@@ -276,11 +276,10 @@ class TestRunServiceIntegration:
         module = _import_module("core.watch_runs.run_service")
         assert "reddit" in module.DEFAULT_COLLECTORS
 
-    def test_web_search_points_to_perplexity(self) -> None:
+    def test_web_search_uses_adaptive_collector(self) -> None:
         run_service = _import_module("core.watch_runs.run_service")
-        collector = _import_module("core.watch_runs.collectors.perplexity_discovery")
 
-        assert run_service.DEFAULT_COLLECTORS["web_search"] is collector.collect_perplexity_discovery
+        assert run_service.DEFAULT_COLLECTORS["web_search"] is run_service.collect_web_search_adaptive
 
     def test_validate_requested_channels_accepts_new_channels(self) -> None:
         module = _import_module("core.watch_runs.run_service")
