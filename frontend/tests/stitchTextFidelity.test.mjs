@@ -30,20 +30,22 @@ function lacks(source, text) {
   assert.ok(!source.includes(text), `Expected source not to contain: ${text}`);
 }
 
-test("Dashboard exposes a plain-language alert-to-action flow", () => {
+test("Dashboard exposes transparent KPIs and the signal-to-action flow", () => {
   const source = readPage("Dashboard.tsx");
-  contains(source, 'title="Situation du jour"');
-  contains(source, "Du signal à la décision");
-  contains(source, "1 · Signal détecté");
-  contains(source, "2 · Ce que cela signifie");
-  contains(source, "3 · Décision proposée");
-  contains(source, "File de traitement");
-  contains(source, "Performance par produit");
-  contains(source, "Répartition par wilaya");
-  contains(source, "Vérifier les sources de données");
+  contains(source, 'title="Aujourd’hui"');
+  contains(source, "Mentions qualifiées");
+  contains(source, "Sentiment net");
+  contains(source, "Taux négatif");
+  contains(source, "Couverture analytique");
+  contains(source, "Signaux qui demandent une décision");
+  contains(source, "Moteurs de l’évolution");
+  contains(source, "Actions à faire avancer");
+  contains(source, "Santé des sources");
+  contains(source, "Échantillon insuffisant");
   lacks(source, "/api/status");
   lacks(source, "API Status:");
   lacks(source, "Latency:");
+  lacks(source, "Perception 62/100");
 });
 
 test("Recommandations keeps professional form labels and stats copy", () => {
@@ -70,10 +72,12 @@ test("Recommandations keeps active analysis cards and actions", () => {
 test("Watchlists keeps surveillance CTA copy", () => {
   const source = readPage("Watchlists.tsx");
   contains(source, "Créer une surveillance");
-  contains(source, "SÉLECTION");
-  contains(source, "Répartition par Aspect");
-  contains(source, "Voir les détails analytiques");
+  contains(source, "Périmètre confirmé");
+  contains(source, "Collecte et limites");
+  contains(source, "Couverture analytique");
+  contains(source, "Documents / mois max.");
   lacks(source, "Création via back-office");
+  lacks(source, "NSS");
 });
 
 test("Alertes names evidence in plain language", () => {
@@ -186,7 +190,9 @@ test("Shared product shell exposes clear navigation and a persistent create acti
   contains(navigation, "Surveiller");
   contains(navigation, "Comprendre");
   contains(navigation, "Agir");
-  contains(navigation, "Sources de données");
+  contains(navigation, 'label: "Sources"');
+  contains(navigation, 'label: "Signaux"');
+  contains(navigation, 'label: "Rapports"');
 });
 
 test("Core product pages use the shared shell and surveillance uses a focused drawer", () => {

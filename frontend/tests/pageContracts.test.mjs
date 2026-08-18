@@ -12,11 +12,30 @@ function readPage(name) {
   return readFileSync(path.join(pagesDir, name), "utf8");
 }
 
-test("Watchlists page exposes a create flow plus live metrics lookup", () => {
+test("Surveillances exposes the V3 assisted composer and tenant-scoped monitor cache", () => {
   const source = readPage("Watchlists.tsx");
-  assert.ok(source.includes('"/api/watchlists"'));
-  assert.ok(source.includes('/api/watchlists/${selectedWatchlist?.id}/metrics'));
-  assert.ok(source.includes("scope_type"));
+  const composer = readFileSync(
+    path.resolve(__dirname, "../client/src/components/watch/V3MonitorComposer.tsx"),
+    "utf8",
+  );
+  assert.ok(source.includes('"/api/v3/monitors"'));
+  assert.ok(source.includes("useV3Monitors"));
+  assert.ok(composer.includes("target_type"));
+  assert.ok(composer.includes("max_monthly_documents"));
+  assert.ok(composer.includes("Préparer le périmètre"));
+});
+
+test("V3 operational pages preserve the signal to action chain", () => {
+  const signals = readPage("Signals.tsx");
+  const actions = readPage("Actions.tsx");
+  const dashboard = readPage("Dashboard.tsx");
+  assert.ok(signals.includes("Pourquoi ce signal existe"));
+  assert.ok(signals.includes("Preuves reliées"));
+  assert.ok(signals.includes("Ouvrir un dossier"));
+  assert.ok(actions.includes("Agent LIDAL"));
+  assert.ok(actions.includes("Analyse et brouillons uniquement"));
+  assert.ok(dashboard.includes("Mentions qualifiées"));
+  assert.ok(dashboard.includes("Couverture analytique"));
 });
 
 test("Explorer exposes consultable source links for cited and ranked results", () => {

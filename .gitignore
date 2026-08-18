@@ -24,6 +24,7 @@ data/processed/
 data/embeddings/
 data/secrets/
 data/*.db
+data/*.sqlite3
 
 # Modèles ML
 models/dziribert/
@@ -34,6 +35,8 @@ models/whisper/
 .pytest_cache/
 test-results/
 playwright-report/
+.playwright-cli/
+.impeccable/review/
 
 # Node / Frontend
 frontend/node_modules/

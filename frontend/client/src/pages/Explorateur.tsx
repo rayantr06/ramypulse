@@ -16,6 +16,7 @@ import { convertToCSV, downloadCSV } from "@/lib/csvExport";
 import { STITCH_AVATARS } from "@/lib/stitchAssets";
 import { formatSlmLabel, parseSlmAnalysis, type SlmAnalysisEnvelope } from "@/lib/slmV04";
 import { useTenantId } from "@/lib/tenantContext";
+import { useV3Observations, useV3Signals } from "@/hooks/useV3Data";
 
 const SENTIMENT_OPTIONS = [
   { value: "positif", label: "Positif" },
@@ -236,8 +237,10 @@ function mapVerbatimsView(value: unknown): VerbatimsView {
 
 export default function Explorateur() {
   const tenantId = useTenantId();
-  const [query, setQuery] = useState("");
-  const [activeSearch, setActiveSearch] = useState("");
+  const v3ObservationsQuery = useV3Observations();
+  const v3SignalsQuery = useV3Signals();
+  const [query, setQuery] = useState(initialExplorerQuery);
+  const [activeSearch, setActiveSearch] = useState(initialExplorerQuery);
   const [activeSources, setActiveSources] = useState<string[]>(["facebook"]);
   const [page, setPage] = useState(1);
   const [filterSentiment, setFilterSentiment] = useState<string>("");
@@ -432,7 +435,8 @@ export default function Explorateur() {
     !activeSearch.trim() &&
     !searchLoading &&
     !verbatimsLoading &&
-    verbatimsData.total === 0;
+    verbatimsData.total === 0 &&
+    (v3ObservationsQuery.data?.length ?? 0) === 0;
 
   if (shouldShowEmptyTenantState) {
     return (
@@ -462,6 +466,21 @@ export default function Explorateur() {
           title="Explorer les avis clients"
           description="Recherchez un sujet en langage naturel, puis consultez les verbatims, leurs sources et les éléments qui expliquent le résultat."
         />
+
+        <section className="cling-panel overflow-hidden" aria-label="Lecture en trois niveaux">
+          <div className="grid border-b border-outline-variant sm:grid-cols-3">
+            <div className="px-5 py-4"><p className="text-[9px] font-semibold text-on-surface-variant">Faits saillants</p><p className="mt-1 font-headline text-lg font-bold text-on-surface">{(v3SignalsQuery.data ?? []).filter((signal) => !["dismissed", "converted"].includes(signal.status)).length} changements à vérifier</p></div>
+            <div className="border-t border-outline-variant px-5 py-4 sm:border-l sm:border-t-0"><p className="text-[9px] font-semibold text-on-surface-variant">Observations</p><p className="mt-1 font-headline text-lg font-bold text-on-surface">{v3ObservationsQuery.data?.length ?? 0} regroupements expliqués</p></div>
+            <div className="border-t border-outline-variant px-5 py-4 sm:border-l sm:border-t-0"><p className="text-[9px] font-semibold text-on-surface-variant">Verbatims</p><p className="mt-1 font-headline text-lg font-bold text-on-surface">{verbatimsData.total || "Preuves disponibles"}</p></div>
+          </div>
+          {(v3ObservationsQuery.data ?? []).length ? (
+            <div className="grid gap-px bg-outline-variant lg:grid-cols-2">
+              {(v3ObservationsQuery.data ?? []).slice(0, 2).map((observation) => (
+                <article key={observation.id} className="bg-surface px-5 py-4 sm:px-6"><div className="flex flex-wrap items-center gap-2 text-[9px] text-on-surface-variant"><span className={`rounded-full px-2 py-1 font-semibold ${observation.sentiment === "negatif" ? "bg-error-container text-error" : "bg-action-container text-action"}`}>{observation.sentiment}</span><span>{observation.mentionCount} mentions</span><span>{observation.evidenceIds.length} preuves directes</span></div><h2 className="mt-3 text-sm font-semibold text-on-surface">{observation.title}</h2><p className="mt-1.5 text-xs leading-5 text-on-surface-variant">{observation.summary}</p><div className="mt-3 flex flex-wrap gap-1.5">{observation.aspects.map((aspect) => <span key={aspect} className="rounded-full bg-surface-container px-2 py-1 text-[8px] font-semibold text-on-surface-variant">{aspect.replaceAll("_", " ")}</span>)}</div></article>
+              ))}
+            </div>
+          ) : null}
+        </section>
 
         <section className="space-y-4">
           <div className="relative">
@@ -914,4 +933,8 @@ export default function Explorateur() {
       </div>
     </AppShell>
   );
+}
+function initialExplorerQuery(): string {
+  const hashQuery = window.location.hash.split("?", 2)[1] ?? "";
+  return new URLSearchParams(hashQuery).get("query")?.trim() ?? "";
 }

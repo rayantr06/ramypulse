@@ -4,7 +4,8 @@ import { Link, useLocation } from "wouter";
 
 import { MobileNavigation, Sidebar } from "@/components/Sidebar";
 import { TenantSwitcher } from "@/components/TenantSwitcher";
-import { toast } from "@/hooks/use-toast";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useV3Notifications } from "@/hooks/useV3Data";
 import {
   getProductRoute,
   PRODUCT_NAV_GROUPS,
@@ -41,11 +42,16 @@ export function AppShell({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const route = getProductRoute(location);
+  const notificationsQuery = useV3Notifications();
+  const notifications = notificationsQuery.data ?? [];
+  const unreadCount = notifications.filter((item) => !item.read).length;
 
   function handleSearchSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (onSearch) return;
-    setLocation("/explorateur");
+    const normalized = searchQuery.trim();
+    if (!normalized) return;
+    setLocation(`/explorateur?query=${encodeURIComponent(normalized)}`);
   }
 
   function handleSearchChange(value: string) {
@@ -138,16 +144,28 @@ export function AppShell({
                 <Plus className="h-4 w-4" aria-hidden="true" />
                 Créer une surveillance
               </Link>
-              <button
-                className="relative flex h-11 w-11 items-center justify-center rounded-full border border-outline-variant bg-surface text-on-surface-variant transition-colors duration-150 hover:border-primary/30 hover:text-primary"
-                data-testid="btn-notifications"
-                onClick={() => toast({ title: "Aucune nouvelle notification" })}
-                type="button"
-                aria-label="Notifications"
-              >
-                <Bell className="h-[18px] w-[18px]" aria-hidden="true" />
-                <span className="absolute right-2.5 top-2 h-1.5 w-1.5 rounded-full bg-error" />
-              </button>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    className="relative flex h-11 w-11 items-center justify-center rounded-full border border-outline-variant bg-surface text-on-surface-variant transition-colors duration-150 hover:border-primary/30 hover:text-primary"
+                    data-testid="btn-notifications"
+                    type="button"
+                    aria-label={`${unreadCount} notification${unreadCount > 1 ? "s" : ""} non lue${unreadCount > 1 ? "s" : ""}`}
+                  >
+                    <Bell className="h-[18px] w-[18px]" aria-hidden="true" />
+                    {unreadCount ? <span className="absolute right-2.5 top-2 h-1.5 w-1.5 rounded-full bg-error" /> : null}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-80 rounded-2xl border-outline-variant bg-surface p-0 shadow-ambient">
+                  <div className="border-b border-outline-variant px-4 py-3"><p className="font-headline text-sm font-bold">Notifications</p><p className="mt-0.5 text-[9px] text-on-surface-variant">{unreadCount} non lue{unreadCount > 1 ? "s" : ""}</p></div>
+                  <div className="divide-y divide-outline-variant">
+                    {notifications.slice(0, 4).map((notification) => (
+                      <Link key={notification.id} href={notification.href ?? "/"} className="block px-4 py-3 hover:bg-surface-container-low"><div className="flex items-start gap-2"><span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${notification.read ? "bg-outline" : "bg-primary"}`} /><div><p className="text-xs font-semibold text-on-surface">{notification.title}</p><p className="mt-1 text-[9px] leading-4 text-on-surface-variant">{notification.body}</p></div></div></Link>
+                    ))}
+                    {!notifications.length ? <p className="px-4 py-6 text-center text-xs text-on-surface-variant">Aucune notification.</p> : null}
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
         </header>

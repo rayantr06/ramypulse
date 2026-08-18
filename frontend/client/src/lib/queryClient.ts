@@ -12,7 +12,11 @@ function getConfiguredApiKey(): string {
 
 function buildAuthHeaders(): Record<string, string> {
   const apiKey = getConfiguredApiKey();
-  return apiKey ? { "X-API-Key": apiKey } : {};
+  const accessToken = window.localStorage.getItem("lidal_supabase_access_token")?.trim();
+  return {
+    ...(apiKey ? { "X-API-Key": apiKey } : {}),
+    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+  };
 }
 
 async function throwIfResNotOk(res: Response) {

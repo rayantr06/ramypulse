@@ -6,6 +6,9 @@ const PRODUCT_ROUTE_PATHS = new Set([
   "/campagnes",
   "/watchlists",
   "/watchlists/new",
+  "/signals",
+  "/actions",
+  "/reports",
   "/alertes",
   "/recommandations",
 ]);

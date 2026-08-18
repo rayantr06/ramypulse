@@ -136,7 +136,7 @@ components:
 
 **Creative North Star: "Clarté modulaire"**
 
-LIDAL Pulse est un espace de veille lumineux, dense et directement opératoire. Son expression « Operate UI » organise les signaux dans une succession de modules compacts : indicateurs essentiels, file d’alertes, analyse du jour, résumé de décision et détails de répartition. La toile perle crée du calme, les panneaux blancs structurent le travail et le violet électrique identifie la marque, l’état actif et l’action principale.
+LIDAL Pulse est un espace de veille lumineux, dense et directement opératoire. Son expression « Operate UI » organise le travail dans une succession de modules compacts : KPI transparents, file de signaux, preuves, dossiers, actions et santé des sources. La toile perle crée du calme, les panneaux blancs structurent le travail et le violet électrique identifie la marque, l’état actif et l’action principale.
 
 La hiérarchie repose sur l’alignement, la densité maîtrisée, les surfaces tonales et les libellés explicites. Aucun module spectaculaire ne doit dominer la preuve : chaque signal reste relié à sa fraîcheur, à sa confiance, à sa provenance et à une voie de vérification. Sur mobile, la même logique s’empile dans l’ordre de priorité sans changer de langage visuel.
 
@@ -144,9 +144,9 @@ La hiérarchie repose sur l’alignement, la densité maîtrisée, les surfaces 
 
 - Toile perle, panneaux blancs et subdivisions gris très clair.
 - Violet électrique réservé à l’identité, à l’actif, au focus et à l’action primaire.
-- Quatre KPI compacts en ouverture, lisibles en grille 4×1 ou 2×2.
-- File d’alertes dense et actionnable, associée à une analyse du jour distincte.
-- Résumé linéaire Signal → Interprétation → Décision avant validation humaine.
+- Six KPI transparents en ouverture, lisibles en grille 6×1, 3×2 ou 2×3.
+- File de signaux dense, toujours associée au seuil, à la confiance et aux preuves.
+- Chaîne linéaire Mention → Observation → Signal → Dossier → Action → Impact, avec validation humaine.
 - Rail desktop compact, étapes en pilules dans l’en-tête et navigation mobile arrimée.
 - Urbanist pour la hiérarchie et les chiffres, Inter pour la lecture, les preuves et les métadonnées.
 
@@ -214,7 +214,7 @@ La palette presque monochrome laisse les accents sémantiques porter l’état s
 
 Le contenu est centré dans un conteneur fluide plafonné à 1580 px, avec 16 px de marge mobile, 24 px dès les petits écrans et 32 px sur desktop. L’en-tête collant mesure au moins 84 px. À partir de 1024 px, un rail fixe de 88 px libère la largeur de travail ; sous ce seuil, le rail devient un panneau de 304 px et une navigation inférieure à cinq emplacements prend le relais.
 
-Le dashboard suit une séquence stable. Les KPI utilisent deux colonnes par défaut et quatre à partir de 1024 px. La zone principale empile les blocs jusqu’à 1280 px, puis associe la file d’alertes et l’analyse du jour selon un rapport 1,55 / 0,75. Le résumé « Du signal à la décision » reste un panneau unique : ses trois étapes s’empilent, puis passent en trois colonnes égales à partir de 1024 px. Les panneaux produit et région utilisent une grille 1,1 / 0,9 sur desktop.
+Le dashboard suit une séquence stable. Les KPI utilisent deux colonnes par défaut, trois à partir de 1024 px et six sur les écrans très larges. La zone principale empile les blocs jusqu’à 1280 px, puis associe la file de signaux et les moteurs de l’évolution. La boucle opérationnelle affiche ensuite les actions à faire avancer et la santé des sources. Les pages Signaux, Surveillances et Actions utilisent une composition maître/détail sur desktop et un empilement logique sur mobile.
 
 Le rythme s’appuie principalement sur 8, 12, 16, 20, 24, 28 et 32 px. Les lignes d’alerte ont une hauteur minimale de 72 px pour préserver la densité sans comprimer la cible. Sur mobile, l’ordre reste KPI, alertes, analyse, décision, détails ; le contenu conserve une marge basse suffisante pour la navigation fixe. Les textes arabes ou mixtes utilisent une direction automatique et l’architecture doit rester compatible avec un futur miroir RTL.
 
@@ -282,7 +282,7 @@ Le rail desktop est un axe compact de 88 px avec cibles carrées de 44 px, icôn
 
 ### DashboardStat
 
-Le KPI associe une icône sémantique dans un carré teinté, un libellé Inter de 10 px et une valeur Urbanist de 1,45 rem. Quatre cartes ouvrent la situation : perception, évolution, avis analysés et alertes à traiter. La valeur n’utilise jamais la couleur seule pour communiquer sa tendance.
+Le KPI associe une icône sémantique dans un carré teinté, un libellé Inter de 10 px et une valeur Urbanist de 1,45 rem. Six cartes ouvrent la situation : mentions qualifiées, sentiment net, taux négatif, signaux ouverts, délai médian de prise en charge et couverture analytique. La valeur n’utilise jamais la couleur seule pour communiquer sa tendance.
 
 ### AlertQueue
 

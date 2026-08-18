@@ -1,4 +1,4 @@
-import { useEffect, type ComponentType } from "react";
+import { lazy, Suspense, useEffect, type ComponentType } from "react";
 import { Switch, Route, Router, useLocation } from "wouter";
 import { useHashLocation } from "wouter/use-hash-location";
 import { getTenantQueryClient } from "./lib/queryClient";
@@ -9,15 +9,22 @@ import { useTenantId } from "@/lib/tenantContext";
 import { useTenantReadiness } from "@/lib/tenantReadiness";
 import { shouldGateProductRoute } from "@/lib/routeAccess";
 import { TenantReadinessScreen } from "@/components/TenantReadinessScreen";
-import NotFound from "@/pages/not-found";
-import Explorateur from "@/pages/Explorateur";
-import Campagnes from "@/pages/Campagnes";
-import Alertes from "@/pages/Alertes";
-import Watchlists from "@/pages/Watchlists";
-import Recommandations from "@/pages/Recommandations";
-import AdminSources from "@/pages/AdminSources";
-import ProductHome from "@/pages/ProductHome";
-import WatchOnboarding from "@/pages/WatchOnboarding";
+const NotFound = lazy(() => import("@/pages/not-found"));
+const Explorateur = lazy(() => import("@/pages/Explorateur"));
+const Campagnes = lazy(() => import("@/pages/Campagnes"));
+const Watchlists = lazy(() => import("@/pages/Watchlists"));
+const AdminSources = lazy(() => import("@/pages/AdminSources"));
+const ProductHome = lazy(() => import("@/pages/ProductHome"));
+const WatchOnboarding = lazy(() => import("@/pages/WatchOnboarding"));
+const Signals = lazy(() => import("@/pages/Signals"));
+const Actions = lazy(() => import("@/pages/Actions"));
+const Reports = lazy(() => import("@/pages/Reports"));
+
+function LegacyRedirect({ to }: { to: string }) {
+  const [, setLocation] = useLocation();
+  useEffect(() => setLocation(to), [setLocation, to]);
+  return <TenantReadinessScreen />;
+}
 
 function TenantProtectedRoute({ component: Component }: { component: ComponentType }) {
   const readiness = useTenantReadiness();
@@ -43,22 +50,25 @@ function TenantProtectedRoute({ component: Component }: { component: ComponentTy
 
 function AppRouter() {
   return (
-    <Switch>
+    <Suspense fallback={<TenantReadinessScreen />}>
+      <Switch>
       <Route path="/" component={ProductHome} />
       <Route path="/nouveau-client" component={WatchOnboarding} />
       <Route path="/explorateur" component={() => <TenantProtectedRoute component={Explorateur} />} />
       <Route path="/campagnes" component={() => <TenantProtectedRoute component={Campagnes} />} />
       <Route path="/watchlists/new" component={() => <TenantProtectedRoute component={Watchlists} />} />
       <Route path="/watchlists" component={() => <TenantProtectedRoute component={Watchlists} />} />
-      <Route path="/alertes" component={() => <TenantProtectedRoute component={Alertes} />} />
-      <Route
-        path="/recommandations"
-        component={() => <TenantProtectedRoute component={Recommandations} />}
-      />
+      <Route path="/signals" component={() => <TenantProtectedRoute component={Signals} />} />
+      <Route path="/actions" component={() => <TenantProtectedRoute component={Actions} />} />
+      <Route path="/reports" component={() => <TenantProtectedRoute component={Reports} />} />
+      <Route path="/sources" component={AdminSources} />
+      <Route path="/alertes" component={() => <LegacyRedirect to="/signals" />} />
+      <Route path="/recommandations" component={() => <LegacyRedirect to="/actions" />} />
       {/* /admin-sources is intentionally outside the tenant gate: it is the operator console. */}
       <Route path="/admin-sources" component={AdminSources} />
       <Route component={NotFound} />
-    </Switch>
+      </Switch>
+    </Suspense>
   );
 }
 

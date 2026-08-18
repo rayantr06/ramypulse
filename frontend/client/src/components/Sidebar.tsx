@@ -29,7 +29,7 @@ const STAGE_TONES: Record<ProductStage, string> = {
 };
 
 function mobileActiveTone(href: string): string {
-  return href === "/alertes"
+  return href === "/signals"
     ? "border-error/20 bg-error-container text-error"
     : "border-primary/20 bg-primary-container text-primary";
 }
@@ -126,7 +126,7 @@ export function Sidebar({
                 >
                   <Icon className={`h-[18px] w-[18px] shrink-0 ${active ? "text-primary-foreground" : STAGE_TONES[item.stage]}`} strokeWidth={active ? 2.2 : 1.8} aria-hidden="true" />
                   <span className="min-w-0 flex-1 truncate font-headline text-[13px] font-semibold lg:hidden">{item.label}</span>
-                  {item.href === "/alertes" ? (
+                  {item.href === "/signals" ? (
                     <span className={`h-1.5 w-1.5 rounded-full ${active ? "bg-white" : "bg-error"}`} aria-label="Alertes actives" />
                   ) : null}
                   <span className="pointer-events-none absolute left-full z-50 ml-3 hidden whitespace-nowrap rounded-xl bg-inverse-surface px-3 py-2 text-xs font-semibold text-inverse-on-surface opacity-0 shadow-ambient transition-opacity group-hover:opacity-100 lg:block">
@@ -161,7 +161,7 @@ export function Sidebar({
   );
 }
 
-const MOBILE_ITEM_HREFS = ["/", "/watchlists", "/alertes", "/recommandations"];
+const MOBILE_ITEM_HREFS = ["/", "/watchlists", "/signals", "/actions"];
 
 export function MobileNavigation() {
   const [location] = useLocation();

@@ -12,9 +12,9 @@ L'utilisateur prioritaire de la première version est le responsable marketing, 
 
 ## Product Purpose
 
-LIDAL Pulse transforme des commentaires, avis et signaux publics, autorisés ou fournis par une organisation en preuves consultables, tendances, alertes, analyses de campagnes et recommandations actionnables. Le produit réduit le délai entre l'apparition d'un signal client, la preuve qui le justifie et une décision que l'organisation peut réellement exécuter.
+LIDAL Pulse transforme des commentaires, avis et signaux publics, autorisés ou fournis par une organisation en observations quantifiées, signaux vérifiables, dossiers attribués et actions mesurables. Le produit réduit le délai entre l'apparition d'un changement client, la preuve qui le justifie et une décision que l'organisation peut réellement exécuter.
 
-Le parcours métier prioritaire est : Vue d'ensemble → Alerte → Preuves → Recommandation → Action.
+Le parcours métier prioritaire est : Aujourd’hui → Mention → Observation → Signal → Dossier → Action → Impact.
 
 ## Positioning
 
@@ -22,13 +22,13 @@ LIDAL Pulse relie chaque conclusion à ses verbatims et à sa provenance, avec u
 
 ## Operating Context
 
-Le produit est utilisé comme plateforme de veille continue et lors de l'analyse ponctuelle d'une marque, d'un produit, d'une campagne, d'un concurrent ou d'un risque. Un utilisateur sélectionne un espace client, configure une surveillance, choisit les sources et langues, suit la collecte, examine les alertes et tendances, ouvre les preuves, puis transforme les constats en recommandations et actions suivies.
+Le produit est utilisé comme plateforme de veille continue et lors de l'analyse ponctuelle d'une marque, d'un produit, d'une campagne, d'un concurrent ou d'un risque. Un utilisateur sélectionne un espace client, configure une surveillance en trois décisions, suit la couverture et la fraîcheur, vérifie les signaux et leurs preuves, ouvre un dossier, assigne une action, puis mesure l'impact avant/après.
 
 ## Capabilities and Constraints
 
 - Frontend existant : React 18, Vite 7, TypeScript strict, Tailwind CSS, Shadcn/Radix, TanStack Query, Wouter, Recharts et Framer Motion.
 - Architecture multi-tenant avec isolation par espace client.
-- Vues existantes : vue d'ensemble, surveillances, onboarding, explorateur, alertes, campagnes, recommandations, sources et connecteurs.
+- Vues V3 : Aujourd’hui, Surveillances, Signaux, Explorer, Actions, Rapports et Sources. Campagnes reste compatible après le cœur métier.
 - Les contrats API, comportements fonctionnels, routes et `data-testid` nécessaires aux tests doivent être préservés.
 - Le SLM V2 et son corpus contrôlé sont en développement et ne doivent pas être présentés comme validés en production.
 - Les sources, la fraîcheur, la confiance et les limites d'une conclusion IA doivent rester visibles.
@@ -54,7 +54,7 @@ Le produit est utilisé comme plateforme de veille continue et lors de l'analyse
 ## Product Principles
 
 1. Montrer la preuve avant de demander la confiance.
-2. Transformer les signaux en décisions, pas seulement en graphiques.
+2. Transformer les signaux validés en dossiers et actions mesurables, pas seulement en graphiques.
 3. Rendre la complexité progressive : synthèse pour le décideur, profondeur pour l'analyste.
 4. Employer un langage métier clair et expliquer les limites de l'IA.
 5. Concevoir pour le contexte linguistique algérien sans folklore visuel.
