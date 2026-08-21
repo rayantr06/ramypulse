@@ -15,6 +15,13 @@ const CHANNEL_LABELS = {
   audio: "Audio autorisé",
 } as const;
 
+const PRESENTATION_CHANNEL_ORDER = [
+  "facebook",
+  "google_maps",
+  "youtube",
+  "audio",
+] as const;
+
 function channelLabel(channel: (typeof LETICIA_DEMO_SCENARIO.authorizedInputChannels)[number]): string {
   if (channel === "facebook") return CHANNEL_LABELS.facebook;
   if (channel === "google_maps") return CHANNEL_LABELS.google_maps;
@@ -33,9 +40,10 @@ function FlowArrow() {
 }
 
 export function DemoSourceFlow() {
-  const channelLabels = LETICIA_DEMO_SCENARIO.authorizedInputChannels.map(
-    channelLabel,
-  );
+  const authorizedChannels = new Set(LETICIA_DEMO_SCENARIO.authorizedInputChannels);
+  const channelLabels = PRESENTATION_CHANNEL_ORDER
+    .filter((channel) => authorizedChannels.has(channel))
+    .map(channelLabel);
 
   return (
     <section
@@ -60,7 +68,11 @@ export function DemoSourceFlow() {
           <p className="text-[9px] font-semibold text-on-surface-variant">Canaux d’écoute</p>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             {[...channelLabels, "QR"].map((label) => (
-              <span key={label} className="rounded-full bg-surface-container-high px-2 py-1 text-[9px] font-semibold text-on-surface">
+              <span
+                key={label}
+                className="rounded-full bg-surface-container-high px-2 py-1 text-[9px] font-semibold text-on-surface"
+                data-testid="demo-source-channel"
+              >
                 {label}
               </span>
             ))}

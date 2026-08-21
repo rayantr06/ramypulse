@@ -21,6 +21,13 @@ test("recording path explains source to decision without overclaiming", async ({
   await expect(sourceFlow).toContainText("Audio autorisé");
   await expect(sourceFlow).toContainText("QR");
   await expect(sourceFlow).toContainText("décision validée par l’équipe");
+  await expect(sourceFlow.getByTestId("demo-source-channel")).toHaveText([
+    "Facebook",
+    "Google Maps",
+    "YouTube",
+    "Audio autorisé",
+    "QR",
+  ]);
   await expect(page.getByTestId("card-health-score")).toBeVisible();
 
   const flowBox = await sourceFlow.boundingBox();
