@@ -9,6 +9,8 @@ const PRODUCT_ROUTE_PATHS = new Set([
   "/signals",
   "/actions",
   "/reports",
+  "/listening-points",
+  "/listening-points/new",
   "/alertes",
   "/recommandations",
 ]);

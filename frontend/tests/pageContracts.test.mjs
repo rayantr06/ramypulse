@@ -86,3 +86,14 @@ test("Run progress panel exposes operator failure controls", () => {
   assert.ok(source.includes("Une etape a echoue"));
   assert.ok(source.includes("Relancer l'initialisation"));
 });
+
+test("QR listening pages expose the reliable recording path", () => {
+  const points = readPage("ListeningPoints.tsx");
+  const feedback = readPage("PublicFeedback.tsx");
+  const reset = readPage("DemoReset.tsx");
+  assert.ok(points.includes('data-testid="listening-point-qr"'));
+  assert.ok(points.includes("Tester le formulaire"));
+  assert.ok(feedback.includes('data-testid="public-feedback-form"'));
+  assert.ok(feedback.includes("En attente d’analyse"));
+  assert.ok(reset.includes("resetLeticiaDemoState"));
+});

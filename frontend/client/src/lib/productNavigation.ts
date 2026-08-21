@@ -9,6 +9,7 @@ import {
   ListChecks,
   Megaphone,
   Radar,
+  QrCode,
   type LucideIcon,
 } from "lucide-react";
 
@@ -45,6 +46,7 @@ export const PRODUCT_NAV_GROUPS: ProductNavGroup[] = [
     items: [
       { href: "/", label: "Aujourd’hui", shortLabel: "Aujourd’hui", description: "Changements, KPI et urgences", icon: LayoutDashboard, stage: "observer", testId: "nav-dashboard" },
       { href: "/watchlists", label: "Surveillances", shortLabel: "Veille", description: "Marques, produits, campagnes, concurrents et sujets", icon: Radar, stage: "observer", testId: "nav-watchlists" },
+      { href: "/listening-points", label: "Points d’écoute", shortLabel: "Écoute", description: "QR directs et retours locaux à analyser", icon: QrCode, stage: "observer", testId: "nav-listening-points" },
       { href: "/signals", label: "Signaux", shortLabel: "Signaux", description: "Changements détectés à vérifier", icon: BellRing, stage: "observer", testId: "nav-alertes" },
     ],
   },

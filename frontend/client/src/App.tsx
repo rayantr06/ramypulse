@@ -19,6 +19,10 @@ const WatchOnboarding = lazy(() => import("@/pages/WatchOnboarding"));
 const Signals = lazy(() => import("@/pages/Signals"));
 const Actions = lazy(() => import("@/pages/Actions"));
 const Reports = lazy(() => import("@/pages/Reports"));
+const ListeningPoints = lazy(() => import("@/pages/ListeningPoints"));
+const ListeningPointComposer = lazy(() => import("@/components/listening/ListeningPointComposer"));
+const PublicFeedback = lazy(() => import("@/pages/PublicFeedback"));
+const DemoReset = lazy(() => import("@/pages/DemoReset"));
 
 function LegacyRedirect({ to }: { to: string }) {
   const [, setLocation] = useLocation();
@@ -61,6 +65,11 @@ function AppRouter() {
       <Route path="/signals" component={() => <TenantProtectedRoute component={Signals} />} />
       <Route path="/actions" component={() => <TenantProtectedRoute component={Actions} />} />
       <Route path="/reports" component={() => <TenantProtectedRoute component={Reports} />} />
+      <Route path="/listening-points/new" component={() => <TenantProtectedRoute component={ListeningPointComposer} />} />
+      <Route path="/listening-points" component={() => <TenantProtectedRoute component={ListeningPoints} />} />
+      {/* Public collection and reset must stay usable without tenant onboarding. */}
+      <Route path="/feedback/:token" component={PublicFeedback} />
+      <Route path="/demo/reset" component={DemoReset} />
       <Route path="/sources" component={AdminSources} />
       <Route path="/alertes" component={() => <LegacyRedirect to="/signals" />} />
       <Route path="/recommandations" component={() => <LegacyRedirect to="/actions" />} />

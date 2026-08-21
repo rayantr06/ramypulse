@@ -31,11 +31,11 @@ const explorerAnnotationV04 = {
   actionability: { actionable: true, queue: "produit", priority: "moyenne" },
 };
 
-async function seedReadyTenant(page: Page, clientId = "tenant-ready") {
-  await page.addInitScript((tenant) => {
-    localStorage.clear();
+async function seedReadyTenant(page: Page, clientId = "tenant-ready", resetStorageOnNavigation = true) {
+  await page.addInitScript(({ tenant, resetStorage }) => {
+    if (resetStorage) localStorage.clear();
     localStorage.setItem("ramypulse.activeTenantId", tenant);
-  }, clientId);
+  }, { tenant: clientId, resetStorage: resetStorageOnNavigation });
 
   await page.route("**/api/dashboard/summary", async (route) => {
     await route.fulfill({
@@ -123,7 +123,7 @@ test("A signal exposes its evidence and can be converted into a case", async ({ 
 
   await expect(page.getByRole("heading", { name: "Pourquoi ce signal existe" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Preuves reliées" })).toBeVisible();
-  await expect(page.getByText("internet y9ta3 bezaf", { exact: false })).toBeVisible();
+  await expect(page.getByText("Ma l9itch le produit fi Oran", { exact: false })).toBeVisible();
   await page.getByRole("button", { name: "Ouvrir un dossier" }).click();
   await page.getByLabel("Responsable").fill("Nadia B.");
   await page.getByRole("button", { name: "Confirmer le dossier" }).click();
@@ -145,4 +145,19 @@ test("Legacy recommendations route redirects to the V3 action workspace", async 
   await page.goto("/#/recommandations");
   await expect(page).toHaveURL(/#\/actions$/);
   await expect(page.getByRole("heading", { name: "Actions" })).toBeVisible();
+});
+
+test("public QR feedback returns to the point as pending", async ({ context, page }) => {
+  await seedReadyTenant(page, "demo-expo-2026", false);
+  await page.goto("/#/listening-points");
+  const popupPromise = context.waitForEvent("page");
+  await page.getByRole("link", { name: "Tester le formulaire" }).click();
+  const feedback = await popupPromise;
+  await feedback.getByRole("radio", { name: "2 étoiles" }).click();
+  await feedback.getByLabel("Votre message").fill("Ma l9itch le produit fi Oran.");
+  await feedback.getByRole("checkbox").check();
+  await feedback.getByRole("button", { name: "Envoyer mon retour" }).click();
+  await expect(feedback.getByText("En attente d’analyse")).toBeVisible();
+  await page.reload();
+  await expect(page.getByTestId("pending-submission")).toContainText("Ma l9itch le produit fi Oran.");
 });
