@@ -18,6 +18,10 @@ test("Leticia scenario is internally coherent and auditable", () => {
   assert.ok(LETICIA_DEMO_SCENARIO.signals.every((signal) => signal.evidenceIds.length > 0));
   assert.match(LETICIA_DEMO_SCENARIO.signals[0]!.title, /disponibilit/i);
   assert.match(LETICIA_DEMO_SCENARIO.signals[0]!.territory ?? "", /Oran/i);
+  assert.deepEqual(LETICIA_DEMO_SCENARIO.authorizedInputChannels, ["facebook", "google_maps", "audio", "youtube"]);
+  assert.ok(LETICIA_DEMO_SCENARIO.monitors.every((monitor) => !monitor.sources.includes("tiktok")));
+  assert.ok(LETICIA_DEMO_SCENARIO.mentions.every((mention) => mention.source !== "tiktok"));
+  assert.ok(LETICIA_DEMO_SCENARIO.overview.sourceHealth.every((source) => source.source !== "tiktok"));
 });
 
 test("reset removes only Leticia demo keys", () => {
