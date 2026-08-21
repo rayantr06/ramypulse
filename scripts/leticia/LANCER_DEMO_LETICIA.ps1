@@ -1,5 +1,7 @@
 [CmdletBinding()]
-param()
+param(
+    [switch]$SmokeTest
+)
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -7,7 +9,13 @@ $ErrorActionPreference = 'Stop'
 $repositoryRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
 $frontendRoot = Join-Path $repositoryRoot 'frontend'
 $vitePath = Join-Path $frontendRoot 'node_modules/vite/bin/vite.js'
+$nodeVersionRules = Join-Path $PSScriptRoot 'NODE_VERSION_DEMO.ps1'
 $applicationUrl = 'http://127.0.0.1:5173/#/'
+
+if (-not (Test-Path -LiteralPath $nodeVersionRules -PathType Leaf)) {
+    throw "Le verificateur de version Node.js est introuvable : $nodeVersionRules. Verifiez que le dossier du projet est complet, puis relancez ce script."
+}
+. $nodeVersionRules
 
 if (-not (Test-Path -LiteralPath $frontendRoot -PathType Container)) {
     throw "Le dossier frontend est introuvable : $frontendRoot. Verifiez que le dossier du projet est complet, puis relancez ce script."
@@ -25,19 +33,20 @@ if ($portListener) {
 
 $nodeCommand = Get-Command 'node.exe' -ErrorAction SilentlyContinue
 if ($null -eq $nodeCommand) {
-    throw 'Node.js est introuvable. Installez Node.js 20 ou 22, puis executez INSTALLER_DEMO_LETICIA.ps1.'
+    throw 'Node.js est introuvable. Installez Node.js 20.19.0 minimum ou Node.js 22.12.0 minimum, puis executez INSTALLER_DEMO_LETICIA.ps1.'
 }
 
 $nodeVersion = (& $nodeCommand.Source --version).Trim()
-if ($nodeVersion -notmatch '^v(20|22)\.') {
-    throw "La version $nodeVersion de Node.js n'est pas prise en charge. Installez Node.js 20 ou 22, puis executez INSTALLER_DEMO_LETICIA.ps1."
+if (-not (Test-LeticiaNodeVersion -Version $nodeVersion)) {
+    throw "La version $nodeVersion de Node.js n'est pas prise en charge par Vite 7.3.1. Installez Node.js 20.19.0 minimum ou Node.js 22.12.0 minimum, puis executez INSTALLER_DEMO_LETICIA.ps1."
 }
 
 $viteProcess = $null
+$viteArguments = '"{0}" --host 127.0.0.1 --port 5173' -f $vitePath
 
 try {
     $viteProcess = Start-Process -FilePath $nodeCommand.Source `
-        -ArgumentList @($vitePath, '--host', '127.0.0.1', '--port', '5173') `
+        -ArgumentList $viteArguments `
         -WorkingDirectory $frontendRoot `
         -WindowStyle Hidden `
         -PassThru
@@ -58,8 +67,12 @@ try {
         throw "Le serveur Vite n'est pas disponible sur http://127.0.0.1:5173 apres 30 secondes. Verifiez l'installation avec INSTALLER_DEMO_LETICIA.ps1, puis relancez ce script."
     }
 
-    Start-Process $applicationUrl
-    Read-Host 'La demonstration est ouverte. Appuyez sur Entree pour arreter uniquement ce processus Vite'
+    if ($SmokeTest) {
+        Write-Host 'Test de lancement Vite reussi. Arret du processus cree par ce lanceur.'
+    } else {
+        Start-Process $applicationUrl
+        Read-Host 'La demonstration est ouverte. Appuyez sur Entree pour arreter uniquement ce processus Vite'
+    }
 } finally {
     if ($null -ne $viteProcess -and -not $viteProcess.HasExited) {
         Stop-Process -Id $viteProcess.Id -ErrorAction Stop

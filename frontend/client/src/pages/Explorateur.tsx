@@ -30,13 +30,24 @@ const WILAYA_OPTIONS = [
   "Béjaïa", "Djelfa", "Biskra", "Mostaganem", "Tlemcen", "Médéa", "Msila",
 ];
 
-const SOURCES = [
-  { id: "facebook", label: "Facebook", icon: "social_leaderboard", color: "#1877F2" },
-  { id: "google_maps", label: "Google Maps", icon: "location_on", color: "#EA4335" },
-  { id: "youtube", label: "YouTube", icon: "video_library", color: "#FF0000" },
+const FACEBOOK_SOURCE = { id: "facebook", label: "Facebook", icon: "social_leaderboard", color: "#1877F2" };
+const GOOGLE_MAPS_SOURCE = { id: "google_maps", label: "Google Maps", icon: "location_on", color: "#EA4335" };
+const YOUTUBE_SOURCE = { id: "youtube", label: "YouTube", icon: "video_library", color: "#FF0000" };
+const LIVE_SOURCES = [
+  FACEBOOK_SOURCE,
+  GOOGLE_MAPS_SOURCE,
+  YOUTUBE_SOURCE,
   { id: "instagram", label: "Instagram", icon: "photo_camera", color: "#E4405F" },
   { id: "import", label: "Import", icon: "file_upload", color: "#9ca3af" },
 ];
+const LETICIA_DEMO_SOURCES = [
+  FACEBOOK_SOURCE,
+  GOOGLE_MAPS_SOURCE,
+  YOUTUBE_SOURCE,
+  { id: "audio", label: "Audio autorisé", icon: "mic", color: undefined },
+  { id: "qr", label: "QR", icon: "qr_code_2", color: undefined },
+];
+const SOURCE_DETAILS = [...LIVE_SOURCES, ...LETICIA_DEMO_SOURCES];
 
 interface SearchResultView {
   id: string;
@@ -121,17 +132,17 @@ function getSentimentDot(sentiment: string) {
 }
 
 function getSourceColor(source: string) {
-  const found = SOURCES.find((item) => item.id === source.toLowerCase());
+  const found = SOURCE_DETAILS.find((item) => item.id === source.toLowerCase());
   return found?.color ?? "#9ca3af";
 }
 
 function getSourceIcon(source: string) {
-  const found = SOURCES.find((item) => item.id === source.toLowerCase());
+  const found = SOURCE_DETAILS.find((item) => item.id === source.toLowerCase());
   return found?.icon ?? "public";
 }
 
 function getSourceLabel(source: string) {
-  const found = SOURCES.find((item) => item.id === source.toLowerCase());
+  const found = SOURCE_DETAILS.find((item) => item.id === source.toLowerCase());
   return found?.label ?? source;
 }
 
@@ -326,6 +337,7 @@ function mapPreparedDemoVerbatims(
 export default function Explorateur() {
   const tenantId = useTenantId();
   const { live: v3Live } = useV3Context();
+  const visibleSources = v3Live ? LIVE_SOURCES : LETICIA_DEMO_SOURCES;
   const v3ObservationsQuery = useV3Observations();
   const v3SignalsQuery = useV3Signals();
   const [query, setQuery] = useState(initialExplorerQuery);
@@ -611,7 +623,7 @@ export default function Explorateur() {
             <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mr-2">
               Sources :
             </span>
-            {SOURCES.map((source) => {
+            {visibleSources.map((source) => {
               const isActive = activeSources.includes(source.id);
               return (
                 <button

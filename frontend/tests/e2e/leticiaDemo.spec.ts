@@ -38,6 +38,20 @@ test("recording path explains source to decision without overclaiming", async ({
   expect(kpiBox!.y + kpiBox!.height).toBeLessThanOrEqual(1080);
 
   await page.goto("/#/explorateur");
+  const explorerSources = page.locator('[data-testid^="filter-source-"]');
+  await expect(explorerSources).toHaveCount(5);
+  const explorerSourceIds = await explorerSources.evaluateAll(
+    (elements) => elements.map((element) => element.getAttribute("data-testid")?.replace("filter-source-", "")),
+  );
+  expect(explorerSourceIds).toEqual([
+    "facebook",
+    "google_maps",
+    "youtube",
+    "audio",
+    "qr",
+  ]);
+  await expect(page.getByTestId("filter-source-instagram")).toHaveCount(0);
+  await expect(page.getByTestId("filter-source-import")).toHaveCount(0);
   await expect(page.getByTestId("demo-slm-provenance")).toContainText(
     "Analyse du SLM — exemple de démonstration",
   );

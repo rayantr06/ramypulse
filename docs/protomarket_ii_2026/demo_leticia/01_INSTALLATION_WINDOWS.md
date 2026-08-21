@@ -4,7 +4,7 @@
 
 - Windows 10 ou 11 ;
 - Git ;
-- Node.js 20 ou 22 avec `npm` ;
+- Node.js 20 à partir de **20.19.0**, ou Node.js 22 à partir de **22.12.0**, avec `npm` ;
 - une connexion internet pour le clonage et `npm ci` uniquement.
 
 Le parcours enregistré est ensuite frontend-only : aucun Python, backend, compte fournisseur ou clé API n’est requis.
@@ -20,7 +20,7 @@ git switch codex/lidal-pulse-leticia-demo
 powershell -ExecutionPolicy Bypass -File .\scripts\leticia\INSTALLER_DEMO_LETICIA.ps1
 ```
 
-Le script vérifie Node.js, installe les dépendances du frontend avec `npm ci` et prépare `.env.local` seulement s’il n’existe pas déjà.
+Le script vérifie la version complète de Node.js, installe les dépendances du frontend avec `npm ci` et prépare `.env.local` seulement s’il n’existe pas déjà. Les autres versions majeures ne sont pas acceptées pour ce paquet de démonstration.
 
 ## Lancer la démo
 

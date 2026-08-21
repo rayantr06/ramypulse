@@ -2,14 +2,14 @@
 
 ## Le script refuse Node.js
 
-La démo accepte Node.js 20 ou 22. Vérifiez :
+La démo accepte Node.js 20 à partir de **20.19.0**, ou Node.js 22 à partir de **22.12.0**. Les versions 20.18.x, 22.11.x et les autres versions majeures sont refusées. Vérifiez :
 
 ```powershell
 node --version
 npm --version
 ```
 
-Installez une version LTS compatible, fermez PowerShell, rouvrez-le, puis relancez l’installateur.
+Installez une version compatible dans l’une de ces deux lignes majeures, fermez PowerShell, rouvrez-le, puis relancez l’installateur.
 
 ## `npm ci` échoue
 
@@ -60,7 +60,25 @@ Vérifiez que ces deux fichiers existent dans le clone :
 - `frontend/client/public/brand/lidal-mark-dark.png` ;
 - `frontend/client/public/brand/lidal-mark-transparent.png`.
 
-Relancez ensuite l’installateur puis le lanceur. N’utilisez pas une image depuis Google Drive ou un CDN pendant le tournage.
+L’installateur ne restaure pas les fichiers suivis par Git. Si vous êtes dans un checkout Git valide et que vous voulez récupérer exactement les deux copies de la branche, vérifiez d’abord l’état ciblé :
+
+```powershell
+git rev-parse --is-inside-work-tree
+git branch --show-current
+git status --short -- frontend/client/public/brand/lidal-mark-dark.png frontend/client/public/brand/lidal-mark-transparent.png
+git restore --source=HEAD -- frontend/client/public/brand/lidal-mark-dark.png frontend/client/public/brand/lidal-mark-transparent.png
+```
+
+Les deux premières commandes doivent afficher `true`, puis `codex/lidal-pulse-leticia-demo`. La dernière commande remplace uniquement les modifications locales de ces deux assets. Si le dossier n’est pas un checkout Git valide, n’est pas sur cette branche, ou si cette récupération ciblée échoue, conservez le dossier actuel et créez un clone propre à côté :
+
+```powershell
+cd ..
+git clone https://github.com/rayantr06/ramypulse.git ramypulse-leticia-propre
+cd ramypulse-leticia-propre
+git switch codex/lidal-pulse-leticia-demo
+```
+
+Exécutez ensuite l’installateur puis le lanceur depuis le checkout récupéré ou le clone propre. N’utilisez pas une image depuis Google Drive ou un CDN pendant le tournage.
 
 ## L’affichage est coupé
 

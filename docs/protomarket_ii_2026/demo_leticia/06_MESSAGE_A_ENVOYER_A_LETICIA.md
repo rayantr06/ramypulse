@@ -2,7 +2,7 @@
 
 Bonjour Leticia,
 
-La démonstration LIDAL Pulse pour ProtoMarket est préparée sur une branche dédiée. Sur un PC Windows avec Git et Node.js 20 ou 22, ouvre PowerShell et exécute exactement :
+La démonstration LIDAL Pulse pour ProtoMarket est préparée sur une branche dédiée. Sur un PC Windows avec Git et Node.js 20 à partir de 20.19.0, ou Node.js 22 à partir de 22.12.0, ouvre PowerShell et exécute exactement :
 
 ```powershell
 git clone https://github.com/rayantr06/ramypulse.git

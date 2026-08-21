@@ -8,6 +8,12 @@ $repositoryRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'
 $frontendRoot = Join-Path $repositoryRoot 'frontend'
 $clientRoot = Join-Path $frontendRoot 'client'
 $environmentFile = Join-Path $clientRoot '.env.local'
+$nodeVersionRules = Join-Path $PSScriptRoot 'NODE_VERSION_DEMO.ps1'
+
+if (-not (Test-Path -LiteralPath $nodeVersionRules -PathType Leaf)) {
+    throw "Le verificateur de version Node.js est introuvable : $nodeVersionRules. Verifiez que le dossier du projet est complet, puis relancez ce script."
+}
+. $nodeVersionRules
 
 if (-not (Test-Path -LiteralPath $frontendRoot -PathType Container)) {
     throw "Le dossier frontend est introuvable : $frontendRoot. Verifiez que le dossier du projet est complet, puis relancez ce script."
@@ -15,17 +21,17 @@ if (-not (Test-Path -LiteralPath $frontendRoot -PathType Container)) {
 
 $nodeCommand = Get-Command 'node.exe' -ErrorAction SilentlyContinue
 if ($null -eq $nodeCommand) {
-    throw 'Node.js est introuvable. Installez Node.js 20 ou 22, puis relancez INSTALLER_DEMO_LETICIA.ps1.'
+    throw 'Node.js est introuvable. Installez Node.js 20.19.0 minimum ou Node.js 22.12.0 minimum, puis relancez INSTALLER_DEMO_LETICIA.ps1.'
 }
 
 $npmCommand = Get-Command 'npm.cmd' -ErrorAction SilentlyContinue
 if ($null -eq $npmCommand) {
-    throw 'npm.cmd est introuvable. Reinstallez Node.js 20 ou 22, puis relancez INSTALLER_DEMO_LETICIA.ps1.'
+    throw 'npm.cmd est introuvable. Reinstallez Node.js 20.19.0 minimum ou Node.js 22.12.0 minimum, puis relancez INSTALLER_DEMO_LETICIA.ps1.'
 }
 
 $nodeVersion = (& $nodeCommand.Source --version).Trim()
-if ($nodeVersion -notmatch '^v(20|22)\.') {
-    throw "La version $nodeVersion de Node.js n'est pas prise en charge. Installez Node.js 20 ou 22, puis relancez INSTALLER_DEMO_LETICIA.ps1."
+if (-not (Test-LeticiaNodeVersion -Version $nodeVersion)) {
+    throw "La version $nodeVersion de Node.js n'est pas prise en charge par Vite 7.3.1. Installez Node.js 20.19.0 minimum ou Node.js 22.12.0 minimum, puis relancez INSTALLER_DEMO_LETICIA.ps1."
 }
 
 Push-Location -LiteralPath $frontendRoot

@@ -28,6 +28,34 @@ test("Leticia scenario is internally coherent and auditable", () => {
   );
 });
 
+test("Leticia net sentiment matches the eight-mention distribution", () => {
+  const { overview } = LETICIA_DEMO_SCENARIO;
+  assert.deepEqual(overview.distribution, { positif: 3, negatif: 4, neutre: 1, mixte: 0 });
+  assert.equal(overview.netSentiment, -12.5);
+
+  const originalNetSentiment = overview.netSentiment;
+  try {
+    overview.netSentiment = 0;
+    assert.match(validateLeticiaDemoScenario().join("\n"), /net sentiment/i);
+  } finally {
+    overview.netSentiment = originalNetSentiment;
+  }
+});
+
+test("Leticia overview flags fewer than 30 qualified mentions", () => {
+  const { overview } = LETICIA_DEMO_SCENARIO;
+  assert.equal(overview.qualifiedMentions, 8);
+  assert.equal(overview.insufficientSample, true);
+
+  const originalInsufficientSample = overview.insufficientSample;
+  try {
+    overview.insufficientSample = false;
+    assert.match(validateLeticiaDemoScenario().join("\n"), /insufficient sample/i);
+  } finally {
+    overview.insufficientSample = originalInsufficientSample;
+  }
+});
+
 test("reset removes only Leticia demo keys", () => {
   const values = new Map([[`${LETICIA_DEMO_STORAGE_PREFIX}points`, "[]"], ["unrelated", "keep"]]);
   const storage = {

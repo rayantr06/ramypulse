@@ -1,7 +1,7 @@
 # LIDAL Pulse — démonstration autonome pour Leticia
 
-**Date :** 20 août 2026  
-**Statut :** conception approuvée  
+**Date :** 20 août 2026
+**Statut :** conception approuvée
 **Branche cible :** `codex/lidal-pulse-leticia-demo`
 
 ## 1. Objectif
