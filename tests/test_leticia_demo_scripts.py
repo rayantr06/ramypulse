@@ -30,6 +30,9 @@ def test_installer_requires_supported_node_and_preserves_existing_environment_fi
     installer = read_script(INSTALLER)
 
     assert "$nodeVersion -notmatch '^v(20|22)\\.'" in installer
+    assert "$clientRoot = Join-Path $frontendRoot 'client'" in installer
+    assert "$environmentFile = Join-Path $clientRoot '.env.local'" in installer
+    assert "$environmentFile = Join-Path $frontendRoot '.env.local'" not in installer
     assert "Test-Path $environmentFile" in installer
     assert "VITE_RAMYPULSE_DEMO_MODE=true" in installer
     assert "VITE_RAMYPULSE_DEFAULT_TENANT_ID=demo-expo-2026" in installer

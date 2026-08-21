@@ -6,7 +6,8 @@ $ErrorActionPreference = 'Stop'
 
 $repositoryRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
 $frontendRoot = Join-Path $repositoryRoot 'frontend'
-$environmentFile = Join-Path $frontendRoot '.env.local'
+$clientRoot = Join-Path $frontendRoot 'client'
+$environmentFile = Join-Path $clientRoot '.env.local'
 
 if (-not (Test-Path -LiteralPath $frontendRoot -PathType Container)) {
     throw "Le dossier frontend est introuvable : $frontendRoot. Verifiez que le dossier du projet est complet, puis relancez ce script."
