@@ -6,10 +6,20 @@
     <title>LIDAL Pulse | Intelligence client</title>
     <meta name="description" content="LIDAL Pulse transforme les signaux clients multilingues en constats vérifiables, alertes et décisions actionnables." />
     <link rel="icon" type="image/png" href="/brand/lidal-mark-transparent.png" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">
+    <style>
+      .material-symbols-outlined {
+        font-family: "Material Symbols Outlined Variable";
+        font-style: normal;
+        font-weight: normal;
+        line-height: 1;
+        letter-spacing: normal;
+        text-transform: none;
+        white-space: nowrap;
+        direction: ltr;
+        font-feature-settings: "liga";
+        -webkit-font-smoothing: antialiased;
+      }
+    </style>
   </head>
   <body>
     <!--
@@ -21,6 +31,11 @@
       FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance.
     -->
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <script type="module">
+      import "@fontsource-variable/inter";
+      import "@fontsource-variable/urbanist";
+      import "@fontsource-variable/material-symbols-outlined";
+      import "/src/main.tsx";
+    </script>
   </body>
 </html>
