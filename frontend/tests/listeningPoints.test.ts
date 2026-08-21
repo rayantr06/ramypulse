@@ -100,3 +100,37 @@ test("repository round-trips every listening-point composer field", () => {
   });
   assert.deepEqual(repository.findByToken("rayon-boissons-fixed"), created);
 });
+
+test("repository rejects a listening point without the mandatory rating channel", () => {
+  const repository = createListeningPointsRepository(memoryStorage());
+
+  assert.throws(() => repository.create({
+    organizationId: "demo-expo-2026",
+    name: "QR sans note",
+    token: "qr-sans-note",
+    status: "active",
+    targetType: "service",
+    targetName: "Service test",
+    ownerName: "Nadia B.",
+    channels: { rating: false, text: true, audio: false, image: false },
+    alertEnabled: false,
+    alertThreshold: 2,
+  }), /note est obligatoire/i);
+});
+
+test("repository rejects feedback without a rating", () => {
+  const repository = createListeningPointsRepository(memoryStorage());
+  const point = repository.findByToken("produit-pilote-demo");
+  assert.ok(point);
+
+  assert.throws(() => repository.submit({
+    organizationId: point.organizationId,
+    listeningPointId: point.id,
+    rating: null,
+    text: "Message sans note",
+    channels: ["text"],
+    imageName: null,
+    audioDurationSeconds: null,
+    consent: true,
+  }), /note est obligatoire/i);
+});

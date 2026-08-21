@@ -132,7 +132,7 @@ function normalizeListeningPoint(point: StoredListeningPoint): ListeningPoint {
     targetName: point.targetName ?? point.name,
     ownerName: point.ownerName ?? "Responsable expérience client",
     channels: {
-      rating: point.channels?.rating ?? true,
+      rating: true,
       text: point.channels?.text ?? true,
       audio: point.channels?.audio ?? true,
       image: point.channels?.image ?? true,
@@ -205,6 +205,9 @@ export function createListeningPointsRepository(
       if (points.some((point) => point.token === input.token)) {
         throw new Error("Un point d'écoute utilise déjà ce jeton QR.");
       }
+      if (!input.channels.rating) {
+        throw new Error("La note est obligatoire pour un point d'écoute.");
+      }
 
       const point: ListeningPoint = {
         id: makeId(),
@@ -247,6 +250,7 @@ export function createListeningPointsRepository(
       if (!point.status || point.status !== "active") {
         throw new Error("Ce point d'écoute n'accepte plus de retours.");
       }
+      if (input.rating === null) throw new Error("La note est obligatoire.");
       if (!input.consent) throw new Error("Le consentement est requis.");
 
       const submission: ListeningPointSubmission = {

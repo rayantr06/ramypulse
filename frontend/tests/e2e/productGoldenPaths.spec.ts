@@ -165,6 +165,8 @@ test("public QR feedback returns to the point as pending", async ({ context, pag
 test("a created listening point hides its disabled public channel", async ({ context, page }) => {
   await seedReadyTenant(page, "demo-expo-2026", false);
   await page.goto("/#/listening-points/new");
+  await expect(page.getByRole("heading", { name: "Créer un point d’écoute" })).toBeVisible();
+  await expect(page.getByText("Note", { exact: true })).toHaveCount(0);
   await page.getByLabel("Nom de la cible").fill("Rayon boissons Oran");
   await page.getByLabel("Nom interne").fill("QR texte uniquement");
   await page.getByLabel("Personne responsable").fill("Nadia B.");
@@ -179,4 +181,8 @@ test("a created listening point hides its disabled public channel", async ({ con
   await expect(feedback.getByRole("radio", { name: "5 étoiles" })).toBeVisible();
   await expect(feedback.getByLabel("Votre message")).toBeVisible();
   await expect(feedback.getByText("Durée audio locale")).toHaveCount(0);
+  await feedback.getByLabel("Votre message").fill("Message avec note obligatoire.");
+  await feedback.getByRole("checkbox").check();
+  await feedback.getByRole("button", { name: "Envoyer mon retour" }).click();
+  await expect(feedback.getByText("Choisissez une note.")).toBeVisible();
 });

@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useListeningPoints, useSubmitListeningPointFeedback } from "@/hooks/useListeningPoints";
 
 const feedbackSchema = z.object({
-  rating: z.coerce.number().int().min(1, "Choisissez une note.").max(5).nullable(),
+  rating: z.coerce.number().int().min(1, "Choisissez une note.").max(5),
   text: z.string().trim().max(1_500, "Votre message est trop long."),
   imageName: z.string().nullable(),
   audioDurationSeconds: z.number().int().positive().nullable(),
@@ -31,7 +31,6 @@ export default function PublicFeedback() {
   const form = useForm<FeedbackValues>({
     resolver: zodResolver(feedbackSchema),
     defaultValues: {
-      rating: null,
       text: "",
       imageName: null,
       audioDurationSeconds: null,
@@ -52,10 +51,6 @@ export default function PublicFeedback() {
   function submit(values: FeedbackValues) {
     if (!point) return;
     form.clearErrors(["rating", "text"]);
-    if (point.channels.rating && values.rating === null) {
-      form.setError("rating", { message: "Choisissez une note." });
-      return;
-    }
     const hasEnabledResponse = Boolean(
       (point.channels.text && values.text)
       || (point.channels.image && values.imageName)
@@ -66,7 +61,7 @@ export default function PublicFeedback() {
       return;
     }
     const channels = [
-      ...(point.channels.rating && values.rating !== null ? ["rating"] : []),
+      "rating",
       ...(point.channels.text && values.text ? ["text"] : []),
       ...(point.channels.image && values.imageName ? ["image"] : []),
       ...(point.channels.audio && values.audioDurationSeconds ? ["audio"] : []),
@@ -134,7 +129,7 @@ export default function PublicFeedback() {
         </header>
 
         <form className="space-y-6 px-5 py-6 sm:px-7" onSubmit={form.handleSubmit(submit)} data-testid="public-feedback-form">
-          {point.channels.rating ? <fieldset>
+          <fieldset>
             <legend className="text-sm font-semibold">Votre note</legend>
             <div className="mt-3 grid grid-cols-5 gap-2">
               {[1, 2, 3, 4, 5].map((value) => (
@@ -147,13 +142,13 @@ export default function PublicFeedback() {
                     {...form.register("rating", { valueAsNumber: true })}
                   />
                   <span className="flex aspect-square items-center justify-center rounded-2xl border border-outline-variant bg-surface-container-low text-on-surface-variant transition-colors peer-checked:border-primary peer-checked:bg-primary peer-checked:text-primary-foreground">
-                    <Star className="h-5 w-5" fill={rating !== null && value <= rating ? "currentColor" : "none"} aria-hidden="true" />
+                    <Star className="h-5 w-5" fill={typeof rating === "number" && value <= rating ? "currentColor" : "none"} aria-hidden="true" />
                   </span>
                 </label>
               ))}
             </div>
             {form.formState.errors.rating ? <p className="mt-2 text-xs text-destructive">{form.formState.errors.rating.message}</p> : null}
-          </fieldset> : null}
+          </fieldset>
 
           {point.channels.text ? <section>
             <label htmlFor="feedback-message" className="text-sm font-semibold">Votre message</label>
