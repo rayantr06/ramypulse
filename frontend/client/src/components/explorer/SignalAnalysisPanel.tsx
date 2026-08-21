@@ -30,6 +30,8 @@ interface SignalAnalysisPanelProps {
   legacySentiment: string;
   legacyAspect: string;
   analysis: SlmAnalysisEnvelope | null;
+  preparedDemo?: boolean;
+  confidence?: number | null;
 }
 
 interface TextRange {
@@ -101,6 +103,8 @@ export function SignalAnalysisPanel({
   legacySentiment,
   legacyAspect,
   analysis,
+  preparedDemo = false,
+  confidence = null,
 }: SignalAnalysisPanelProps) {
   if (!analysis) {
     return (
@@ -175,7 +179,19 @@ export function SignalAnalysisPanel({
         </div>
       </div>
 
-      <div className="max-h-none space-y-6 overflow-visible p-5 sm:p-6 xl:max-h-[calc(100vh-9rem)] xl:overflow-y-auto">
+      <div
+        className="max-h-none space-y-6 overflow-visible p-5 sm:p-6 xl:max-h-[calc(100vh-9rem)] xl:overflow-y-auto"
+        data-testid={preparedDemo ? "demo-structured-output" : undefined}
+      >
+        {preparedDemo ? (
+          <section className="rounded-xl bg-insight-container p-4 text-insight" data-testid="demo-slm-provenance">
+            <h3 className="text-xs font-bold">Analyse du SLM — exemple de démonstration</h3>
+            <p className="mt-1 text-[10px] leading-4">
+              Le modèle spécialisé est en cours de validation. Cette sortie préparée montre le contrat produit visé.
+            </p>
+          </section>
+        ) : null}
+
         {shouldReview ? (
           <div className="flex gap-3 rounded-xl bg-warning/10 p-4 text-warning">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
@@ -193,7 +209,7 @@ export function SignalAnalysisPanel({
           <div className="mb-3 flex items-center justify-between gap-3">
             <h3 id="signal-original-title" className="flex items-center gap-2 text-xs font-bold text-on-surface">
               <MessageSquareQuote className="h-4 w-4 text-insight" aria-hidden="true" />
-              Verbatim et preuves
+              Entrée, verbatim et preuves exactes
             </h3>
             <span className="text-[10px] text-on-surface-variant">{evidence.length} extrait{evidence.length > 1 ? "s" : ""}</span>
           </div>
@@ -202,7 +218,7 @@ export function SignalAnalysisPanel({
           </blockquote>
         </section>
 
-        <section className="grid grid-cols-1 divide-y divide-outline-variant overflow-hidden rounded-xl bg-surface-container-low sm:grid-cols-3 sm:divide-x sm:divide-y-0" aria-label="Lecture globale du signal">
+        <section className={`grid grid-cols-1 divide-y divide-outline-variant overflow-hidden rounded-xl bg-surface-container-low sm:divide-x sm:divide-y-0 ${confidence === null ? "sm:grid-cols-3" : "sm:grid-cols-4"}`} aria-label="Lecture globale du signal">
           <div className="min-w-0 px-3 py-3">
             <p className="text-[9px] font-semibold text-on-surface-variant">Sentiment</p>
             <span className={`mt-2 inline-flex rounded-full px-2 py-1 text-[10px] font-bold ${sentimentTone(annotation.sentiment.label)}`}>
@@ -217,6 +233,12 @@ export function SignalAnalysisPanel({
             <p className="text-[9px] font-semibold text-on-surface-variant">Pertinence</p>
             <p className="mt-2 text-xs font-bold leading-4 text-on-surface">{formatSlmLabel(annotation.businessRelevance)}</p>
           </div>
+          {confidence !== null ? (
+            <div className="min-w-0 px-3 py-3">
+              <p className="text-[9px] font-semibold text-on-surface-variant">Confiance du signal</p>
+              <p className="mt-2 text-xs font-bold leading-4 text-on-surface">{Math.round(confidence * 100)} %</p>
+            </div>
+          ) : null}
         </section>
 
         <section aria-labelledby="signal-aspects-title">
@@ -332,7 +354,6 @@ export function SignalAnalysisPanel({
           {sourceLabel} · {dateLabel} · {locationLabel}
           {analysis.modelVersion ? ` · ${analysis.modelVersion}` : ""}
           {analysis.compilerVersion ? ` · ${analysis.compilerVersion}` : ""}
-          {analysis.inferenceMs !== null ? ` · ${analysis.inferenceMs} ms` : ""}
         </p>
       </div>
     </aside>

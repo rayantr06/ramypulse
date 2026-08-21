@@ -15,8 +15,9 @@ import { toast } from "@/hooks/use-toast";
 import { convertToCSV, downloadCSV } from "@/lib/csvExport";
 import { STITCH_AVATARS } from "@/lib/stitchAssets";
 import { formatSlmLabel, parseSlmAnalysis, type SlmAnalysisEnvelope } from "@/lib/slmV04";
+import { LETICIA_DEMO_SCENARIO } from "@/lib/leticiaDemoScenario";
 import { useTenantId } from "@/lib/tenantContext";
-import { useV3Observations, useV3Signals } from "@/hooks/useV3Data";
+import { useV3Context, useV3Observations, useV3Signals } from "@/hooks/useV3Data";
 
 const SENTIMENT_OPTIONS = [
   { value: "positif", label: "Positif" },
@@ -61,6 +62,8 @@ interface VerbatimView {
   text: string;
   source_url: string;
   analysis: SlmAnalysisEnvelope | null;
+  preparedDemo: boolean;
+  confidence: number | null;
 }
 
 interface VerbatimsView {
@@ -226,6 +229,8 @@ function mapVerbatimsView(value: unknown): VerbatimsView {
         text: item.text,
         source_url: item.source_url || "",
         analysis: parseSlmAnalysis(rawResults[index]),
+        preparedDemo: false,
+        confidence: null,
       };
     }),
     total: verbatims.total,
@@ -235,8 +240,92 @@ function mapVerbatimsView(value: unknown): VerbatimsView {
   };
 }
 
+function mapPreparedDemoVerbatims(
+  channel: string | null,
+  sentiment: string,
+  wilaya: string,
+): VerbatimsView {
+  const signalConfidence = LETICIA_DEMO_SCENARIO.signals[0]?.confidence ?? null;
+  const items = Object.entries(LETICIA_DEMO_SCENARIO.slmAnalysesByMentionId).flatMap(
+    ([mentionId, prepared]) => {
+      const mention = LETICIA_DEMO_SCENARIO.mentions.find((item) => item.id === mentionId);
+      if (!mention) return [];
+      if (channel && mention.source !== channel) return [];
+      if (sentiment && mention.sentiment !== sentiment) return [];
+      if (wilaya && mention.territory !== wilaya) return [];
+
+      const evidenceStart = mention.text.indexOf(prepared.evidence);
+      const evidence = {
+        text: prepared.evidence,
+        start: evidenceStart >= 0 ? evidenceStart : null,
+        end: evidenceStart >= 0 ? evidenceStart + prepared.evidence.length : null,
+      };
+      const parts = formatDateParts(mention.publishedAt);
+      const analysis = parseSlmAnalysis({
+        annotation: {
+          schema_version: "0.4.0",
+          is_exploitable: true,
+          non_exploitable_reason: null,
+          business_relevance: "directe",
+          author_role: "consommateur",
+          requires_parent_context: false,
+          language: {
+            dominant: mention.language,
+            detected: [mention.language],
+            code_switching: mention.language === "darija_arabizi",
+            scripts: [mention.language === "darija_arabe" ? "arabe" : "latin"],
+          },
+          entities: [
+            { id: "product_lidal", type: "produit", name: "Produit LIDAL", mention: null, source: "contexte" },
+            { id: "territory_oran", type: "lieu", name: "Oran", mention: "Oran", source: "texte" },
+          ],
+          sentiment: {
+            label: mention.sentiment,
+            intensity: "forte",
+            emotion: "frustration",
+            sarcasm: false,
+            target_entity_ids: ["product_lidal"],
+            evidence: [evidence],
+          },
+          intents: ["signalement_incident"],
+          aspects: [{
+            family: "disponibilite_acces",
+            attribute: prepared.aspect,
+            target_entity_id: "product_lidal",
+            sentiment: mention.sentiment,
+            intensity: "forte",
+            implicit: false,
+            evidence: [evidence],
+          }],
+          alerts: [{ type: "rupture_stock", severity: "elevee", target_entity_id: "product_lidal", evidence: [evidence] }],
+          actionability: { actionable: true, queue: "logistique", priority: "elevee" },
+        },
+        validation_status: "valid",
+      });
+
+      return [{
+        id: `demo-${mention.id}`,
+        date: parts.date,
+        time: parts.time,
+        source: mention.source,
+        aspect: prepared.aspect,
+        sentiment: formatSentimentLabel(mention.sentiment),
+        wilaya: mention.territory ?? "Oran",
+        text: prepared.normalizedText,
+        source_url: mention.sourceUrl ?? "",
+        analysis,
+        preparedDemo: true,
+        confidence: signalConfidence,
+      }];
+    },
+  );
+
+  return { items, total: items.length, page: 1, page_size: 50, total_pages: 1 };
+}
+
 export default function Explorateur() {
   const tenantId = useTenantId();
+  const { live: v3Live } = useV3Context();
   const v3ObservationsQuery = useV3Observations();
   const v3SignalsQuery = useV3Signals();
   const [query, setQuery] = useState(initialExplorerQuery);
@@ -340,6 +429,9 @@ export default function Explorateur() {
       { tenantId, page, channel: channelFilter, sentiment: filterSentiment, wilaya: filterWilaya },
     ],
     queryFn: async () => {
+      if (!v3Live) {
+        return mapPreparedDemoVerbatims(channelFilter, filterSentiment, filterWilaya);
+      }
       const params = new URLSearchParams();
       params.set("page", String(page));
       params.set("page_size", "50");
@@ -413,6 +505,8 @@ export default function Explorateur() {
         sentiment: selectedSearchSignal.sentiment,
         aspect: selectedSearchSignal.aspect,
         analysis: selectedSearchSignal.analysis,
+        preparedDemo: false,
+        confidence: null,
       }
     : selectedSignal
       ? {
@@ -424,6 +518,8 @@ export default function Explorateur() {
           sentiment: selectedSignal.sentiment,
           aspect: selectedSignal.aspect,
           analysis: selectedSignal.analysis,
+          preparedDemo: selectedSignal.preparedDemo,
+          confidence: selectedSignal.confidence,
         }
       : null;
   const enrichedSignalsCount = useMemo(
@@ -918,6 +1014,8 @@ export default function Explorateur() {
                 legacySentiment={selectedDetail.sentiment}
                 legacyAspect={selectedDetail.aspect}
                 analysis={selectedDetail.analysis}
+                preparedDemo={selectedDetail.preparedDemo}
+                confidence={selectedDetail.confidence}
               />
             </div>
           ) : (

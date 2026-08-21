@@ -14,6 +14,7 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 import { Link } from "wouter";
 
 import { AppShell } from "@/components/AppShell";
+import { DemoSourceFlow } from "@/components/demo/DemoSourceFlow";
 import { PageHeader } from "@/components/PageHeader";
 import { V3DataState } from "@/components/v3/V3DataState";
 import { useV3Actions, useV3Overview, useV3Signals } from "@/hooks/useV3Data";
@@ -68,6 +69,8 @@ export default function Dashboard() {
             </span>
           ) : null}
         />
+
+        <DemoSourceFlow />
 
         <section className="grid grid-cols-2 gap-3 lg:grid-cols-3 2xl:grid-cols-6" aria-label="Indicateurs transparents">
           <article className="dashboard-stat" data-testid="card-health-score">

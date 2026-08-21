@@ -97,3 +97,26 @@ test("QR listening pages expose the reliable recording path", () => {
   assert.ok(feedback.includes("En attente d’analyse"));
   assert.ok(reset.includes("resetLeticiaDemoState"));
 });
+
+test("Leticia demo explains prepared SLM output from authorized inputs to human decision", () => {
+  const dashboard = readPage("Dashboard.tsx");
+  const explorer = readPage("Explorateur.tsx");
+  const sourceFlow = readFileSync(
+    path.resolve(__dirname, "../client/src/components/demo/DemoSourceFlow.tsx"),
+    "utf8",
+  );
+  const analysisPanel = readFileSync(
+    path.resolve(__dirname, "../client/src/components/explorer/SignalAnalysisPanel.tsx"),
+    "utf8",
+  );
+
+  assert.ok(dashboard.includes("DemoSourceFlow"));
+  assert.ok(sourceFlow.includes('data-testid="demo-source-flow"'));
+  assert.ok(sourceFlow.includes("LETICIA_DEMO_SCENARIO.authorizedInputChannels"));
+  assert.ok(explorer.includes("LETICIA_DEMO_SCENARIO.slmAnalysesByMentionId"));
+  assert.ok(explorer.includes("parseSlmAnalysis"));
+  assert.ok(analysisPanel.includes('data-testid="demo-slm-provenance"'));
+  assert.ok(analysisPanel.includes('"demo-structured-output"'));
+  assert.ok(analysisPanel.includes("Cette sortie préparée montre le contrat produit visé."));
+  assert.ok(!analysisPanel.includes("analysis.inferenceMs"));
+});
