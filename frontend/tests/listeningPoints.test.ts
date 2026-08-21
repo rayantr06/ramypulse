@@ -62,3 +62,41 @@ test("repository isolates points by organization", () => {
   assert.ok(repository.list("demo-expo-2026").length > 0);
   assert.deepEqual(repository.list("another-tenant"), []);
 });
+
+test("repository round-trips every listening-point composer field", () => {
+  const repository = createListeningPointsRepository(
+    memoryStorage(),
+    () => "2026-08-20T12:00:00Z",
+    () => "fixed-id",
+  );
+
+  const created = repository.create({
+    organizationId: "demo-expo-2026",
+    name: "QR rayon boissons",
+    token: "rayon-boissons-fixed",
+    status: "active",
+    targetType: "location",
+    targetName: "Rayon boissons Oran",
+    ownerName: "Nadia B.",
+    channels: { rating: true, text: true, audio: false, image: false },
+    alertEnabled: true,
+    alertThreshold: 2,
+  });
+
+  assert.deepEqual(created, {
+    id: "fixed-id",
+    organizationId: "demo-expo-2026",
+    name: "QR rayon boissons",
+    token: "rayon-boissons-fixed",
+    status: "active",
+    createdAt: "2026-08-20T12:00:00Z",
+    scanCount: 0,
+    targetType: "location",
+    targetName: "Rayon boissons Oran",
+    ownerName: "Nadia B.",
+    channels: { rating: true, text: true, audio: false, image: false },
+    alertEnabled: true,
+    alertThreshold: 2,
+  });
+  assert.deepEqual(repository.findByToken("rayon-boissons-fixed"), created);
+});

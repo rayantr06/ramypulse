@@ -15,6 +15,7 @@ const composerSchema = z.object({
   internalName: z.string().trim().min(2, "Donnez un nom interne au point d’écoute."),
   responsiblePerson: z.string().trim().min(2, "Indiquez la personne responsable."),
   channels: z.object({
+    rating: z.boolean(),
     text: z.boolean(),
     audio: z.boolean(),
     image: z.boolean(),
@@ -36,6 +37,7 @@ const TARGET_TYPES: Array<{ value: ComposerValues["targetType"]; label: string }
 ];
 
 const CHANNELS = [
+  { key: "rating" as const, label: "Note", description: "Évaluation de 1 à 5 étoiles", icon: Star },
   { key: "text" as const, label: "Texte", description: "Un message libre et multilingue", icon: MessageSquareText },
   { key: "audio" as const, label: "Audio", description: "Durée locale uniquement", icon: Mic2 },
   { key: "image" as const, label: "Photo", description: "Nom du fichier uniquement", icon: ImagePlus },
@@ -63,7 +65,7 @@ export function ListeningPointComposer() {
       targetName: "",
       internalName: "",
       responsiblePerson: "Responsable expérience client",
-      channels: { text: true, audio: true, image: true },
+      channels: { rating: true, text: true, audio: true, image: true },
       lowRatingAlert: true,
       alertThreshold: 2,
     },
@@ -74,9 +76,15 @@ export function ListeningPointComposer() {
   function submit(values: ComposerValues) {
     createPoint.mutate(
       {
-        name: `${values.internalName} · ${values.targetName}`,
+        name: values.internalName,
         token: createToken(values),
         status: "active",
+        targetType: values.targetType,
+        targetName: values.targetName,
+        ownerName: values.responsiblePerson,
+        channels: values.channels,
+        alertEnabled: values.lowRatingAlert,
+        alertThreshold: values.alertThreshold,
       },
       { onSuccess: () => setLocation("/listening-points") },
     );
@@ -163,8 +171,8 @@ export function ListeningPointComposer() {
 
           <fieldset className="border-t border-outline-variant pt-7">
             <legend className="font-headline text-lg font-semibold">Canaux activés</legend>
-            <p className="mt-1 text-xs leading-5 text-on-surface-variant">La note est toujours demandée; activez au moins un moyen d’expression.</p>
-            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <p className="mt-1 text-xs leading-5 text-on-surface-variant">Activez les formats utiles et conservez au moins un moyen d’expression.</p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {CHANNELS.map((channel) => {
                 const active = channels[channel.key];
                 const Icon = channel.icon;

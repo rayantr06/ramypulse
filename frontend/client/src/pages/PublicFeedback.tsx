@@ -11,15 +11,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { useListeningPoints, useSubmitListeningPointFeedback } from "@/hooks/useListeningPoints";
 
 const feedbackSchema = z.object({
-  rating: z.coerce.number().int().min(1, "Choisissez une note.").max(5),
+  rating: z.coerce.number().int().min(1, "Choisissez une note.").max(5).nullable(),
   text: z.string().trim().max(1_500, "Votre message est trop long."),
   imageName: z.string().nullable(),
   audioDurationSeconds: z.number().int().positive().nullable(),
   consent: z.boolean().refine(Boolean, "Votre consentement est requis."),
-}).refine(
-  (value) => Boolean(value.text || value.imageName || value.audioDurationSeconds),
-  { path: ["text"], message: "Ajoutez un message, une durée audio ou un nom de fichier." },
-);
+});
 
 type FeedbackValues = z.infer<typeof feedbackSchema>;
 
@@ -34,6 +31,7 @@ export default function PublicFeedback() {
   const form = useForm<FeedbackValues>({
     resolver: zodResolver(feedbackSchema),
     defaultValues: {
+      rating: null,
       text: "",
       imageName: null,
       audioDurationSeconds: null,
@@ -53,11 +51,25 @@ export default function PublicFeedback() {
 
   function submit(values: FeedbackValues) {
     if (!point) return;
+    form.clearErrors(["rating", "text"]);
+    if (point.channels.rating && values.rating === null) {
+      form.setError("rating", { message: "Choisissez une note." });
+      return;
+    }
+    const hasEnabledResponse = Boolean(
+      (point.channels.text && values.text)
+      || (point.channels.image && values.imageName)
+      || (point.channels.audio && values.audioDurationSeconds),
+    );
+    if (!hasEnabledResponse) {
+      form.setError("text", { message: "Utilisez au moins un canal de réponse activé." });
+      return;
+    }
     const channels = [
-      "rating",
-      ...(values.text ? ["text"] : []),
-      ...(values.imageName ? ["image"] : []),
-      ...(values.audioDurationSeconds ? ["audio"] : []),
+      ...(point.channels.rating && values.rating !== null ? ["rating"] : []),
+      ...(point.channels.text && values.text ? ["text"] : []),
+      ...(point.channels.image && values.imageName ? ["image"] : []),
+      ...(point.channels.audio && values.audioDurationSeconds ? ["audio"] : []),
     ];
     submitFeedback.mutate(
       {
@@ -118,11 +130,11 @@ export default function PublicFeedback() {
           </div>
           <p className="mt-8 text-[10px] font-bold uppercase tracking-[0.15em] text-primary">{point.name}</p>
           <h1 className="mt-2 font-headline text-3xl font-semibold leading-tight">Comment s’est passée votre expérience ?</h1>
-          <p className="mt-3 text-sm leading-6 text-on-surface-variant">Une minute suffit. La note et votre message restent privés.</p>
+          <p className="mt-3 text-sm leading-6 text-on-surface-variant">Une minute suffit. Votre retour reste privé.</p>
         </header>
 
         <form className="space-y-6 px-5 py-6 sm:px-7" onSubmit={form.handleSubmit(submit)} data-testid="public-feedback-form">
-          <fieldset>
+          {point.channels.rating ? <fieldset>
             <legend className="text-sm font-semibold">Votre note</legend>
             <div className="mt-3 grid grid-cols-5 gap-2">
               {[1, 2, 3, 4, 5].map((value) => (
@@ -135,15 +147,15 @@ export default function PublicFeedback() {
                     {...form.register("rating", { valueAsNumber: true })}
                   />
                   <span className="flex aspect-square items-center justify-center rounded-2xl border border-outline-variant bg-surface-container-low text-on-surface-variant transition-colors peer-checked:border-primary peer-checked:bg-primary peer-checked:text-primary-foreground">
-                    <Star className="h-5 w-5" fill={rating !== undefined && value <= rating ? "currentColor" : "none"} aria-hidden="true" />
+                    <Star className="h-5 w-5" fill={rating !== null && value <= rating ? "currentColor" : "none"} aria-hidden="true" />
                   </span>
                 </label>
               ))}
             </div>
             {form.formState.errors.rating ? <p className="mt-2 text-xs text-destructive">{form.formState.errors.rating.message}</p> : null}
-          </fieldset>
+          </fieldset> : null}
 
-          <section>
+          {point.channels.text ? <section>
             <label htmlFor="feedback-message" className="text-sm font-semibold">Votre message</label>
             <Textarea
               id="feedback-message"
@@ -154,10 +166,10 @@ export default function PublicFeedback() {
               {...form.register("text")}
             />
             {form.formState.errors.text ? <p className="mt-2 text-xs text-destructive">{form.formState.errors.text.message}</p> : null}
-          </section>
+          </section> : null}
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <section className="rounded-2xl border border-outline-variant bg-surface-container-low p-4">
+          {point.channels.audio || point.channels.image ? <div className="grid gap-3 sm:grid-cols-2">
+            {point.channels.audio ? <section className="rounded-2xl border border-outline-variant bg-surface-container-low p-4">
               <div className="flex items-start gap-3">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-container text-primary"><Mic2 className="h-4 w-4" aria-hidden="true" /></span>
                 <div>
@@ -175,9 +187,9 @@ export default function PublicFeedback() {
                 </Button>
               )}
               {audioDurationSeconds ? <p className="mt-2 text-center text-[10px] text-on-surface-variant">{audioDurationSeconds} s conservées</p> : null}
-            </section>
+            </section> : null}
 
-            <section className="rounded-2xl border border-outline-variant bg-surface-container-low p-4">
+            {point.channels.image ? <section className="rounded-2xl border border-outline-variant bg-surface-container-low p-4">
               <div className="flex items-start gap-3">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-insight-container text-insight"><ImagePlus className="h-4 w-4" aria-hidden="true" /></span>
                 <div className="min-w-0">
@@ -197,8 +209,10 @@ export default function PublicFeedback() {
                 {imageName ? "Changer le fichier" : "Choisir un fichier"}
               </Button>
               {imageName ? <p className="mt-2 truncate text-center text-[10px] text-on-surface-variant">{imageName}</p> : null}
-            </section>
-          </div>
+            </section> : null}
+          </div> : null}
+
+          {!point.channels.text && form.formState.errors.text ? <p className="text-xs text-destructive">{form.formState.errors.text.message}</p> : null}
 
           <label className="flex cursor-pointer items-start gap-3 rounded-2xl bg-surface-container-low p-4">
             <input type="checkbox" className="mt-0.5 h-4 w-4 accent-primary" {...form.register("consent")} />
