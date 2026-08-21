@@ -9,17 +9,30 @@ $frontendRoot = Join-Path $repositoryRoot 'frontend'
 $vitePath = Join-Path $frontendRoot 'node_modules/vite/bin/vite.js'
 $applicationUrl = 'http://127.0.0.1:5173/#/'
 
+if (-not (Test-Path -LiteralPath $frontendRoot -PathType Container)) {
+    throw "Le dossier frontend est introuvable : $frontendRoot. Verifiez que le dossier du projet est complet, puis relancez ce script."
+}
+
 if (-not (Test-Path -LiteralPath $vitePath -PathType Leaf)) {
-    throw "Vite is not installed at $vitePath. Run INSTALLER_DEMO_LETICIA.ps1 first."
+    throw "Vite n'est pas installe : $vitePath. Executez d'abord INSTALLER_DEMO_LETICIA.ps1, puis relancez ce script."
 }
 
 $portListener = [System.Net.NetworkInformation.IPGlobalProperties]::GetIPGlobalProperties().GetActiveTcpListeners() |
     Where-Object { $_.Port -eq 5173 }
 if ($portListener) {
-    throw 'Port 5173 is already in use. This launcher will not attach to or stop another process.'
+    throw "Le port 5173 est deja utilise. Fermez l'application qui utilise ce port, puis relancez LANCER_DEMO_LETICIA.ps1."
 }
 
-$nodeCommand = Get-Command 'node.exe' -ErrorAction Stop
+$nodeCommand = Get-Command 'node.exe' -ErrorAction SilentlyContinue
+if ($null -eq $nodeCommand) {
+    throw 'Node.js est introuvable. Installez Node.js 20 ou 22, puis executez INSTALLER_DEMO_LETICIA.ps1.'
+}
+
+$nodeVersion = (& $nodeCommand.Source --version).Trim()
+if ($nodeVersion -notmatch '^v(20|22)\.') {
+    throw "La version $nodeVersion de Node.js n'est pas prise en charge. Installez Node.js 20 ou 22, puis executez INSTALLER_DEMO_LETICIA.ps1."
+}
+
 $viteProcess = $null
 
 try {
@@ -42,14 +55,14 @@ try {
     } while ((Get-Date) -lt $deadline)
 
     if (-not $serverReady) {
-        throw 'Vite did not become available on http://127.0.0.1:5173 within 30 seconds.'
+        throw "Le serveur Vite n'est pas disponible sur http://127.0.0.1:5173 apres 30 secondes. Verifiez l'installation avec INSTALLER_DEMO_LETICIA.ps1, puis relancez ce script."
     }
 
     Start-Process $applicationUrl
-    Read-Host 'The demo is running. Press Enter to stop only this Vite process'
+    Read-Host 'La demonstration est ouverte. Appuyez sur Entree pour arreter uniquement ce processus Vite'
 } finally {
     if ($null -ne $viteProcess -and -not $viteProcess.HasExited) {
         Stop-Process -Id $viteProcess.Id -ErrorAction Stop
-        Write-Host 'Stopped the Vite process started by this launcher.'
+        Write-Host 'Le processus Vite demarre par ce lanceur a ete arrete.'
     }
 }
